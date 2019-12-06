@@ -1,8 +1,10 @@
-package repository;
+package com.tellyouiam.alittlebitaboutspring.repository;
 
-import dto.Note;
+import com.tellyouiam.alittlebitaboutspring.dto.Note;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 /**
  * @author : Ho Anh
@@ -11,5 +13,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface NoteRepository extends JpaRepository<Note, Long> {
-
+	List<Note> findNoteByTitleContaining();
 }

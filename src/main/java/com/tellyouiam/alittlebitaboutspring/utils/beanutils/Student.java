@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.beanutils;
+package com.tellyouiam.alittlebitaboutspring.utils.beanutils;
 
 /**
  * @author : Ho Anh

@@ -1,10 +1,9 @@
-package com.tellyouiam.alittlebitaboutspring.beanutils;
+package com.tellyouiam.alittlebitaboutspring.utils.beanutils;
 
 import org.springframework.beans.BeanUtils;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * @author : Ho Anh
