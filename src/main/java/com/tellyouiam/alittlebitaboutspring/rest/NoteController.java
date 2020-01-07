@@ -1,19 +1,17 @@
 package com.tellyouiam.alittlebitaboutspring.rest;
 
 import com.tellyouiam.alittlebitaboutspring.dto.Note;
+import com.tellyouiam.alittlebitaboutspring.service.NoteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import com.tellyouiam.alittlebitaboutspring.repository.NoteRepository;
 
 import javax.validation.Valid;
 import java.util.Date;
+import java.util.List;
 
 /**
  * @author : Ho Anh
@@ -23,10 +21,13 @@ import java.util.Date;
 @RestController
 @RequestMapping(value = "/note")
 public class NoteController {
-
+	
 	@Autowired
 	private NoteRepository noteRepository;
-
+	
+	@Autowired
+	private NoteService noteService;
+	
 	@RequestMapping(value = "/create", method = RequestMethod.POST)
 	@ResponseBody
 	public final ResponseEntity<Object> createNote(@Valid @RequestBody Note note) {
@@ -35,5 +36,18 @@ public class NoteController {
 		note.setUpdatedAt(new Date(0));
 		noteRepository.save(note);
 		return new ResponseEntity<Object>(note, new HttpHeaders(), HttpStatus.OK);
+	}
+	
+	@RequestMapping(method = RequestMethod.GET)
+	@ResponseBody
+	public final ResponseEntity<Object> getDate() {
+//		Date timestamp = Objects.requireNonNull(noteRepository.findById(1).orElse(null)).getTestDate();
+//		Date date = Objects.requireNonNull(noteRepository.findById(1).orElse(null)).getCreatedAt();
+//		List<Date> dates = Arrays.asList(timestamp, date);
+		
+		List<Note> notes = noteRepository.findByCode(15);
+		notes.forEach(n -> System.out.println(n.getCode()));
+		return new ResponseEntity<Object>(notes, new HttpHeaders(), HttpStatus.OK);
+		
 	}
 }

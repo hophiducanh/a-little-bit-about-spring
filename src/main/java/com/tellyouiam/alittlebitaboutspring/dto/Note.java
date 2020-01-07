@@ -25,37 +25,42 @@ import java.util.Date;
 @Entity
 @Table(name = "notes")
 @EntityListeners(AuditingEntityListener.class)
-@JsonIgnoreProperties(value = {"createdAt", "updatedAt"},
-	allowGetters = true)
+//@JsonIgnoreProperties(value = {"createdAt", "updatedAt"},
+//	allowGetters = true)
 public class Note implements Serializable {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private Long id;
+	private Integer id;
 
 	private Integer code;
 
 	@NotBlank
+	@Column(length = 25)
 	private String title;
 
 	@NotBlank
 	private String content;
 
-	@Column(nullable = false, updatable = false)
+//	@Column(nullable = false, updatable = false)
 	@Temporal(TemporalType.TIMESTAMP)
 	@CreatedDate
 	private Date createdAt;
 
 	@Column(nullable = false)
 	@Temporal(TemporalType.TIMESTAMP)
-	@LastModifiedDate
+//	@LastModifiedDate
 	private Date updatedAt;
+	
+	@Column(name = "test_date")
+	@Temporal(TemporalType.TIMESTAMP)
+	private Date testDate;
 
-	public Long getId() {
+	public Integer getId() {
 		return id;
 	}
 
-	public void setId(Long id) {
+	public void setId(Integer id) {
 		this.id = id;
 	}
 
@@ -99,5 +104,13 @@ public class Note implements Serializable {
 
 	public void setCode(Integer code) {
 		this.code = code;
+	}
+	
+	public Date getTestDate() {
+		return testDate;
+	}
+	
+	public void setTestDate(Date testDate) {
+		this.testDate = testDate;
 	}
 }
