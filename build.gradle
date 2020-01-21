@@ -30,5 +30,6 @@ dependencies {
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.17'
+    implementation 'org.jsoup:jsoup:1.12.1'
 
 }

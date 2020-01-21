@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.tellyouiam.alittlebitaboutspring.repository.NoteRepository;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
 import java.util.Date;
@@ -49,5 +50,13 @@ public class NoteController {
 		notes.forEach(n -> System.out.println(n.getCode()));
 		return new ResponseEntity<Object>(notes, new HttpHeaders(), HttpStatus.OK);
 		
+	}
+	
+	@RequestMapping(value = "/owner/automate-import-owner", method = RequestMethod.POST)
+	@ResponseBody
+	public final ResponseEntity<Object> automateImportOwner(@RequestPart MultipartFile ownerFile) {
+		Object result = noteService.automateImportOwner(ownerFile);
+		
+		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}
 }
