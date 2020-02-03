@@ -11,4 +11,6 @@ public interface NoteService {
 	Object automateImportHorse(MultipartFile horseFile);
 	
 	Object automateImportOwnerShip(MultipartFile horseFile);
+	
+	Object prepareOwnership(MultipartFile ownershipFile);
 }

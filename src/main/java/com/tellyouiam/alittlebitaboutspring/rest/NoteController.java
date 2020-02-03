@@ -75,4 +75,12 @@ public class NoteController {
 		
 		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}
+	
+	@RequestMapping(value = "/owner/prepared-ownership", method = RequestMethod.POST)
+	@ResponseBody
+	public final ResponseEntity<Object> prepareOwnership(@RequestPart MultipartFile ownershipFile) {
+		Object result = noteService.prepareOwnership(ownershipFile);
+		
+		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+	}
 }

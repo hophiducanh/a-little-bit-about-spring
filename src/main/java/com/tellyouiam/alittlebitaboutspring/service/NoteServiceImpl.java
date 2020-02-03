@@ -13,17 +13,18 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Date;
+import java.util.Collections;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Service
 public class NoteServiceImpl implements NoteService{
+	
 	
 	private int check(String[] arr, String... valuesToCheck) {
 		int index;
@@ -476,6 +477,95 @@ public class NoteServiceImpl implements NoteService{
 			e.printStackTrace();
 		}
 		return null;
+	}
+	
+	private static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
+	private static final String REMOVE_LINE_BREAK_PATTERN = "\nCT";
+	private static final String REMOVE_INVALID_SHARES_PATTERN = "Int.Party";
+	private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\(\\s.*";
+	private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
+	private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\n,";
+	
+	@Override
+	public Object prepareOwnership(MultipartFile ownershipFile) {
+		try {
+			List<String> csvData = this.getCsvData(ownershipFile);
+			String allLines = String.join("\n", csvData);
+			
+			Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
+			if(blankLinesMatcher.find()) {
+				allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, "");
+			}
+			
+			Matcher linesBreakMatcher = Pattern.compile(REMOVE_LINE_BREAK_PATTERN).matcher(allLines);
+			if(linesBreakMatcher.find()) {
+				allLines = allLines.replaceAll(REMOVE_LINE_BREAK_PATTERN, " CT");
+			}
+			
+			Matcher invalidSharesMatcher = Pattern.compile(REMOVE_INVALID_SHARES_PATTERN).matcher(allLines);
+			if (invalidSharesMatcher.find()) {
+				allLines = allLines.replaceAll(REMOVE_INVALID_SHARES_PATTERN, "0%");
+			}
+			
+			Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(allLines);
+			if(correctHorseNameMatcher.find()) {
+				allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
+			}
+			
+			Matcher trimHorseNameMatcher = Pattern.compile(TRIM_HORSE_NAME_PATTERN).matcher(allLines);
+			if(trimHorseNameMatcher.find()) {
+				allLines = allLines.replaceAll(TRIM_HORSE_NAME_PATTERN, "");
+			}
+			
+			Matcher correctHorseLinePattern = Pattern.compile(MOVE_HORSE_TO_CORRECT_LINE_PATTERN).matcher(allLines);
+			if(correctHorseLinePattern.find()) {
+				allLines = allLines.replaceAll(MOVE_HORSE_TO_CORRECT_LINE_PATTERN, "$1,");
+			}
+			
+			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\prepared-ownership.csv";
+			try {
+				File file = new File(path);
+				FileOutputStream os = new FileOutputStream(file);
+				os.write(allLines.getBytes());
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static List<String> removeTheElement(List<String> arr,
+	                                     int index)
+	{
+		
+		// If the array is empty
+		// or the index is not in array range
+		// return the original array
+		if (arr == null
+				|| index < 0
+				|| index >= arr.size()) {
+			
+			return arr;
+		}
+		
+		// return the resultant array
+		return Collections.singletonList(arr.remove(index));
+	}
+	
+	private static String removeByIndex(String str, int index) {
+		return new StringBuilder(str).deleteCharAt(index).toString();
+	}
+	
+	public static void main(String[] args) {
+		String text = "anh,lan,,ho";
+		List<String> myList = new ArrayList<String>(Arrays.asList(text.split(",")));
+		List<String> old = removeTheElement(myList,3);
+		myList.removeAll(old);
+		String str = Arrays.toString(myList.toArray());
+		System.out.println(str);
 	}
 	
 }
