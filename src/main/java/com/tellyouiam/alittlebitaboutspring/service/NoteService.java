@@ -5,6 +5,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public interface NoteService {
- 
- Object automateImportOwner(MultipartFile ownerFile);
+	
+	Object automateImportOwner(MultipartFile ownerFile);
+	
+	Object automateImportHorse(MultipartFile horseFile);
+	
+	Object automateImportOwnerShip(MultipartFile horseFile);
 }

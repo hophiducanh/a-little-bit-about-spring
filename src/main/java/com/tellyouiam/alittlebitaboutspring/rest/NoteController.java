@@ -59,4 +59,20 @@ public class NoteController {
 		
 		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}
+	
+	@RequestMapping(value = "/owner/automate-import-horse", method = RequestMethod.POST)
+	@ResponseBody
+	public final ResponseEntity<Object> automateImportHorse(@RequestPart MultipartFile horseFile) {
+		Object result = noteService.automateImportHorse(horseFile);
+		
+		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+	}
+	
+	@RequestMapping(value = "/owner/automate-import-ownership", method = RequestMethod.POST)
+	@ResponseBody
+	public final ResponseEntity<Object> automateImportOwnerShip(@RequestPart MultipartFile ownershipFile) {
+		Object result = noteService.automateImportOwnerShip(ownershipFile);
+		
+		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+	}
 }

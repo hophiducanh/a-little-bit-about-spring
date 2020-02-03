@@ -40,4 +40,25 @@ public class OnboardHelper {
 		
 		return stringValue;
 	}
+	
+	public static String getPostcode(String value) {
+		if (StringUtils.isEmpty(value))
+			return null;
+		else {
+			if (Integer.parseInt(value) == 0)
+				return "";
+			else if (value.matches("\\d+"))
+				return value;
+			else {
+				System.out.println("********** Postcode is not numerical :{}" + value);
+				
+				// if is not number (Australia type) then must contain at least a number
+				if (value.matches(".*\\d+.*")) {
+					System.out.println("Postcode contain numerical => passed:{}" + value);
+					return value;
+				}
+				return null;
+			}
+		}
+	}
 }
