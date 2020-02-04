@@ -3,27 +3,36 @@ package com.tellyouiam.alittlebitaboutspring.service;
 import com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 @Service
-public class NoteServiceImpl implements NoteService{
+public class NoteServiceImpl implements NoteService {
 	
 	
 	private int check(String[] arr, String... valuesToCheck) {
@@ -42,13 +51,42 @@ public class NoteServiceImpl implements NoteService{
 		return 100;
 	}
 	
+	private List<String> getCsvDataWithHeader(MultipartFile multipart) throws IOException {
+		InputStream is = multipart.getInputStream();
+		BufferedReader br = new BufferedReader(new InputStreamReader(is));
+		List<String> data = new ArrayList<>();
+		String line;
+		while ((line = br.readLine()) != null) {
+			data.add(line);
+		}
+		return data;
+	}
+	
 	private List<String> getCsvData(MultipartFile multipart) throws IOException {
 		InputStream is = multipart.getInputStream();
 		BufferedReader br = new BufferedReader(new InputStreamReader(is));
 		return this.getCsvData(br, false);
 	}
 	
-	public  List<String> getCsvData(BufferedReader bufReader) throws IOException {
+	private List<String> getCsvDataFromPath(String path, boolean ignoreHeader) throws IOException {
+		try (
+				FileReader fr = new FileReader(path);
+				BufferedReader br = new BufferedReader(fr);
+		) {
+			List<String> data = new ArrayList<>();
+			String line = null;
+			int count = 0;
+			while ((line = br.readLine()) != null) {
+				count++;
+				if (ignoreHeader && count == 1)
+					continue;
+				data.add(line);
+			}
+			return data;
+		}
+	}
+	
+	public List<String> getCsvData(BufferedReader bufReader) throws IOException {
 		return getCsvData(bufReader, true);
 	}
 	
@@ -63,6 +101,30 @@ public class NoteServiceImpl implements NoteService{
 			data.add(line);
 		}
 		return data;
+	}
+	
+	private static boolean isValid(String dateStr) {
+		Matcher dateMatcher = Pattern.compile(IS_INSTANCEOF_DATE).matcher(dateStr);
+		if (dateMatcher.matches()) {
+			return true;
+		}
+		return false;
+	}
+	
+	public static String[][] readCSVTo2DArray(String path, boolean ignoreHeader) throws FileNotFoundException, IOException {
+		try (FileReader fr = new FileReader(path);
+		     BufferedReader br = new BufferedReader(fr)) {
+			Collection<String[]> lines = new ArrayList<>();
+			int count = 0;
+			for (String line = br.readLine(); line != null; line = br.readLine()) {
+				count++;
+				if (ignoreHeader && count == 1) {
+					continue;
+				}
+				lines.add(OnboardHelper.readCsvLine(line));
+			}
+			return lines.toArray(new String[lines.size()][]);
+		}
 	}
 	
 	private String readMobilePhoneNumber(String phone) {
@@ -132,14 +194,14 @@ public class NoteServiceImpl implements NoteService{
 						"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName",
 						"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
 						"Country", "GST"
-						);
+				);
 				
 				builder.append(rowHeader);
 				
 				csvData = csvData.stream().skip(1).collect(Collectors.toList());
 				int count = 0;
 				for (String line : csvData) {
-					count ++;
+					count++;
 					String[] r = OnboardHelper.readCsvLine(line);
 					
 					String ownerId = OnboardHelper.readCsvRow(r, ownerIdIndex);
@@ -243,7 +305,7 @@ public class NoteServiceImpl implements NoteService{
 //				int addedDateIndex = check(header, "");
 				int activeStatusIndex = check(header, "Active Status", "ActiveStatus");
 				int horseLocationIndex = check(header, "Property");
-				int horseStatusIndex = check(header, "Current Status","CurrentStatus");
+				int horseStatusIndex = check(header, "Current Status", "CurrentStatus");
 				int typeIndex = check(header, "Type");
 				int categoryIndex = check(header, "Category");
 				int bonusSchemeIndex = check(header, "Bonus Scheme", "BonusScheme", "Schemes");
@@ -290,7 +352,7 @@ public class NoteServiceImpl implements NoteService{
 					String weekHere = OnboardHelper.readCsvRow(r, weeksHereIndex);
 					
 					String addedDate = "";
-					if(StringUtils.isEmpty(dayHere) && StringUtils.isEmpty(weekHere)) {
+					if (StringUtils.isEmpty(dayHere) && StringUtils.isEmpty(weekHere)) {
 						addedDate = "";
 					}
 					
@@ -385,7 +447,7 @@ public class NoteServiceImpl implements NoteService{
 				int financeEmailIndex = check(header, "Finance Email", "FinanceEmail");
 				int firstNameIndex = check(header, "FirstName", "First Name");
 				int lastNameIndex = check(header, "LastName", "Last Name");
-				int displayNameIndex = check(header, "DisplayName", "Name");
+				int displayNameIndex = check(header, "DisplayName", "Name", "Display Name");
 				int typeIndex = check(header, "Type");
 				int mobileIndex = check(header, "Mobile", "Mobile Phone");
 				int phoneIndex = check(header, "Phone");
@@ -396,14 +458,14 @@ public class NoteServiceImpl implements NoteService{
 				int postCodeIndex = check(header, "PostCode");
 				int countryIndex = check(header, "Country");
 				int gstIndex = check(header, "GST");
-				int shareIndex = check(header, "Shares", "Share", "Ownership");
+				int shareIndex = check(header, "Shares", "Share", "Ownership", "Share %");
 				int addedDateIndex = check(header, "AddedDate", "Added Date");
 				
 				String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 						"HorseId", "HorseName",
-						"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName",
+						"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
 						"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-						"Country", "GST", "Share", "AddedDate"
+						"Country", "GST", "Share", "FromDate"
 				);
 				
 				builder.append(rowHeader);
@@ -462,9 +524,6 @@ public class NoteServiceImpl implements NoteService{
 			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-ownership.csv";
 			try {
 				File file = new File(path);
-//				file.setWritable(true);
-//				file.setExecutable(true);
-//				file.setReadable(true);
 				
 				FileOutputStream os = new FileOutputStream(file);
 				os.write(builder.toString().getBytes());
@@ -484,7 +543,9 @@ public class NoteServiceImpl implements NoteService{
 	private static final String REMOVE_INVALID_SHARES_PATTERN = "Int.Party";
 	private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\(\\s.*";
 	private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
-	private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\n,";
+	private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\\n,(?=([\\d]{1,3})?(\\.)?([\\d]{1,2})?%)";
+	private static final String REMOVE_UNNECESSARY_HEADER_FOOTER = "(?m)^(?!,Share).*(?<!(Y,|N,))$(\\n)?";
+	private static final String IS_INSTANCEOF_DATE = "([0-9]{0,2}/[0-9]{0,2}/[0-9]{0,4})";
 	
 	@Override
 	public Object prepareOwnership(MultipartFile ownershipFile) {
@@ -493,12 +554,12 @@ public class NoteServiceImpl implements NoteService{
 			String allLines = String.join("\n", csvData);
 			
 			Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
-			if(blankLinesMatcher.find()) {
+			if (blankLinesMatcher.find()) {
 				allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, "");
 			}
 			
 			Matcher linesBreakMatcher = Pattern.compile(REMOVE_LINE_BREAK_PATTERN).matcher(allLines);
-			if(linesBreakMatcher.find()) {
+			if (linesBreakMatcher.find()) {
 				allLines = allLines.replaceAll(REMOVE_LINE_BREAK_PATTERN, " CT");
 			}
 			
@@ -508,64 +569,163 @@ public class NoteServiceImpl implements NoteService{
 			}
 			
 			Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(allLines);
-			if(correctHorseNameMatcher.find()) {
+			if (correctHorseNameMatcher.find()) {
 				allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
 			}
 			
 			Matcher trimHorseNameMatcher = Pattern.compile(TRIM_HORSE_NAME_PATTERN).matcher(allLines);
-			if(trimHorseNameMatcher.find()) {
+			if (trimHorseNameMatcher.find()) {
 				allLines = allLines.replaceAll(TRIM_HORSE_NAME_PATTERN, "");
 			}
 			
 			Matcher correctHorseLinePattern = Pattern.compile(MOVE_HORSE_TO_CORRECT_LINE_PATTERN).matcher(allLines);
-			if(correctHorseLinePattern.find()) {
+			if (correctHorseLinePattern.find()) {
 				allLines = allLines.replaceAll(MOVE_HORSE_TO_CORRECT_LINE_PATTERN, "$1,");
 			}
 			
+			Matcher removeUnnecessaryData = Pattern.compile(REMOVE_UNNECESSARY_HEADER_FOOTER).matcher(allLines);
+			if (removeUnnecessaryData.find()) {
+				allLines = allLines.replaceAll(REMOVE_UNNECESSARY_HEADER_FOOTER, "");
+			}
+			
 			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\prepared-ownership.csv";
+			
+			FileOutputStream fos = null;
 			try {
 				File file = new File(path);
-				FileOutputStream os = new FileOutputStream(file);
-				os.write(allLines.getBytes());
+				fos = new FileOutputStream(file);
+				fos.write(allLines.getBytes());
+				fos.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} finally {
+				try {
+					if (fos != null)
+						fos.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+			
+			String[][] data = readCSVTo2DArray(path, false);
+			
+			List<Integer> rowHasValueIndex = new ArrayList<>();
+			Set<Integer> setAllIndexes = new HashSet<>();
+			Set<Integer> isEmptyIndexes = new HashSet<>();
+			int dateIndex = -1;
+			int gstIndex = -1;
+			
+			for (int i = 0; i < data.length; i++) {
+				for (int j = 0; j < data[i].length; j++) {
+					setAllIndexes.add(j);
+					
+					if (data[i][j].equalsIgnoreCase("")) {
+						isEmptyIndexes.add(j);
+					}
+					
+					//append date header
+					if (isValid(data[i][j])) {
+						dateIndex = j;
+						data[0][dateIndex] = "Added Date";
+					}
+					
+					if (data[i][j].equals("N") || data[i][j].equals("Y")) {
+						gstIndex = j;
+					}
+				}
+			}
+			
+			//Append Header
+			StringBuilder gstString =  new StringBuilder();
+			for (int i = 0; i < data.length; i++) {
+				gstString.append(data[i][gstIndex]);
+			}
+			String distinctGST = gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
+			if (distinctGST.matches("(YN)|(NY)")) {
+				data[0][gstIndex] = "GST";
+			}
+			data[0][0] = "Horse";
+			
+			setAllIndexes.removeAll(isEmptyIndexes);
+			
+			for (Integer index : isEmptyIndexes) {
+				StringBuilder isEmptyString = new StringBuilder();
+				
+				for (int l = 0; l < data.length; l++) {
+					isEmptyString.append(data[l][index]);
+				}
+				
+				if (!isEmptyString.toString().equals("")) {
+					rowHasValueIndex.add(index);
+				}
+			}
+			
+			setAllIndexes.addAll(rowHasValueIndex);
+			
+			List<Integer> allIndexes = new ArrayList<>(setAllIndexes);
+			
+			try {
+				StringBuilder arrayBuilder = new StringBuilder();
+				for (int i = 0; i < data.length; i++) {
+					for (int j = 0; j < data[i].length; j++) {
+						arrayBuilder.append(data[i][j]);
+						if (j < data.length - 1) {
+							arrayBuilder.append(",");
+						}
+					}
+					arrayBuilder.append("\n");//append new line at the end of the row
+				}
+				
+				BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+				writer.write(arrayBuilder.toString());
+				writer.close();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 			
+			//read with header
+			List<String> csvDataWithBankColumns = this.getCsvDataFromPath(path, false);
+			
+			StringBuilder builder = new StringBuilder();
+			for (String line : csvDataWithBankColumns) {
+				String[] r = OnboardHelper.readCsvLine(line);
+				
+				StringBuilder rowBuilder = new StringBuilder();
+				for (Integer index : allIndexes) {
+					rowBuilder.append(r[index]).append(",");
+				}
+				rowBuilder.append("\n");
+				builder.append(rowBuilder);
+			}
+			
+			
+			try {
+				File file = new File(path);
+				
+				FileOutputStream os = new FileOutputStream(file);
+				os.write(builder.toString().getBytes());
+				os.flush();
+				os.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			Path filePath = Paths.get(path);
+			String name = "prepared-ownership";
+			byte[] content = null;
+			try {
+				content = Files.readAllBytes(filePath);
+			} catch (final IOException e) {
+				e.printStackTrace();
+			}
+			MultipartFile ownershipMultipart = new MockMultipartFile(name, content);
+			automateImportOwnerShip(ownershipMultipart);
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
 		return null;
-	}
-	
-	public static List<String> removeTheElement(List<String> arr,
-	                                     int index)
-	{
-		
-		// If the array is empty
-		// or the index is not in array range
-		// return the original array
-		if (arr == null
-				|| index < 0
-				|| index >= arr.size()) {
-			
-			return arr;
-		}
-		
-		// return the resultant array
-		return Collections.singletonList(arr.remove(index));
-	}
-	
-	private static String removeByIndex(String str, int index) {
-		return new StringBuilder(str).deleteCharAt(index).toString();
-	}
-	
-	public static void main(String[] args) {
-		String text = "anh,lan,,ho";
-		List<String> myList = new ArrayList<String>(Arrays.asList(text.split(",")));
-		List<String> old = removeTheElement(myList,3);
-		myList.removeAll(old);
-		String str = Arrays.toString(myList.toArray());
-		System.out.println(str);
 	}
 	
 }

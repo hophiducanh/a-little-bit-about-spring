@@ -32,4 +32,5 @@ dependencies {
     compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.17'
     implementation 'org.jsoup:jsoup:1.12.1'
     implementation 'com.opencsv:opencsv:4.6'
+    compile group: 'org.springframework', name: 'spring-test', version: '3.1.1.RELEASE'
 }
