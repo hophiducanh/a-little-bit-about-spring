@@ -2,6 +2,7 @@ package com.tellyouiam.alittlebitaboutspring.rest;
 
 import com.tellyouiam.alittlebitaboutspring.dto.Note;
 import com.tellyouiam.alittlebitaboutspring.service.NoteService;
+import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -79,7 +80,12 @@ public class NoteController {
 	@RequestMapping(value = "/owner/prepared-ownership", method = RequestMethod.POST)
 	@ResponseBody
 	public final ResponseEntity<Object> prepareOwnership(@RequestPart MultipartFile ownershipFile) {
-		Object result = noteService.prepareOwnership(ownershipFile);
+		Object result = null;
+		try {
+			result = noteService.prepareOwnership(ownershipFile);
+		} catch (CustomException e) {
+			e.printStackTrace();
+		}
 		
 		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}

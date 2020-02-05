@@ -1,8 +1,12 @@
 package com.tellyouiam.alittlebitaboutspring.service;
 
+import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
+import com.tellyouiam.alittlebitaboutspring.utils.ErrorInfo;
 import com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -21,11 +25,18 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -34,6 +45,7 @@ import java.util.stream.Collectors;
 @Service
 public class NoteServiceImpl implements NoteService {
 	
+	Logger logger = LoggerFactory.getLogger(NoteServiceImpl.class);
 	
 	private int check(String[] arr, String... valuesToCheck) {
 		int index;
@@ -105,13 +117,10 @@ public class NoteServiceImpl implements NoteService {
 	
 	private static boolean isValid(String dateStr) {
 		Matcher dateMatcher = Pattern.compile(IS_INSTANCEOF_DATE).matcher(dateStr);
-		if (dateMatcher.matches()) {
-			return true;
-		}
-		return false;
+		return dateMatcher.matches();
 	}
 	
-	public static String[][] readCSVTo2DArray(String path, boolean ignoreHeader) throws FileNotFoundException, IOException {
+	private static String[][] readCSVTo2DArray(String path, boolean ignoreHeader) throws FileNotFoundException, IOException {
 		try (FileReader fr = new FileReader(path);
 		     BufferedReader br = new BufferedReader(fr)) {
 			Collection<String[]> lines = new ArrayList<>();
@@ -139,8 +148,8 @@ public class NoteServiceImpl implements NoteService {
 				return phone;
 			} else {
 				System.out.println("Invalid Phone Number: " + phone);
+				return "";
 			}
-			return "";
 		}
 	}
 	
@@ -331,15 +340,7 @@ public class NoteServiceImpl implements NoteService {
 					String name = OnboardHelper.readCsvRow(r, nameIndex);
 					
 					String foaled = OnboardHelper.readCsvRow(r, foaledIndex);
-//					if(!isDMYformat) {
-//						DateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");
-//						formatter.setLenient(false);
-//						try {
-//							Date date= formatter.parse(foaled);
-//						} catch (ParseException e) {
-//							//If input date is in different format or invalid.
-//						}
-//					}
+
 					
 					String sire = OnboardHelper.readCsvRow(r, sireIndex);
 					String dam = OnboardHelper.readCsvRow(r, damIndex);
@@ -407,6 +408,266 @@ public class NoteServiceImpl implements NoteService {
 		return null;
 	}
 	
+	private static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
+	private static final String REMOVE_LINE_BREAK_PATTERN = "\nCT";
+	private static final String REMOVE_INVALID_SHARES_PATTERN = "Int.Party";
+	private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\(\\s.*";
+	private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
+	private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\\n,(?=([\\d]{1,3})?(\\.)?([\\d]{1,2})?%)";
+	private static final String REMOVE_UNNECESSARY_HEADER_FOOTER = "(?m)^(?!,Share).*(?<!([YN]))(,)?$(\\n)?";
+	private static final String IS_INSTANCEOF_DATE = "([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
+	private static final String EXTRACT_DEPARTED_DATE_OF_HORSE =
+			"(?m)^([^,].*)\\s\\(\\s.*([\\s]+)([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
+	private static final String EXTRACT_OWNERSHIP_EXPORTED_DATE =
+			"(?m)(Printed[:\\s]+)([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
+	
+	private static final String IS_DATE_MONTH_YEAR_FORMAT = "^(?:(?:31([/\\-.])(?:0?[13578]|1[02]))\\1|" +
+			"(?:(?:29|30)([/\\-.])(?:0?[13-9]|1[0-2])\\2))(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$|" +
+			"^(?:29([/\\-.])0?2\\3(?:(?:1[6-9]|[2-9]\\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00)))$|" +
+			"^(?:0?[1-9]|1\\d|2[0-8])([/\\-.])(?:(?:0?[1-9])|(?:1[0-2]))\\4(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$";
+	
+	private static final String IS_MONTH_DATE_YEAR_FORMAT = "^(?:(?:(?:0?[13578]|1[02])([/\\-.])31)\\1|" +
+			"(?:(?:0?[13-9]|1[0-2])([/\\-.])(?:29|30)\\2))(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$|" +
+			"^(?:0?2([/\\-.])29\\3(?:(?:1[6-9]|[2-9]\\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00)))$|" +
+			"^(?:(?:0?[1-9])|(?:1[0-2]))([/\\-.])(?:0?[1-9]|1\\d|2[0-8])\\4(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$";
+	
+	private static final String IS_FILE_START_WITH_CORRECT_PREFIX = ",Share %";
+	
+	@Override
+	public Object prepareOwnership(MultipartFile ownershipFile) throws CustomException {
+		try {
+			List<String> csvData = this.getCsvData(ownershipFile);
+			String allLines = String.join("\n", csvData);
+			
+			String exportedDate = null;
+			Matcher exportedDateMatcher = Pattern.compile(EXTRACT_OWNERSHIP_EXPORTED_DATE).matcher(allLines);
+			if (exportedDateMatcher.find()) {
+				exportedDate = exportedDateMatcher.group(2).trim();
+			}
+			
+			Matcher departedDateMatcher = Pattern.compile(EXTRACT_DEPARTED_DATE_OF_HORSE).matcher(allLines);
+			Map<String, LinkedHashSet<String>> horseData = new HashMap<>();
+			LinkedHashSet<String> horseNameList = new LinkedHashSet<>();
+			LinkedHashSet<String> horseDateList = new LinkedHashSet<>();
+			
+			while (departedDateMatcher.find()) {
+				String horseName = departedDateMatcher.group(1).trim();
+				String horseDepartedDate = departedDateMatcher.group(3).trim();
+				
+				horseNameList.add(horseName);
+				horseNameList.add(horseDepartedDate);
+			}
+			horseData.put("HorseName", horseNameList);
+			horseData.put("DepartedDate", horseDateList);
+			
+			System.out.println(horseData);
+			Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
+			if (blankLinesMatcher.find()) {
+				allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, "");
+			} else {
+				throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+			}
+			
+			Matcher linesBreakMatcher = Pattern.compile(REMOVE_LINE_BREAK_PATTERN).matcher(allLines);
+			if (linesBreakMatcher.find()) {
+				allLines = allLines.replaceAll(REMOVE_LINE_BREAK_PATTERN, " CT");
+			} else {
+				throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+			}
+			
+			//optional
+			Matcher invalidSharesMatcher = Pattern.compile(REMOVE_INVALID_SHARES_PATTERN).matcher(allLines);
+			if (invalidSharesMatcher.find()) {
+				allLines = allLines.replaceAll(REMOVE_INVALID_SHARES_PATTERN, "0%");
+			} else {
+				logger.info("Cannot apply regex: {}... for ownership file", REMOVE_INVALID_SHARES_PATTERN);
+			}
+			
+			Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(allLines);
+			if (correctHorseNameMatcher.find()) {
+				allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
+			} else {
+				throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+			}
+			
+			Matcher trimHorseNameMatcher = Pattern.compile(TRIM_HORSE_NAME_PATTERN).matcher(allLines);
+			if (trimHorseNameMatcher.find()) {
+				allLines = allLines.replaceAll(TRIM_HORSE_NAME_PATTERN, "");
+			} else {
+				throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+			}
+			
+			Matcher correctHorseLinePattern = Pattern.compile(MOVE_HORSE_TO_CORRECT_LINE_PATTERN).matcher(allLines);
+			if (correctHorseLinePattern.find()) {
+				allLines = allLines.replaceAll(MOVE_HORSE_TO_CORRECT_LINE_PATTERN, "$1,");
+			} else {
+				throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+			}
+			
+			Matcher removeUnnecessaryData = Pattern.compile(REMOVE_UNNECESSARY_HEADER_FOOTER).matcher(allLines);
+			if (removeUnnecessaryData.find()) {
+				allLines = allLines.replaceAll(REMOVE_UNNECESSARY_HEADER_FOOTER, "");
+			} else {
+				throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+			}
+			
+			int headerIndex = allLines.indexOf("\n");
+			if (!allLines.startsWith(IS_FILE_START_WITH_CORRECT_PREFIX)) {
+				logger.info("The first line of File after formatted with REGEX:\n{}", allLines.substring(0, headerIndex));
+				throw new CustomException(new ErrorInfo("File start with an incorrect prefix! Please check!"));
+			}
+			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\prepared-ownership.csv";
+			
+			FileOutputStream fos = null;
+			try {
+				File file = new File(path);
+				fos = new FileOutputStream(file);
+				fos.write(allLines.getBytes());
+				fos.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			String[][] data = readCSVTo2DArray(path, false);
+			
+			List<Integer> rowHasValueIndex = new ArrayList<>();
+			Set<Integer> setAllIndexes = new HashSet<>();
+			Set<Integer> isEmptyIndexes = new HashSet<>();
+			int dateIndex = -1;
+			int gstIndex = -1;
+			
+			//find all cells has empty columns.
+			for (int i = 0; i < data.length; i++) {
+				for (int j = 0; j < data[i].length; j++) {
+					setAllIndexes.add(j);
+					
+					if (data[i][j].equalsIgnoreCase("")) {
+						isEmptyIndexes.add(j);
+					}
+					
+					//append date header
+					if (isValid(data[i][j])) {
+						dateIndex = j;
+						data[0][dateIndex] = "Added Date";
+					}
+					
+					if (data[i][j].equals("N") || data[i][j].equals("Y")) {
+						gstIndex = j;
+					}
+				}
+			}
+			
+			//Append Header
+			StringBuilder gstString =  new StringBuilder();
+			for (String[] row : data) {
+				gstString.append(row[gstIndex]);
+			}
+			String distinctGST = gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
+			if (distinctGST.matches("(YN)|(NY)")) {
+				data[0][gstIndex] = "GST";
+			}
+			data[0][0] = "Horse";
+			
+			//remains columns always has data in all cells.
+			setAllIndexes.removeAll(isEmptyIndexes);
+			
+			//find all columns with at least one cell have data, except columns always has data in all cells.
+			for (Integer index : isEmptyIndexes) {
+				StringBuilder isEmptyString = new StringBuilder();
+				
+				for (String[] row : data) {
+					isEmptyString.append(row[index]);
+				}
+				
+				if (!isEmptyString.toString().equals("")) {
+					rowHasValueIndex.add(index);
+				}
+			}
+			
+			//Index of non-empty columns.
+			setAllIndexes.addAll(rowHasValueIndex);
+			
+			List<Integer> allIndexes = new ArrayList<>(setAllIndexes);
+			
+			try {
+				StringBuilder arrayBuilder = generateCsvDataToBuild(data);
+				
+				BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+				writer.write(arrayBuilder.toString());
+				writer.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			//read with header
+			List<String> csvDataWithBankColumns = this.getCsvDataFromPath(path, false);
+			
+			StringBuilder builder = new StringBuilder();
+			for (String line : csvDataWithBankColumns) {
+				String[] r = OnboardHelper.readCsvLine(line);
+				
+				StringBuilder rowBuilder = new StringBuilder();
+				for (Integer index : allIndexes) {
+					rowBuilder.append(r[index]).append(",");
+				}
+				rowBuilder.append("\n");
+				builder.append(rowBuilder);
+			}
+			
+			try {
+				File file = new File(path);
+				
+				FileOutputStream os = new FileOutputStream(file);
+				os.write(builder.toString().getBytes());
+				os.flush();
+				os.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			String[][] blankHorseNameData = readCSVTo2DArray(path, false);
+			
+			//fill empty horse cells with previous cell data.
+			for (int i = 1; i < blankHorseNameData.length;) {
+				if (StringUtils.isNotEmpty(blankHorseNameData[i][0])) {
+					for (int j = i + 1; j < blankHorseNameData.length; j++) {
+						if (StringUtils.isNotEmpty(blankHorseNameData[j][0])) {
+							i = j;
+							continue;
+						}
+						blankHorseNameData[j][0] = blankHorseNameData[i][0];
+					}
+				}
+				i++;
+			}
+			
+			try {
+				StringBuilder arrayBuilder = generateCsvDataToBuild(blankHorseNameData);
+				BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+				writer.write(arrayBuilder.toString());
+				writer.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			Path filePath = Paths.get(path);
+			String name = "pre-format.csv";
+			byte[] content = null;
+			try {
+				content = Files.readAllBytes(filePath);
+			} catch (final IOException e) {
+				e.printStackTrace();
+			}
+			MultipartFile ownershipMultipart = new MockMultipartFile(name, content);
+			automateImportOwnerShip(ownershipMultipart);
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return null;
+	}
+	
 	@Override
 	public Object automateImportOwnerShip(MultipartFile ownershipFile) {
 		try {
@@ -465,7 +726,7 @@ public class NoteServiceImpl implements NoteService {
 						"HorseId", "HorseName",
 						"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
 						"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-						"Country", "GST", "Share", "FromDate"
+						"Country", "GST", "Shares", "FromDate"
 				);
 				
 				builder.append(rowHeader);
@@ -493,7 +754,22 @@ public class NoteServiceImpl implements NoteService {
 					String country = OnboardHelper.readCsvRow(r, countryIndex);
 					String gst = OnboardHelper.readCsvRow(r, gstIndex);
 					String share = OnboardHelper.readCsvRow(r, shareIndex);
-					String addedDate = OnboardHelper.readCsvRow(r, addedDateIndex);
+					
+					String rawAddedDate = OnboardHelper.readCsvRow(r, addedDateIndex);
+					String addedDate ="";
+					if (rawAddedDate.matches(IS_DATE_MONTH_YEAR_FORMAT)) {
+						addedDate = rawAddedDate;
+					} else if (rawAddedDate.matches(IS_MONTH_DATE_YEAR_FORMAT)) {
+						DateTimeFormatter rawFormatter = DateTimeFormatter.ofPattern("MM/dd/yyyy");
+						DateTimeFormatter expectedFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+						try {
+							addedDate = LocalDate.parse(rawAddedDate, rawFormatter).format(expectedFormatter);
+						} catch (DateTimeParseException e) {
+							e.printStackTrace();
+						}
+					} else {
+						logger.info("UNKNOWN TYPE OF DATE: {}", rawAddedDate);
+					}
 					
 					String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 							StringHelper.csvValue(horseId),
@@ -538,194 +814,18 @@ public class NoteServiceImpl implements NoteService {
 		return null;
 	}
 	
-	private static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
-	private static final String REMOVE_LINE_BREAK_PATTERN = "\nCT";
-	private static final String REMOVE_INVALID_SHARES_PATTERN = "Int.Party";
-	private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\(\\s.*";
-	private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
-	private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\\n,(?=([\\d]{1,3})?(\\.)?([\\d]{1,2})?%)";
-	private static final String REMOVE_UNNECESSARY_HEADER_FOOTER = "(?m)^(?!,Share).*(?<!(Y,|N,))$(\\n)?";
-	private static final String IS_INSTANCEOF_DATE = "([0-9]{0,2}/[0-9]{0,2}/[0-9]{0,4})";
-	
-	@Override
-	public Object prepareOwnership(MultipartFile ownershipFile) {
-		try {
-			List<String> csvData = this.getCsvData(ownershipFile);
-			String allLines = String.join("\n", csvData);
-			
-			Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
-			if (blankLinesMatcher.find()) {
-				allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, "");
-			}
-			
-			Matcher linesBreakMatcher = Pattern.compile(REMOVE_LINE_BREAK_PATTERN).matcher(allLines);
-			if (linesBreakMatcher.find()) {
-				allLines = allLines.replaceAll(REMOVE_LINE_BREAK_PATTERN, " CT");
-			}
-			
-			Matcher invalidSharesMatcher = Pattern.compile(REMOVE_INVALID_SHARES_PATTERN).matcher(allLines);
-			if (invalidSharesMatcher.find()) {
-				allLines = allLines.replaceAll(REMOVE_INVALID_SHARES_PATTERN, "0%");
-			}
-			
-			Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(allLines);
-			if (correctHorseNameMatcher.find()) {
-				allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
-			}
-			
-			Matcher trimHorseNameMatcher = Pattern.compile(TRIM_HORSE_NAME_PATTERN).matcher(allLines);
-			if (trimHorseNameMatcher.find()) {
-				allLines = allLines.replaceAll(TRIM_HORSE_NAME_PATTERN, "");
-			}
-			
-			Matcher correctHorseLinePattern = Pattern.compile(MOVE_HORSE_TO_CORRECT_LINE_PATTERN).matcher(allLines);
-			if (correctHorseLinePattern.find()) {
-				allLines = allLines.replaceAll(MOVE_HORSE_TO_CORRECT_LINE_PATTERN, "$1,");
-			}
-			
-			Matcher removeUnnecessaryData = Pattern.compile(REMOVE_UNNECESSARY_HEADER_FOOTER).matcher(allLines);
-			if (removeUnnecessaryData.find()) {
-				allLines = allLines.replaceAll(REMOVE_UNNECESSARY_HEADER_FOOTER, "");
-			}
-			
-			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\prepared-ownership.csv";
-			
-			FileOutputStream fos = null;
-			try {
-				File file = new File(path);
-				fos = new FileOutputStream(file);
-				fos.write(allLines.getBytes());
-				fos.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			} finally {
-				try {
-					if (fos != null)
-						fos.close();
-				} catch (IOException e) {
-					e.printStackTrace();
+	private StringBuilder generateCsvDataToBuild(String[][] source) {
+		StringBuilder arrayBuilder = new StringBuilder();
+		for (String[] row : source) {
+			for (int j = 0; j < row.length; j++) {
+				arrayBuilder.append(row[j]);
+				if (j < source.length - 1) {
+					arrayBuilder.append(",");
 				}
 			}
-			
-			String[][] data = readCSVTo2DArray(path, false);
-			
-			List<Integer> rowHasValueIndex = new ArrayList<>();
-			Set<Integer> setAllIndexes = new HashSet<>();
-			Set<Integer> isEmptyIndexes = new HashSet<>();
-			int dateIndex = -1;
-			int gstIndex = -1;
-			
-			for (int i = 0; i < data.length; i++) {
-				for (int j = 0; j < data[i].length; j++) {
-					setAllIndexes.add(j);
-					
-					if (data[i][j].equalsIgnoreCase("")) {
-						isEmptyIndexes.add(j);
-					}
-					
-					//append date header
-					if (isValid(data[i][j])) {
-						dateIndex = j;
-						data[0][dateIndex] = "Added Date";
-					}
-					
-					if (data[i][j].equals("N") || data[i][j].equals("Y")) {
-						gstIndex = j;
-					}
-				}
-			}
-			
-			//Append Header
-			StringBuilder gstString =  new StringBuilder();
-			for (int i = 0; i < data.length; i++) {
-				gstString.append(data[i][gstIndex]);
-			}
-			String distinctGST = gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
-			if (distinctGST.matches("(YN)|(NY)")) {
-				data[0][gstIndex] = "GST";
-			}
-			data[0][0] = "Horse";
-			
-			setAllIndexes.removeAll(isEmptyIndexes);
-			
-			for (Integer index : isEmptyIndexes) {
-				StringBuilder isEmptyString = new StringBuilder();
-				
-				for (int l = 0; l < data.length; l++) {
-					isEmptyString.append(data[l][index]);
-				}
-				
-				if (!isEmptyString.toString().equals("")) {
-					rowHasValueIndex.add(index);
-				}
-			}
-			
-			setAllIndexes.addAll(rowHasValueIndex);
-			
-			List<Integer> allIndexes = new ArrayList<>(setAllIndexes);
-			
-			try {
-				StringBuilder arrayBuilder = new StringBuilder();
-				for (int i = 0; i < data.length; i++) {
-					for (int j = 0; j < data[i].length; j++) {
-						arrayBuilder.append(data[i][j]);
-						if (j < data.length - 1) {
-							arrayBuilder.append(",");
-						}
-					}
-					arrayBuilder.append("\n");//append new line at the end of the row
-				}
-				
-				BufferedWriter writer = new BufferedWriter(new FileWriter(path));
-				writer.write(arrayBuilder.toString());
-				writer.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
-			//read with header
-			List<String> csvDataWithBankColumns = this.getCsvDataFromPath(path, false);
-			
-			StringBuilder builder = new StringBuilder();
-			for (String line : csvDataWithBankColumns) {
-				String[] r = OnboardHelper.readCsvLine(line);
-				
-				StringBuilder rowBuilder = new StringBuilder();
-				for (Integer index : allIndexes) {
-					rowBuilder.append(r[index]).append(",");
-				}
-				rowBuilder.append("\n");
-				builder.append(rowBuilder);
-			}
-			
-			
-			try {
-				File file = new File(path);
-				
-				FileOutputStream os = new FileOutputStream(file);
-				os.write(builder.toString().getBytes());
-				os.flush();
-				os.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			
-			Path filePath = Paths.get(path);
-			String name = "prepared-ownership";
-			byte[] content = null;
-			try {
-				content = Files.readAllBytes(filePath);
-			} catch (final IOException e) {
-				e.printStackTrace();
-			}
-			MultipartFile ownershipMultipart = new MockMultipartFile(name, content);
-			automateImportOwnerShip(ownershipMultipart);
-			
-		} catch (IOException e) {
-			e.printStackTrace();
+			arrayBuilder.append("\n");//append new line at the end of the row
 		}
-		
-		return null;
+		return arrayBuilder;
 	}
 	
 }

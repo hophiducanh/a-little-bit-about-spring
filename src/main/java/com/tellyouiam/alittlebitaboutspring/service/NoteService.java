@@ -1,5 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.service;
 
+import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,5 +13,5 @@ public interface NoteService {
 	
 	Object automateImportOwnerShip(MultipartFile horseFile);
 	
-	Object prepareOwnership(MultipartFile ownershipFile);
+	Object prepareOwnership(MultipartFile ownershipFile) throws CustomException;
 }
