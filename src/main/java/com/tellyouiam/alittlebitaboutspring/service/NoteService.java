@@ -9,7 +9,7 @@ public interface NoteService {
 	
 	Object automateImportOwner(MultipartFile ownerFile);
 	
-	Object automateImportHorse(MultipartFile horseFile);
+	Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile) throws CustomException;
 	
 	Object automateImportOwnerShip(MultipartFile horseFile);
 	

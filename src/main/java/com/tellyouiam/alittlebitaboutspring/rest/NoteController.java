@@ -63,8 +63,14 @@ public class NoteController {
 	
 	@RequestMapping(value = "/owner/automate-import-horse", method = RequestMethod.POST)
 	@ResponseBody
-	public final ResponseEntity<Object> automateImportHorse(@RequestPart MultipartFile horseFile) {
-		Object result = noteService.automateImportHorse(horseFile);
+	public final ResponseEntity<Object> automateImportHorse(@RequestPart MultipartFile horseFile,
+                                                            @RequestPart MultipartFile ownershipFile) {
+		Object result = null;
+		try {
+			result = noteService.automateImportHorse(horseFile, ownershipFile);
+		} catch (CustomException e) {
+			e.printStackTrace();
+		}
 		
 		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}

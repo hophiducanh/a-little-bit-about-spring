@@ -25,18 +25,23 @@ import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -276,7 +281,18 @@ public class NoteServiceImpl implements NoteService {
 		return null;
 	}
 	
-	public Object automateImportHorse(MultipartFile horseFile) {
+	public Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile) throws CustomException {
+		Map<String, Object> result = (Map<String, Object>) this.prepareOwnership(ownershipFile);
+		
+		String exportedDateStr = String.valueOf(result.get("ExportedDate"));
+		Date exportedDate = null;
+		SimpleDateFormat formatter = new SimpleDateFormat("dd/MM/yyyy");
+		try {
+			exportedDate = formatter.parse(exportedDateStr);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		
 		try {
 			List<String> csvData = this.getCsvData(horseFile);
 			csvData = csvData.stream().filter(org.apache.commons.lang3.StringUtils::isNotEmpty).collect(Collectors.toList());
@@ -304,7 +320,7 @@ public class NoteServiceImpl implements NoteService {
 				String[] header = OnboardHelper.readCsvLine(csvData.get(0));
 				
 				int externalIdIndex = check(header, "ExternalId");
-				int nameIndex = check(header, "Horse Name", "Name");
+				int nameIndex = check(header, "Horse Name", "Name", "Horse");
 				int foaledIndex = check(header, "DOB", "foaled");
 				int sireIndex = check(header, "Sire");
 				int damIndex = check(header, "Dam");
@@ -321,7 +337,6 @@ public class NoteServiceImpl implements NoteService {
 				int nickNameIndex = check(header, "Nick Name", "NickName");
 				
 				int daysHereIndex = check(header, "Days Here", "Days");
-				int weeksHereIndex = check(header, "Weeks Here", "Weeks");
 				
 				String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 						"ExternalId", "Name", "Foaled", "Sire", "Dam", "Color",
@@ -333,29 +348,53 @@ public class NoteServiceImpl implements NoteService {
 				builder.append(rowHeader);
 				
 				csvData = csvData.stream().skip(1).collect(Collectors.toList());
+				
+				Map<String, String> horseMap = new LinkedHashMap<>();
+				Map<String, String> horseOwnershipMap = (Map<String, String>) result.get("HorseDataMap");
+				System.out.println(horseOwnershipMap);
+				int count = 0;
 				for (String line : csvData) {
+					count++;
+					
+					if (count == csvData.size()) {
+						logger.info("Footer Date: {}", line);
+						continue;
+					}
+					if (StringUtils.isEmpty(line)) continue;
 					String[] r = OnboardHelper.readCsvLine(line);
 					
 					String externalId = OnboardHelper.readCsvRow(r, externalIdIndex);
 					String name = OnboardHelper.readCsvRow(r, nameIndex);
 					
-					String foaled = OnboardHelper.readCsvRow(r, foaledIndex);
-
+					if (StringUtils.isEmpty(name)) continue;
 					
+					logger.info("Horse Name: {}", name);
+					String foaled = OnboardHelper.readCsvRow(r, foaledIndex);
 					String sire = OnboardHelper.readCsvRow(r, sireIndex);
 					String dam = OnboardHelper.readCsvRow(r, damIndex);
+					
+					if (StringUtils.isEmpty(name) && StringUtils.isEmpty(sire) && StringUtils.isEmpty(dam)
+							&& StringUtils.isEmpty(foaled)) continue;
+					
 					String color = OnboardHelper.readCsvRow(r, colorIndex);
 					String sex = OnboardHelper.readCsvRow(r, sexIndex);
-					
 					String avatar = OnboardHelper.readCsvRow(r, avatarIndex);
 					
 					String dayHere = OnboardHelper.readCsvRow(r, daysHereIndex);
-					String weekHere = OnboardHelper.readCsvRow(r, weeksHereIndex);
 					
-					String addedDate = "";
-					if (StringUtils.isEmpty(dayHere) && StringUtils.isEmpty(weekHere)) {
-						addedDate = "";
+					long minusDays = StringUtils.isNotEmpty(dayHere) ? Long.parseLong(dayHere) : 0;
+					LocalDateTime exportedLocalDate = LocalDateTime.ofInstant(Objects.requireNonNull(exportedDate).toInstant(), ZoneId.systemDefault());
+					LocalDateTime dateAtFirstLocation = exportedLocalDate.minusDays(minusDays);
+					Date addedDate = Date.from(dateAtFirstLocation.atZone(ZoneId.systemDefault()).toInstant());
+					
+					SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
+					String addedDateStr = dateFormat.format(addedDate);
+					
+					if (!addedDateStr.matches(IS_DATE_MONTH_YEAR_FORMAT)) {
+						logger.info("UNKNOWN TYPE OF DATE: {}", addedDateStr);
 					}
+					
+					horseMap.put(name, addedDateStr);
 					
 					String activeStatus = OnboardHelper.readCsvRow(r, activeStatusIndex);
 					
@@ -375,7 +414,7 @@ public class NoteServiceImpl implements NoteService {
 							StringHelper.csvValue(color),
 							StringHelper.csvValue(sex),
 							StringHelper.csvValue(avatar),
-							StringHelper.csvValue(addedDate),
+							StringHelper.csvValue(addedDateStr),
 							StringHelper.csvValue(activeStatus),
 							StringHelper.csvValue(currentLocation),
 							StringHelper.csvValue(currentStatus),
@@ -386,9 +425,10 @@ public class NoteServiceImpl implements NoteService {
 					);
 					builder.append(rowBuilder);
 				}
+				System.out.println(horseMap);
 			}
 			
-			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-horse.csv";
+			String path = "/home/logbasex/Desktop/data/formatted-horse.csv";
 			try {
 				File file = new File(path);
 //				file.setWritable(true);
@@ -435,6 +475,8 @@ public class NoteServiceImpl implements NoteService {
 	
 	@Override
 	public Object prepareOwnership(MultipartFile ownershipFile) throws CustomException {
+		Map<String, Object> result = new HashMap<>();
+		
 		try {
 			List<String> csvData = this.getCsvData(ownershipFile);
 			String allLines = String.join("\n", csvData);
@@ -446,21 +488,28 @@ public class NoteServiceImpl implements NoteService {
 			}
 			
 			Matcher departedDateMatcher = Pattern.compile(EXTRACT_DEPARTED_DATE_OF_HORSE).matcher(allLines);
-			Map<String, LinkedHashSet<String>> horseData = new HashMap<>();
-			LinkedHashSet<String> horseNameList = new LinkedHashSet<>();
-			LinkedHashSet<String> horseDateList = new LinkedHashSet<>();
+			
+			Map<String, String> horseDataMap = new LinkedHashMap<>();
+			List<String> horseDataList = new ArrayList<>();
 			
 			while (departedDateMatcher.find()) {
 				String horseName = departedDateMatcher.group(1).trim();
 				String horseDepartedDate = departedDateMatcher.group(3).trim();
 				
-				horseNameList.add(horseName);
-				horseNameList.add(horseDepartedDate);
+				if(StringUtils.isEmpty(horseName)) {
+					continue;
+				}
+				
+				if(StringUtils.isEmpty(horseDepartedDate)) {
+					logger.info("Horse without departed date: {}", horseName);
+				}
+				horseDataMap.put(horseName, horseDepartedDate);
+				horseDataList.add(horseName + ": " + horseDepartedDate);
 			}
-			horseData.put("HorseName", horseNameList);
-			horseData.put("DepartedDate", horseDateList);
 			
-			System.out.println(horseData);
+			result.put("HorseDataMap", horseDataMap);
+			result.put("HorseDataList", horseDataList);
+			result.put("ExportedDate", exportedDate);
 			Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
 			if (blankLinesMatcher.find()) {
 				allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, "");
@@ -516,7 +565,8 @@ public class NoteServiceImpl implements NoteService {
 				logger.info("The first line of File after formatted with REGEX:\n{}", allLines.substring(0, headerIndex));
 				throw new CustomException(new ErrorInfo("File start with an incorrect prefix! Please check!"));
 			}
-			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\prepared-ownership.csv";
+//			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\prepared-ownership.csv";
+			String path = "/home/logbasex/Desktop/data/prepared-ownership.csv";
 			
 			FileOutputStream fos = null;
 			try {
@@ -665,7 +715,7 @@ public class NoteServiceImpl implements NoteService {
 			e.printStackTrace();
 		}
 		
-		return null;
+		return result;
 	}
 	
 	@Override
@@ -797,7 +847,7 @@ public class NoteServiceImpl implements NoteService {
 				}
 			}
 			
-			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-ownership.csv";
+			String path = "/home/logbasex/Desktop/data/formatted-ownership.csv";
 			try {
 				File file = new File(path);
 				
