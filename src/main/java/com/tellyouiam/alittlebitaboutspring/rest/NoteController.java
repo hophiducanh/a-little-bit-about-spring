@@ -64,7 +64,7 @@ public class NoteController {
 	@RequestMapping(value = "/owner/automate-import-horse", method = RequestMethod.POST)
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportHorse(@RequestPart MultipartFile horseFile,
-                                                            @RequestPart MultipartFile ownershipFile) {
+                                                            @RequestPart(required = false) MultipartFile ownershipFile) {
 		Object result = null;
 		try {
 			result = noteService.automateImportHorse(horseFile, ownershipFile);
