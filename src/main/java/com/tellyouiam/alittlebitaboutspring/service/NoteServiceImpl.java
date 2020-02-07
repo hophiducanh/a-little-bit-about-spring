@@ -33,7 +33,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -284,10 +283,18 @@ public class NoteServiceImpl implements NoteService {
 	}
 	
 	public Object importHorseFromMiStable(MultipartFile horseFile) {
+		
 		try {
+			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-horse.csv";
+			
 			List<String> csvData = this.getCsvData(horseFile);
 			csvData = csvData.stream().filter(org.apache.commons.lang3.StringUtils::isNotEmpty).collect(Collectors.toList());
 			StringBuilder builder = new StringBuilder();
+			
+			StringBuilder addedDateBuilder = new StringBuilder();
+			StringBuilder activeStatusBuilder = new StringBuilder();
+			StringBuilder currentLocationBuilder = new StringBuilder();
+			
 			if (!CollectionUtils.isEmpty(csvData)) {
 				
 				// read from horse file first, standard columns order:
@@ -346,22 +353,23 @@ public class NoteServiceImpl implements NoteService {
 					String rawFoaled = OnboardHelper.readCsvRow(r, foaledIndex);
 					String foaled = StringUtils.EMPTY;
 					
-					if (StringUtils.isEmpty(rawFoaled)) {
-						rawFoaled = foaled;
-					} else if (rawFoaled.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-						foaled = rawFoaled;
-					} else if (rawFoaled.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
-						DateTimeFormatter expectedFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-						DateTimeFormatter rawFormatter = new DateTimeFormatterBuilder()
-								.appendOptional(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
-								.appendOptional(DateTimeFormatter.ofPattern("M/dd/yyyy"))
-								.appendOptional(DateTimeFormatter.ofPattern("MM/d/yyyy"))
-								.appendOptional(DateTimeFormatter.ofPattern("M/d/yyyy"))
-								.toFormatter();
+					if (StringUtils.isNotEmpty(rawFoaled)) {
 						
-						foaled = LocalDate.parse(rawFoaled, rawFormatter).format(expectedFormatter);
-					} else {
-						logger.info("UNKNOWN TYPE OF DATE: {} in line : {}" , foaled, line);
+						if (rawFoaled.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
+							foaled = rawFoaled;
+						} else if (rawFoaled.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
+							DateTimeFormatter expectedFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+							DateTimeFormatter rawFormatter = new DateTimeFormatterBuilder()
+									.appendOptional(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
+									.appendOptional(DateTimeFormatter.ofPattern("M/dd/yyyy"))
+									.appendOptional(DateTimeFormatter.ofPattern("MM/d/yyyy"))
+									.appendOptional(DateTimeFormatter.ofPattern("M/d/yyyy"))
+									.toFormatter();
+							
+							foaled = LocalDate.parse(rawFoaled, rawFormatter).format(expectedFormatter);
+						} else {
+							logger.info("UNKNOWN TYPE OF DATE: {} in line : {}", foaled, line);
+						}
 					}
 					
 					String sire = OnboardHelper.readCsvRow(r, sireIndex);
@@ -372,10 +380,14 @@ public class NoteServiceImpl implements NoteService {
 					String avatar = OnboardHelper.readCsvRow(r, avatarIndex);
 					
 					String addedDate = OnboardHelper.readCsvRow(r, addedDateIndex);
+					addedDateBuilder.append(addedDate);
 					
 					String activeStatus = OnboardHelper.readCsvRow(r, activeStatusIndex);
+					addedDateBuilder.append(activeStatus);
 					
 					String currentLocation = OnboardHelper.readCsvRow(r, horseLocationIndex);
+					addedDateBuilder.append(currentLocation);
+					
 					String currentStatus = OnboardHelper.readCsvRow(r, horseStatusIndex);
 					String type = OnboardHelper.readCsvRow(r, typeIndex);
 					String category = OnboardHelper.readCsvRow(r, categoryIndex);
@@ -402,9 +414,64 @@ public class NoteServiceImpl implements NoteService {
 					);
 					builder.append(rowBuilder);
 				}
+				
+				//Address case addedDate, activeStatus and current location in horse file are empty.
+				// We will face an error if we keep this data intact.
+				if(StringUtils.isAllEmpty(addedDateBuilder, activeStatusBuilder, currentLocationBuilder)) {
+					logger.warn("All of AddedDate && ActiveStatus && CurrentLocation can't be empty. At least addedDate required.");
+					
+					List<String> formattedData = StringHelper.convertStringBuilderToList(builder);
+					StringBuilder dataBuilder = new StringBuilder();
+					
+					String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+					if (!CollectionUtils.isEmpty(formattedData)) {
+						String[] formattedHeader = OnboardHelper.readCsvLine(formattedData.get(0));
+						
+						//Get addedDate index from header
+						int addedDateOrdinal = check(formattedHeader, "AddedDate");
+						
+						//Append a header at first line of StringBuilder data to write to file.
+						dataBuilder.append(formattedData.get(0)).append("\n");
+						
+						//process data ignore header
+						for (String line : formattedData.stream().skip(1).collect(Collectors.toList())) {
+							
+							String[] row = OnboardHelper.readCsvLine(line);
+							
+							for (int i = 0; i < row.length; i++) {
+								
+								//replace empty addedDate with current date.
+								if(i == addedDateOrdinal) {
+									row[addedDateOrdinal] = currentDate;
+									dataBuilder.append(row[i]).append(",");
+									continue;
+								}
+								dataBuilder.append(row[i]).append(",");
+							}
+							dataBuilder.append("\n");
+						}
+					}
+					
+					if (dataBuilder.toString().contains(currentDate)) {
+						logger.info("******************** Successfully generated addedDate with dd/MM/yyyy format : {}", currentDate);
+					} else {
+						logger.error("******************** Error created when trying to attach generated addedDate to output file.");
+					}
+					
+					try {
+						File file = new File(path);
+						
+						FileOutputStream os = new FileOutputStream(file);
+						os.write(dataBuilder.toString().getBytes());
+						os.flush();
+						os.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					return dataBuilder;
+				}
 			}
 			
-			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-horse.csv";
 			try {
 				File file = new File(path);
 				
@@ -650,6 +717,7 @@ public class NoteServiceImpl implements NoteService {
 	
 	private static final String IS_FILE_START_WITH_CORRECT_PREFIX_PATTERN = ",Share %";
 	private static final String TRAINER_OWNER_SYNDICATOR_NAME_PATTERN = "^[a-zA-Z0-9 ,:.'_@/\\+&()-]+$";
+	private static final String EXTRACT_OWNER_FILE_NAME_PATTERN = "^(Horses.*)$(?=\\n)";
 	
 	@Override
 	public Object prepareOwnership(MultipartFile ownershipFile) throws CustomException {
