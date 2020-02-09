@@ -46,6 +46,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 @Service
@@ -490,7 +491,7 @@ public class NoteServiceImpl implements NoteService {
 
 	
 	public Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile) throws CustomException {
-		if(ownershipFile == null) {
+		if(!Objects.isNull(horseFile)) {
 			return this.importHorseFromMiStable(horseFile);
 		}
 		
@@ -671,8 +672,8 @@ public class NoteServiceImpl implements NoteService {
 				result.put("Diff From OwnerShip File", fromOwnerShipFile);
 			}
 			
-			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-horse.csv";
-//			String path = "/home/logbasex/Desktop/data/formatted-horse.csv";
+//			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-horse.csv";
+			String path = "/home/logbasex/Desktop/data/formatted-horse.csv";
 			try {
 				File file = new File(path);
 //				file.setWritable(true);
@@ -698,7 +699,7 @@ public class NoteServiceImpl implements NoteService {
 	private static final String GET_HORSE_NAME_PATTERN = "(?m)^([^,].*)";
 	private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
 	private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\\n,(?=([\\d]{1,3})?(\\.)?([\\d]{1,2})?%)";
-	private static final String REMOVE_UNNECESSARY_HEADER_FOOTER_PATTERN = "(?m)^(?!,Share).*(?<!(Y,|N,))$(\\n)?";
+	private static final String REMOVE_UNNECESSARY_HEADER_FOOTER_PATTERN = "(?m)^(?!,Share)(.*)((?<!([YN]))(?<!(Y,|N,)))$\\n";
 	private static final String IS_INSTANCEOF_DATE_PATTERN = "([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
 	private static final String EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN =
 			"(?m)^([^,].*)\\s\\(\\s.*([\\s]+)([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
@@ -717,7 +718,42 @@ public class NoteServiceImpl implements NoteService {
 	
 	private static final String IS_FILE_START_WITH_CORRECT_PREFIX_PATTERN = ",Share %";
 	private static final String TRAINER_OWNER_SYNDICATOR_NAME_PATTERN = "^[a-zA-Z0-9 ,:.'_@/\\+&()-]+$";
-	private static final String EXTRACT_OWNER_FILE_NAME_PATTERN = "^(Horses.*)$(?=\\n)";
+	private static final String EXTRACT_FILE_OWNER_NAME_PATTERN = "(?m)^(Horses)(.*)$(?=\\n)";
+	private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 6;
+	
+	private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
+	private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
+	
+	private static <T> Collector<T, ?, T> toSingleton() throws CustomException {
+		try {
+			return Collectors.collectingAndThen(
+					Collectors.toList(),
+					list -> {
+						if (list.size() != 1) {
+							throw new IllegalStateException();
+						}
+						return list.get(0);
+					}
+			);
+		} catch (RuntimeException e) {
+			if (e.getCause() instanceof IllegalStateException) {
+				throw new CustomException(
+						new ErrorInfo("Can't detect owner file name. CSV data seemingly a little bit wired. Please check!"));
+			}
+			throw e;
+		}
+	}
+	
+	public static String getOutputFolderPath() {
+		String os = System.getProperty("os.name").toLowerCase();
+		
+		if (os.contains("win")) {
+			return WINDOW_OUTPUT_FILE_PATH;
+		} else if (os.contains("nix") || os.contains("nux") || os.contains("aix")) {
+			return UNIX_OUTPUT_FILE_PATH;
+		}
+		return null;
+	}
 	
 	@Override
 	public Object prepareOwnership(MultipartFile ownershipFile) throws CustomException {
@@ -775,9 +811,19 @@ public class NoteServiceImpl implements NoteService {
 				throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
 			}
 			
+			String lineHasFileOwnerName = "";
+			Matcher extractFileOwnerName = Pattern.compile(EXTRACT_FILE_OWNER_NAME_PATTERN).matcher(allLines);
+			if (extractFileOwnerName.find()) {
+				logger.info("*******************Line has owner file name:\n {}", extractFileOwnerName.group());
+				lineHasFileOwnerName = extractFileOwnerName.group(2);
+			} else {
+				logger.warn("*******************Can not detect lines contain owner file name");
+			}
 			
-			//TODO: extract trainer/syndicator name
+			List<String> lineHasFileOwnerNameElements = Arrays.asList(OnboardHelper.readCsvLine(lineHasFileOwnerName));
 			
+			String fileOwnerName = lineHasFileOwnerNameElements.stream().filter(StringUtils::isNotEmpty)
+					.collect(toSingleton());
 			
 			Matcher linesBreakMatcher = Pattern.compile(REMOVE_LINE_BREAK_PATTERN).matcher(allLines);
 			if (linesBreakMatcher.find()) {
@@ -833,14 +879,35 @@ public class NoteServiceImpl implements NoteService {
 				throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
 			}
 			
+			int nonDataLine = 0;
+			while (removeUnnecessaryData.find()) {
+				nonDataLine++;
+			}
+			
+			if (nonDataLine > IGNORED_NON_DATA_LINE_THRESHOLD) {
+				throw new CustomException(new ErrorInfo("CSV data seemingly a little bit wired. Please check!"));
+			}
+			
 			int headerIndex = allLines.indexOf("\n");
 			if (!allLines.startsWith(IS_FILE_START_WITH_CORRECT_PREFIX_PATTERN)) {
 				logger.info("The first line of File after formatted with REGEX:\n{}", allLines.substring(0, headerIndex));
 				throw new CustomException(new ErrorInfo("File start with an incorrect prefix! Please check!"));
 			}
-			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\prepared-ownership.csv";
-//			String path = "/home/logbasex/Desktop/data/prepared-ownership.csv";
 			
+			String path = "/home/logbasex/Desktop/data/prepared-ownership.csv";
+			String dirOutput = getOutputFolderPath() + fileOwnerName;
+			String outputPath = getOutputFolderPath() + fileOwnerName + File.separator + "prepared-ownership.csv";
+			
+			
+			Path dirOutputPath = Paths.get(dirOutput);
+			boolean dirExists = Files.exists(dirOutputPath);
+			if (!dirExists) {
+				try {
+					Files.createDirectories(dirOutputPath);
+				} catch (IOException io) {
+					logger.info("Error occur when create folder at: {}", dirOutput);
+				}
+			}
 			FileOutputStream fos = null;
 			try {
 				File file = new File(path);
@@ -1126,8 +1193,8 @@ public class NoteServiceImpl implements NoteService {
 				}
 			}
 			
-			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-ownership.csv";
-//			String path = "/home/logbasex/Desktop/data/formatted-ownership.csv";
+//			String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\formatted-ownership.csv";
+			String path = "/home/logbasex/Desktop/data/formatted-ownership.csv";
 			try {
 				File file = new File(path);
 				
