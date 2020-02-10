@@ -7,11 +7,11 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public interface NoteService {
 	
-	Object automateImportOwner(MultipartFile ownerFile);
+	Object automateImportOwner(MultipartFile ownerFile, String dirName);
 	
-	Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile) throws CustomException;
+	Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile, String dirName) throws CustomException;
 	
-	Object automateImportOwnerShip(MultipartFile horseFile);
+	Object automateImportOwnerShip(MultipartFile horseFile, String filePath);
 	
-	Object prepareOwnership(MultipartFile ownershipFile) throws CustomException;
+	Object prepareOwnership(MultipartFile ownershipFile, String dirName) throws CustomException;
 }
