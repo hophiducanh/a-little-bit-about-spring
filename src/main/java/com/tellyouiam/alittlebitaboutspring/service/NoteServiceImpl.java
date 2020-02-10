@@ -884,7 +884,7 @@
 				if (linesBreakMatcher.find()) {
 					allLines = allLines.replaceAll(REMOVE_LINE_BREAK_PATTERN, " CT");
 				} else {
-					throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+					logger.warn("Cannot apply regex: {}... for ownership file", REMOVE_LINE_BREAK_PATTERN);
 				}
 				
 				//optional
@@ -960,7 +960,7 @@
 				
 				logger.info("******************************IGNORED DATA**********************************\n {}", ignoredData);
 				//normally unnecessary lines to ignored between 5 and 10.;
-				if (ignoredDataLines < IGNORED_NON_DATA_LINE_THRESHOLD || ignoredDataLines > 10) {
+				if (ignoredDataLines > IGNORED_NON_DATA_LINE_THRESHOLD) {
 					throw new CustomException(new ErrorInfo("CSV data seems a little wired. Please check!"));
 				}
 
@@ -969,11 +969,12 @@
 					allLines = allLines.replaceAll(REMOVE_BLANK_FOOTER_PATTERN, StringUtils.EMPTY);
 				}
 				
-				String path = getOutputFolder(dirName) + "prepared-ownership.csv";
+				String path = getOutputFolder(dirName);
 				
 				FileOutputStream fos = null;
 				try {
-					File file = new File(path);
+					File file = new File(path, "prepared-ownership.csv");
+					path = file.getAbsolutePath();
 					fos = new FileOutputStream(file);
 					fos.write(allLines.getBytes());
 					fos.close();
