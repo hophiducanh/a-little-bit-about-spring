@@ -52,7 +52,7 @@
 	@Service
 	public class NoteServiceImpl implements NoteService {
 		
-		Logger logger = LoggerFactory.getLogger(NoteServiceImpl.class);
+		private static final Logger logger = LoggerFactory.getLogger(NoteServiceImpl.class);
 		
 		private int check(String[] arr, String... valuesToCheck) {
 			int index;
@@ -88,6 +88,7 @@
 		}
 		
 		private List<String> getCsvDataFromPath(String path, boolean ignoreHeader) throws IOException {
+			//java7 >> try with statement
 			try (
 					FileReader fr = new FileReader(path);
 					BufferedReader br = new BufferedReader(fr);
@@ -164,8 +165,8 @@
 		}
 		
 		private String getOutputFolder(String dirName) {
-			String pathStr = getOutputFolderPath() + dirName + File.separator + "submit" + File.separator;
-			Path outputDirPath = Paths.get(pathStr);
+			String initFolderPath = getOutputFolderPath();
+			Path outputDirPath = Paths.get(Objects.requireNonNull(initFolderPath), dirName, "submit");
 			
 			Path path = null;
 			boolean dirExists = Files.exists(outputDirPath);
@@ -173,10 +174,10 @@
 				try {
 					path = Files.createDirectories(outputDirPath);
 				} catch (IOException io) {
-					logger.error("Error occur when create the folder at: {}", pathStr);
+					logger.error("Error occur when create the folder at: {}", outputDirPath.toAbsolutePath().toString());
 				}
 			}
-			return dirExists ? pathStr : Objects.requireNonNull(path).toString();
+			return dirExists ? outputDirPath.toAbsolutePath().toString() : Objects.requireNonNull(path).toString();
 		}
 		
 		@Override
@@ -579,7 +580,6 @@
 					
 					Map<String, String> horseMap = new LinkedHashMap<>();
 					Map<String, String> horseOwnershipMap = (Map<String, String>) ownerShipResult.get("HorseDataMap");
-					String horseCount = String.valueOf(ownerShipResult.get("HorseCount"));
 					
 					int count = 0;
 					for (String line : csvData) {
@@ -717,7 +717,7 @@
 			} catch (RuntimeException e) {
 				if (e.getCause() instanceof IllegalStateException) {
 					throw new CustomException(
-							new ErrorInfo("Can't detect owner file name. CSV data seemingly a little bit wired. Please check!"));
+							new ErrorInfo("Can't detect owner file name. CSV data seemingly a little weird. Please check!"));
 				}
 				throw e;
 			}
@@ -759,6 +759,8 @@
 				"^(?:0?2([/\\-.])29\\3(?:(?:1[6-9]|[2-9]\\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00)))$|" +
 				"^(?:(?:0?[1-9])|(?:1[0-2]))([/\\-.])(?:0?[1-9]|1\\d|2[0-8])\\4(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$";
 		
+		private static final String MIXING_COMMS_FINANCE_EMAIL_PATTERN = "\"?Accs:\\s((.+) (?=(Comms)))Comms:\\s((.+)(\\.[a-zA-Z;]+)(?=,))\"?";
+		
 		private static final String FILE_BEGINNING_PATTERN = "(?m)^(,Share %)";
 		private static final String FILE_BEGINNING_TRYING_PATTERN = "(?m)^(Share %)";
 		private static final String EXTRACT_FILE_OWNER_NAME_PATTERN = "(?m)^(Horses)(.*)$(?=\\n)";
@@ -768,6 +770,7 @@
 		
 		private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
 		private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
+		private static final String CT_IN_DISPLAY_NAME_PATTERN = "CT\\:";
 		
 		@Override
 		public Object prepareOwnership(MultipartFile ownershipFile, String dirName) throws CustomException {
@@ -780,13 +783,20 @@
 				//get file exportedDate.
 				// Pattern : ,,,,,,,,,,,,,,Printed: 21/10/2019  3:41:46PM,,,,Page -1 of 1,,,,
 				String exportedDate = null;
-				Matcher exportedDateMatcher = Pattern.compile(EXTRACT_OWNERSHIP_EXPORTED_DATE_PATTERN).matcher(allLines);
+				Matcher exportedDateMatcher = Pattern.compile(EXTRACT_OWNERSHIP_EXPORTED_DATE_PATTERN, Pattern.CASE_INSENSITIVE).matcher(allLines);
 				
 				int exportedDateCount = 0;
+				
 				while (exportedDateMatcher.find()) {
 					exportedDateCount++;
 				}
-				if (exportedDateCount > 1) throw new CustomException(new ErrorInfo("CSV data seems a little wired. Please check!"));
+				if (exportedDateCount > 1) throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
+				
+				 /* find() method starts at the beginning of this matcher's region, or, if
+				 * a previous invocation of the method was successful and the matcher has
+				 * not since been reset, at the first character not matched by the previous
+				 * match.
+				 * */
 				exportedDateMatcher.reset();
 				
 				String ignoredDataFooter = null;
@@ -862,7 +872,7 @@
 				Matcher extractFileOwnerName = Pattern.compile(EXTRACT_FILE_OWNER_NAME_PATTERN).matcher(allLines);
 				if (extractFileOwnerName.find()) {
 					
-					logger.info("*******************Line has owner file name:\n {}", extractFileOwnerName.group());
+					logger.info("*******************Lines possible have owner file name:\n {}", extractFileOwnerName.group());
 					
 					lineHasFileOwnerName = extractFileOwnerName.group(2);
 					
@@ -888,7 +898,7 @@
 				}
 				
 				//optional
-				Matcher invalidSharesMatcher = Pattern.compile(REMOVE_INVALID_SHARES_PATTERN).matcher(allLines);
+				Matcher invalidSharesMatcher = Pattern.compile(REMOVE_INVALID_SHARES_PATTERN, Pattern.CASE_INSENSITIVE).matcher(allLines);
 				if (invalidSharesMatcher.find()) {
 					allLines = allLines.replaceAll(REMOVE_INVALID_SHARES_PATTERN, "0.00%");
 				} else {
@@ -914,7 +924,7 @@
 					} else if (shareColumnPositionTrying.find()) {
 						allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1").replaceAll(SHARE_COLUMN_POSITION_TRYING_PATTERN, ",$1");
 					} else {
-						logger.warn("Data seemingly wired. Please check!");
+						logger.warn("Data seemingly weird. Please check!");
 					}
 				} else {
 					throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
@@ -961,9 +971,11 @@
 				logger.info("******************************IGNORED DATA**********************************\n {}", ignoredData);
 				//normally unnecessary lines to ignored between 5 and 10.;
 				if (ignoredDataLines > IGNORED_NON_DATA_LINE_THRESHOLD) {
-					throw new CustomException(new ErrorInfo("CSV data seems a little wired. Please check!"));
+					throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
 				}
 
+				//last blank header can caused ArrayIndexOutOfBoundsException if you don't remove these lines.
+				// E.g: line[23] if blank line is: ,,,,,,,,,,,,,,
 				Matcher removeBlankFooter = Pattern.compile(REMOVE_BLANK_FOOTER_PATTERN).matcher(allLines);
 				if(removeBlankFooter.find()) {
 					allLines = allLines.replaceAll(REMOVE_BLANK_FOOTER_PATTERN, StringUtils.EMPTY);
@@ -988,7 +1000,9 @@
 				Set<Integer> setAllIndexes = new HashSet<>();
 				Set<Integer> isEmptyIndexes = new HashSet<>();
 				
-				//Can't use regex to file column header name addedDate and gst, then we have to find all manually.
+				// CSV data after using initial regex missing these header name: HorseName, AddedDate, GST
+				// Can't use regex for file to find column header name addedDate and GST, better we have to find all manually.
+				// We need all column data has right header name above to process in the next step.
 				int dateIndex = -1;
 				int gstIndex = -1;
 				
@@ -1075,6 +1089,7 @@
 					builder.append(rowBuilder);
 				}
 				
+				//write data and continue reading data for the next processing step.
 				try {
 					File file = new File(path);
 					
@@ -1119,8 +1134,19 @@
 				} catch (final IOException e) {
 					e.printStackTrace();
 				}
+				
+				//content only store raw data without right format >> we need to call automateImportOwnerShip() method to process.
 				MultipartFile ownershipMultipart = new MockMultipartFile(name, content);
-				automateImportOwnerShip(ownershipMultipart, path);
+				
+				StackTraceElement[] stackTraceElements  = Thread.currentThread().getStackTrace();
+				List<String> callerMethods = Arrays.stream(stackTraceElements).map(StackTraceElement::getMethodName).collect(Collectors.toList());
+				
+				Object finalResult = automateImportOwnerShip(ownershipMultipart, dirName);
+				
+				//if only automateImport function call >> return result.
+				if (!callerMethods.contains("automateImportHorse")) {
+					return finalResult;
+				}
 				
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -1194,6 +1220,20 @@
 					
 					//ignore process file header
 					csvData = csvData.stream().skip(1).collect(Collectors.toList());
+					
+					String csvDataStr = String.join("\n", csvData);
+					Matcher mixingEmailTypeMatcher = Pattern.compile(MIXING_COMMS_FINANCE_EMAIL_PATTERN, Pattern.CASE_INSENSITIVE).matcher(csvDataStr);
+					int expectedMixingEmailCount = 0;
+					int patternMixingEmailCount = 0;
+					
+					if (mixingEmailTypeMatcher.find()) {
+						expectedMixingEmailCount = StringUtils.countMatches(csvDataStr, "Accs:");
+					} else {
+						logger.info("Data don't match kind of this REGEX: {}", MIXING_COMMS_FINANCE_EMAIL_PATTERN);
+					}
+					mixingEmailTypeMatcher.reset();
+					
+					
 					for (String line : csvData) {
 						String[] r = OnboardHelper.readCsvLine(line);
 						
@@ -1202,9 +1242,68 @@
 						String ownerId = OnboardHelper.readCsvRow(r, ownerIdIndex);
 						String commsEmail = OnboardHelper.readCsvRow(r, commsEmailIndex);
 						String financeEmail = OnboardHelper.readCsvRow(r, financeEmailIndex);
+						
+						//shortest email ever contains at least 3 char: x@y
+						//https://stackoverflow.com/questions/1423195/what-is-the-actual-minimum-length-of-an-email-address-as-defined-by-the-ietf
+						if (StringUtils.isNotEmpty(commsEmail) && commsEmail.trim().length() < 3) {
+							commsEmail = StringUtils.EMPTY;
+							logger.warn("Found weird email: {} at line: {}", commsEmail, line);
+						}
+						
+						if (StringUtils.isNotEmpty(financeEmail) && financeEmail.trim().length() < 3) {
+							financeEmail = StringUtils.EMPTY;
+							logger.warn("Found weird email: {} at line: {}", financeEmail, line);
+						}
+						
+						/*
+			  	        ### **Process case email cell like: Accs: accounts@marshallofbrisbane.com.au Comms: monopoly@bigpond.net.au**
+			  	        - [1] Extract Comms to communication email cell.
+			  	        - [2] Extract Accs to financial email cell.
+						*/
+						
+						if (mixingEmailTypeMatcher.find()) {
+							patternMixingEmailCount++;
+							
+							String tryingCommsEmail = mixingEmailTypeMatcher.group(4).trim();
+							String tryingFinanceEmail = mixingEmailTypeMatcher.group(2).trim();
+							
+							List<String> multiCommsEmail = Arrays.asList(tryingCommsEmail.split(";"));
+							List<String> multiFinanceEmail = Arrays.asList(tryingFinanceEmail.split(";"));
+							
+							commsEmail = getValidEmail(commsEmail, tryingCommsEmail, multiCommsEmail, line);
+							
+							if (StringUtils.isEmpty(financeEmail)) {
+								financeEmail = getValidEmail(financeEmail, tryingFinanceEmail, multiFinanceEmail, line);
+							}
+						}
+						
 						String firstName = OnboardHelper.readCsvRow(r, firstNameIndex);
 						String lastName = OnboardHelper.readCsvRow(r, lastNameIndex);
 						String displayName = OnboardHelper.readCsvRow(r, displayNameIndex);
+						
+						//We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
+						//We wanna extract this name to firstName, lastName, displayName:
+						//Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
+						Matcher ctMatcher = Pattern.compile(CT_IN_DISPLAY_NAME_PATTERN, Pattern.CASE_INSENSITIVE).matcher(displayName);
+						if (ctMatcher.find()) {
+							if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
+								int ctStartedIndex = ctMatcher.start();
+								int ctEndIndex = ctMatcher.end();
+								
+								logger.info("TRAINER/SYNDICATOR has CT in displayName: {}", displayName);
+								String firstAndLastNameStr = displayName.substring(ctEndIndex);
+								displayName = displayName.substring(0, ctStartedIndex).trim();
+								
+								String[] firstAndLastNameArr = firstAndLastNameStr.split(",");
+								firstName = firstAndLastNameArr[0].trim();
+								if (firstAndLastNameArr.length > 1) {
+									lastName = firstAndLastNameArr[1].trim();
+								}
+								
+								logger.info("Successfully EXTRACTED firstName***: {}, lastName**: {}, displayName***: {}", firstName, lastName, displayName);
+							}
+						}
+						
 						String type = OnboardHelper.readCsvRow(r, typeIndex);
 						String mobile = readMobilePhoneNumber(OnboardHelper.readCsvRow(r, mobileIndex));
 						String phone = readMobilePhoneNumber(OnboardHelper.readCsvRow(r, phoneIndex));
@@ -1220,7 +1319,7 @@
 						String rawAddedDate = OnboardHelper.readCsvRow(r, addedDateIndex);
 						String addedDate = StringUtils.EMPTY;
 						
-						//TODO: extract this code.
+						//convert addedDate read from CSV to Australia date time format.
 						if (StringUtils.isNotEmpty(rawAddedDate)) {
 							if (rawAddedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
 								addedDate = rawAddedDate;
@@ -1263,12 +1362,19 @@
 						);
 						builder.append(rowBuilder);
 					}
+					
+					mixingEmailTypeMatcher.reset();
+					if (mixingEmailTypeMatcher.find()) {
+						if (expectedMixingEmailCount != patternMixingEmailCount) {
+							logger.info("Found mixing email was faced with weird data. Please check!");
+						}
+					}
 				}
 				
-				//Categorized to two type >> one from mistable don't use dirOuputPath.
-				String path = getOutputFolder(dirOutputPath) + "formatted-ownership.csv";
+				//have two type of ownership file >> one from mistable with input is csv file, one is another with input is xlsx file.
+				String path = getOutputFolder(dirOutputPath);
 				try {
-					File file = new File(Objects.requireNonNull(path));
+					File file = new File(Objects.requireNonNull(path), "formatted-ownership.csv");
 					
 					FileOutputStream os = new FileOutputStream(file);
 					os.write(builder.toString().getBytes());
@@ -1277,10 +1383,23 @@
 				}
 				
 				return builder;
-			} catch (IOException e) {
+			} catch (IOException | CustomException e) {
 				e.printStackTrace();
 			}
 			return null;
+		}
+		
+		private String getValidEmail(String finalEmailCellValue, String regexExtractedEmail, List<String> multiEmailsCell, String line) throws CustomException {
+			if (!CollectionUtils.isEmpty(multiEmailsCell)) {
+				for (String email : multiEmailsCell) {
+					if (!StringHelper.isValidEmail(email.trim())) {
+						logger.error("*********************Email is invalid: {} at line: {}. Please check!", email, line);
+						throw new CustomException(new ErrorInfo("Invalid Email"));
+					}
+				}
+				finalEmailCellValue = regexExtractedEmail;
+			}
+			return finalEmailCellValue;
 		}
 		
 		private StringBuilder generateCsvDataToBuild(String[][] source) {

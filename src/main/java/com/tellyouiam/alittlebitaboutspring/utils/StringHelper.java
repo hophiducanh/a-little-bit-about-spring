@@ -1,13 +1,18 @@
 package com.tellyouiam.alittlebitaboutspring.utils;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class StringHelper {
 	
 	private static final String DATE_TIME_FORMAT_IN_CSV = "dd/MM/yyyy h:m:s a";
+	private static final String EMAIL_PATTERN = "^[_A-Za-z0-9\\-+&]+(\\.[_A-Za-z0-9\\-+&]+)*@[A-Za-z0-9\\-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$";
 	
 	public static String csvValue(Object value) {
 		if (value == null) {
@@ -23,5 +28,13 @@ public class StringHelper {
 	
 	public static List<String> convertStringBuilderToList(StringBuilder resource) {
 		return Arrays.asList(resource.toString().split("\n"));
+	}
+	
+	public static boolean isValidEmail(String email) {
+		if (StringUtils.isEmpty(email))
+			return false;
+		Pattern pattern = Pattern.compile(EMAIL_PATTERN);
+		Matcher matcher = pattern.matcher(email);
+		return matcher.matches();
 	}
 }
