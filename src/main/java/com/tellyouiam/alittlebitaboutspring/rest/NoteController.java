@@ -3,6 +3,7 @@ package com.tellyouiam.alittlebitaboutspring.rest;
 import com.tellyouiam.alittlebitaboutspring.dto.Note;
 import com.tellyouiam.alittlebitaboutspring.service.NoteService;
 import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
+import com.tellyouiam.alittlebitaboutspring.utils.HttpReqRespUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -97,6 +98,6 @@ public class NoteController {
 			e.printStackTrace();
 		}
 		
-		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+		return new ResponseEntity<Object>(HttpReqRespUtils.getClientIpAddressIfServletRequestExist(), new HttpHeaders(), HttpStatus.OK);
 	}
 }
