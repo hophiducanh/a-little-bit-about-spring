@@ -58,7 +58,12 @@ public class NoteController {
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportOwner(@RequestPart MultipartFile ownerFile,
 	                                                        @RequestParam String dirName) {
-		Object result = noteService.automateImportOwner(ownerFile, dirName);
+		Object result = null;
+		try {
+			result = noteService.automateImportOwner(ownerFile, dirName);
+		} catch (CustomException e) {
+			e.printStackTrace();
+		}
 		
 		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}

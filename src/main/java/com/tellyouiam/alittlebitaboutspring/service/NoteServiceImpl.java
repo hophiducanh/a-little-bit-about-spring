@@ -5,6 +5,7 @@
 	import com.tellyouiam.alittlebitaboutspring.utils.ErrorInfo;
 	import com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
+	import org.apache.commons.lang3.ArrayUtils;
 	import org.apache.commons.lang3.StringUtils;
 	import org.slf4j.Logger;
 	import org.slf4j.LoggerFactory;
@@ -180,8 +181,9 @@
 			return dirExists ? outputDirPath.toAbsolutePath().toString() : Objects.requireNonNull(path).toString();
 		}
 		
+		private static final String HORSE_RECORDS_PATTERN = "([\\d]+)\\sRecords"; //like: 162 records
 		@Override
-		public Object automateImportOwner(MultipartFile ownerFile, String dirName) {
+		public Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException {
 			try {
 				List<String> csvData = this.getCsvData(ownerFile);
 				StringBuilder builder = new StringBuilder();
@@ -233,11 +235,43 @@
 					
 					builder.append(rowHeader);
 					
+					String allLines = String.join("", csvData);
+					Matcher recordsMatcher = Pattern.compile(HORSE_RECORDS_PATTERN).matcher(allLines);
+					int horseRecords = 0;
+					if (recordsMatcher.find()) {
+						horseRecords = Integer.parseInt(recordsMatcher.group(1));
+					}
+					
+					int matcherCount = 0;
+					while (recordsMatcher.find()) {
+						matcherCount++;
+					}
+					if (matcherCount > 1) {
+						throw new CustomException(new ErrorInfo("CSV data seem pretty weird. Please check!"));
+					}
 					csvData = csvData.stream().skip(1).collect(Collectors.toList());
 					int count = 0;
 					for (String line : csvData) {
-						count++;
+						if (StringUtils.isEmpty(line)) continue;
+						
 						String[] r = OnboardHelper.readCsvLine(line);
+						
+						//rows will be ignored like:
+						//,,,,
+						//162 Records,,,,
+						
+						StringBuilder ignoreRowBuilder = new StringBuilder();
+						for (String s : r) {
+							ignoreRowBuilder.append(s);
+						}
+						if (StringUtils.isEmpty(ignoreRowBuilder.toString())) continue;
+						
+						if (StringUtils.isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
+							logger.info("Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
+							continue;
+						}
+						
+						count++;
 						
 						String ownerId = OnboardHelper.readCsvRow(r, ownerIdIndex);
 						String email = OnboardHelper.readCsvRow(r, emailIndex);
@@ -280,9 +314,14 @@
 						);
 						builder.append(rowBuilder);
 					}
+					
+					if (horseRecords != count) {
+						logger.info("Data records found: {}, Data records count: {}", horseRecords, count);
+						throw new CustomException(new ErrorInfo("Data records doesn't match!"));
+					}
 				}
 				
-				String path = getOutputFolder(dirName) + "formatted-owner.csv";
+				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
 				try {
 					File file = new File(path);
 					FileOutputStream os = new FileOutputStream(file);
@@ -581,23 +620,21 @@
 					Map<String, String> horseMap = new LinkedHashMap<>();
 					Map<String, String> horseOwnershipMap = (Map<String, String>) ownerShipResult.get("HorseDataMap");
 					
-					int count = 0;
 					for (String line : csvData) {
-						count++;
 						
-						if (count == csvData.size()) {
-							logger.info("Footer Date: {}", line);
+						if (StringUtils.isEmpty(line)) {
+							logger.info("***************************Empty CSV Data Line: {}", line);
 							continue;
 						}
-						if (StringUtils.isEmpty(line)) continue;
 						String[] r = OnboardHelper.readCsvLine(line);
 						
 						String externalId = OnboardHelper.readCsvRow(r, externalIdIndex);
 						String name = OnboardHelper.readCsvRow(r, nameIndex);
 						
-						if (StringUtils.isEmpty(name)) continue;
-						
-						logger.info("Horse Name: {}", name);
+						if (StringUtils.isEmpty(name)) {
+							logger.info("**************************Empty Horse Name: {}", name);
+							continue;
+						}
 						
 						String rawFoaled = OnboardHelper.readCsvRow(r, foaledIndex);
 						String foaled = StringUtils.EMPTY;
@@ -688,7 +725,7 @@
 					result.put("Diff From OwnerShip File", fromOwnerShipFile);
 				}
 				
-				String path = getOutputFolder(dirName) + "formatted-horse.csv";
+				String path = getOutputFolder(dirName) + File.separator + "formatted-horse.csv";
 				try {
 					File file = new File(path);
 					FileOutputStream os = new FileOutputStream(file);
@@ -770,7 +807,7 @@
 		
 		private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
 		private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
-		private static final String CT_IN_DISPLAY_NAME_PATTERN = "CT\\:";
+		private static final String CT_IN_DISPLAY_NAME_PATTERN = "CT:";
 		
 		@Override
 		public Object prepareOwnership(MultipartFile ownershipFile, String dirName) throws CustomException {
@@ -996,8 +1033,13 @@
 				
 				String[][] data = readCSVTo2DArray(path, false);
 				
+				//all possible index of cell has value.
 				List<Integer> rowHasValueIndex = new ArrayList<>();
+				
+				//all possible index.
 				Set<Integer> setAllIndexes = new HashSet<>();
+				
+				//all possible index of empty cell.
 				Set<Integer> isEmptyIndexes = new HashSet<>();
 				
 				// CSV data after using initial regex missing these header name: HorseName, AddedDate, GST
@@ -1033,7 +1075,7 @@
 					gstString.append(row[gstIndex]);
 				}
 				String distinctGST = gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
-				if (distinctGST.matches("(YN)|(NY)")) {
+				if (distinctGST.matches("(YN)|(NY)|N|Y")) {
 					data[0][gstIndex] = "GST";
 				}
 				
@@ -1405,12 +1447,11 @@
 		private StringBuilder generateCsvDataToBuild(String[][] source) {
 			StringBuilder arrayBuilder = new StringBuilder();
 			for (String[] row : source) {
-				for (int j = 0; j < row.length; j++) {
-					arrayBuilder.append(row[j]);
-					if (j < source.length - 1) {
-						arrayBuilder.append(",");
-					}
+				for (String cell : row) {
+					arrayBuilder.append(cell).append(",");
 				}
+				//Fix missing comma (,) at the end of line >> cause ArrayIndexOutOfBound bug: waynemcummins@hotmail.com,,,,,,,,,,,,,N
+				arrayBuilder.append(",");
 				arrayBuilder.append("\n");//append new line at the end of the row
 			}
 			return arrayBuilder;
