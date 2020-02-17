@@ -742,7 +742,7 @@
 		private static final String SHARE_COLUMN_POSITION_TRYING_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
 		private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
 		private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\\n,(?=([\\d]{1,3})?(\\.)?([\\d]{1,2})?%)";
-		private static final String REMOVE_UNNECESSARY_HEADER_FOOTER_PATTERN = "(?m)^(?!,Share)(.*)((?<!([YN]))(?<!(Y,|N,)))$\\n";
+		// private static final String REMOVE_UNNECESSARY_HEADER_FOOTER_PATTERN = "(?m)^(?!,Share)(.*)((?<!([YN]))(?<!(Y,|N,)))$\\n";
 		private static final String IS_INSTANCEOF_DATE_PATTERN = "([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
 		private static final String EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN =
 				"(?m)^([^,].*)\\s\\(\\s.*([\\s]+)([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
@@ -770,7 +770,7 @@
 		
 		private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
 		private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
-		private static final String CT_IN_DISPLAY_NAME_PATTERN = "CT\\:";
+		private static final String CT_IN_DISPLAY_NAME_PATTERN = "CT:";
 		
 		@Override
 		public Object prepareOwnership(MultipartFile ownershipFile, String dirName) throws CustomException {
@@ -792,11 +792,11 @@
 				}
 				if (exportedDateCount > 1) throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
 				
-				 /* find() method starts at the beginning of this matcher's region, or, if
-				 * a previous invocation of the method was successful and the matcher has
-				 * not since been reset, at the first character not matched by the previous
-				 * match.
-				 * */
+				 // find() method starts at the beginning of this matcher's region, or, if
+				 // a previous invocation of the method was successful and the matcher has
+				 // not since been reset, at the first character not matched by the previous
+				 // match.
+				 
 				exportedDateMatcher.reset();
 				
 				String ignoredDataFooter = null;
@@ -981,6 +981,20 @@
 					allLines = allLines.replaceAll(REMOVE_BLANK_FOOTER_PATTERN, StringUtils.EMPTY);
 				}
 				
+				// for case the header of ownership file (break header):
+				// ,Share %,"Date\n
+				// Purchased",Display Name,Address,Phone,Fax,Mobile,Email,
+				int beginFirstHorseLineIndex = StringUtils.ordinalIndexOf(allLines, "\n", 1);
+				int lastFirstHorseLineIndex = StringUtils.ordinalIndexOf(allLines, "\n", 2);
+				
+				// ignore line feed (\n) in begin and end.
+				String firstLine = allLines.substring(beginFirstHorseLineIndex + 1, lastFirstHorseLineIndex - 1);
+				// break header don't contain any number
+				if (!firstLine.matches("(.)*(\\d)(.)*")) {
+					logger.info("*********************The first horse data of file seem pretty wired: {}", firstLine);
+					throw new CustomException(new ErrorInfo("Header data are weird. Please check and manually fix this."));
+				}
+				
 				String path = getOutputFolder(dirName);
 				
 				FileOutputStream fos = null;
@@ -1143,7 +1157,7 @@
 				
 				Object finalResult = automateImportOwnerShip(ownershipMultipart, dirName);
 				
-				//if only automateImport function call >> return result.
+				//if only automateImport() has a call to this method >> return result.
 				if (!callerMethods.contains("automateImportHorse")) {
 					return finalResult;
 				}
@@ -1255,10 +1269,10 @@
 							logger.warn("Found weird email: {} at line: {}", financeEmail, line);
 						}
 						
-						/*
+						/**
 			  	        ### **Process case email cell like: Accs: accounts@marshallofbrisbane.com.au Comms: monopoly@bigpond.net.au**
 			  	        - [1] Extract Comms to communication email cell.
-			  	        - [2] Extract Accs to financial email cell.
+				        - [2] Extract Accs to financial email cell.
 						*/
 						
 						if (mixingEmailTypeMatcher.find()) {
