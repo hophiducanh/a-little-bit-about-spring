@@ -31,3 +31,6 @@ out/
 
 ### VS Code ###
 .vscode/
+src/main/java/com/tellyouiam/alittlebitaboutspring/config/
+
+application.properties
