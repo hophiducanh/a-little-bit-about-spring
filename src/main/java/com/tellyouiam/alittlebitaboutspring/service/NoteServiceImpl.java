@@ -744,11 +744,11 @@
 				return Collectors.collectingAndThen(
 						Collectors.toList(),
 						list -> {
-							if (list.size() != 1) {
-								throw new IllegalStateException();
-							}
-							return list.get(0);
-						}
+					if (list.size() != 1) {
+						throw new IllegalStateException();
+					}
+					return list.get(0);
+				}
 				);
 			} catch (RuntimeException e) {
 				if (e.getCause() instanceof IllegalStateException) {
@@ -819,7 +819,8 @@
 				//get file exportedDate.
 				// Pattern : ,,,,,,,,,,,,,,Printed: 21/10/2019  3:41:46PM,,,,Page -1 of 1,,,,
 				String exportedDate = null;
-				Matcher exportedDateMatcher = Pattern.compile(EXTRACT_OWNERSHIP_EXPORTED_DATE_PATTERN, Pattern.CASE_INSENSITIVE).matcher(allLines);
+				Pattern exportedDatePattern = Pattern.compile(EXTRACT_OWNERSHIP_EXPORTED_DATE_PATTERN, Pattern.CASE_INSENSITIVE);
+				Matcher exportedDateMatcher = exportedDatePattern.matcher(allLines);
 				
 				int exportedDateCount = 0;
 				
@@ -828,11 +829,11 @@
 				}
 				if (exportedDateCount > 1) throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
 				
-				 /* find() method starts at the beginning of this matcher's region, or, if
-				 * a previous invocation of the method was successful and the matcher has
-				 * not since been reset, at the first character not matched by the previous
-				 * match.
-				 * */
+				 // find() method starts at the beginning of this matcher's region, or, if
+				 // a previous invocation of the method was successful and the matcher has
+				 // not since been reset, at the first character not matched by the previous
+				 // match.
+				 //
 				exportedDateMatcher.reset();
 				
 				String ignoredDataFooter = null;
@@ -1274,6 +1275,30 @@
 					}
 					mixingEmailTypeMatcher.reset();
 					
+					final List<String> organizationNames = Arrays.asList(
+							"Company",
+							"Racing",
+							"Pty Ltd",
+							"Racing Pty Ltd",
+							"Breeding",
+							"stud",
+							"group",
+							"bred",
+							"breds",
+							"tbreds",
+							"Thoroughbred",
+							"Thoroughbreds",
+							"synd",
+							"syndicate",
+							"syndicates",
+							"syndication",
+							"syndications",
+							"Bloodstock",
+							"farm",
+							"Horse Transport",
+							"Club"
+							);
+					
 					
 					for (String line : csvData) {
 						String[] r = OnboardHelper.readCsvLine(line);
@@ -1296,11 +1321,12 @@
 							logger.warn("Found weird email: {} at line: {}", financeEmail, line);
 						}
 						
-						/*
-			  	        ### **Process case email cell like: Accs: accounts@marshallofbrisbane.com.au Comms: monopoly@bigpond.net.au**
-			  	        - [1] Extract Comms to communication email cell.
-			  	        - [2] Extract Accs to financial email cell.
-						*/
+			  	        /*
+			  	         ### **Process case email cell like: Accs: accounts@marshallofbrisbane.com.au Comms:
+			  	         monopoly@bigpond.net.au**
+			  	         - [1] Extract Comms to communication email cell.
+			  	         - [2] Extract Accs to financial email cell.
+			  	        */
 						
 						if (mixingEmailTypeMatcher.find()) {
 							patternMixingEmailCount++;
@@ -1332,13 +1358,25 @@
 								int ctEndIndex = ctMatcher.end();
 								
 								logger.info("TRAINER/SYNDICATOR has CT in displayName: {}", displayName);
-								String firstAndLastNameStr = displayName.substring(ctEndIndex);
+								//E.g: Edmonds Racing
 								displayName = displayName.substring(0, ctStartedIndex).trim();
 								
-								String[] firstAndLastNameArr = firstAndLastNameStr.split(",");
-								firstName = firstAndLastNameArr[0].trim();
-								if (firstAndLastNameArr.length > 1) {
-									lastName = firstAndLastNameArr[1].trim();
+								//E.g: Toby Edmonds, Logbasex
+								String firstAndLastNameStr = displayName.substring(ctEndIndex);
+								
+								boolean isOrganizationName = organizationNames.stream().anyMatch(name -> firstAndLastNameStr.toLowerCase().contains(name.toLowerCase()));
+								if (isOrganizationName) {
+									lastName = firstAndLastNameStr;
+									
+								} else {
+//									StringUtils.normalizeSpace()
+									String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
+									if (firstAndLastNameArr.length > 1) {
+										lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second).orElse("");
+										String finalLastName = lastName;
+										firstName = Arrays.stream(firstAndLastNameArr).filter(i -> !i.toLowerCase().equals(finalLastName)).collect(Collectors.joining(" "));
+									}
+									
 								}
 								
 								logger.info("Successfully EXTRACTED firstName***: {}, lastName**: {}, displayName***: {}", firstName, lastName, displayName);
