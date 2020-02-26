@@ -1,11 +1,13 @@
 	package com.tellyouiam.alittlebitaboutspring.service;
 	
 	import com.tellyouiam.alittlebitaboutspring.utils.CollectionsHelper;
+	import com.tellyouiam.alittlebitaboutspring.utils.CsvHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.utils.ErrorInfo;
 	import com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
 	import org.apache.commons.lang3.StringUtils;
+	import org.apache.commons.lang3.SystemUtils;
 	import org.slf4j.Logger;
 	import org.slf4j.LoggerFactory;
 	import org.springframework.mock.web.MockMultipartFile;
@@ -36,6 +38,7 @@
 	import java.util.ArrayList;
 	import java.util.Arrays;
 	import java.util.Collection;
+	import java.util.Collections;
 	import java.util.Date;
 	import java.util.HashMap;
 	import java.util.HashSet;
@@ -147,23 +150,6 @@
 			}
 		}
 		
-		private String readMobilePhoneNumber(String phone) {
-			if (org.apache.commons.lang3.StringUtils.isEmpty(phone)) {
-				return "";
-			} else {
-				phone = phone.replaceAll("[^\\d]+", "");
-				if (phone.matches("^[0-9]{8,}.*")) {
-					if (phone.matches("^[1-9]+.*")) {
-						phone = String.format("0%s", phone);
-					}
-					return phone;
-				} else {
-					System.out.println("Invalid Phone Number: " + phone);
-					return "";
-				}
-			}
-		}
-		
 		private String getOutputFolder(String dirName) {
 			String initFolderPath = getOutputFolderPath();
 			Path outputDirPath = Paths.get(Objects.requireNonNull(initFolderPath), dirName, "submit");
@@ -185,7 +171,11 @@
 		public Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException {
 			try {
 				List<String> csvData = this.getCsvData(ownerFile);
+				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
+				
+				String ownerErrorData = null;
+				
 				if (!CollectionUtils.isEmpty(csvData)) {
 					
 					// ---------- common cols --------------------------------------
@@ -235,10 +225,12 @@
 					builder.append(rowHeader);
 					
 					String allLines = String.join("", csvData);
-					Matcher recordsMatcher = Pattern.compile(HORSE_RECORDS_PATTERN).matcher(allLines);
+					Pattern recordsPattern = Pattern.compile(HORSE_RECORDS_PATTERN);
+					Matcher recordsMatcher = recordsPattern.matcher(allLines);
 					int horseRecords = 0;
 					if (recordsMatcher.find()) {
 						horseRecords = Integer.parseInt(recordsMatcher.group(1));
+						recordsMatcher.reset(); //only use in single-threaded
 					}
 					
 					int matcherCount = 0;
@@ -250,6 +242,7 @@
 					}
 					csvData = csvData.stream().skip(1).collect(Collectors.toList());
 					int count = 0;
+					
 					for (String line : csvData) {
 						if (StringUtils.isEmpty(line)) continue;
 						
@@ -266,7 +259,7 @@
 						if (StringUtils.isEmpty(ignoreRowBuilder.toString())) continue;
 						
 						if (StringUtils.isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
-							logger.info("Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
+							logger.info("\n*******************Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
 							continue;
 						}
 						
@@ -280,10 +273,9 @@
 						String displayName = OnboardHelper.readCsvRow(r, displayNameIndex);
 						String type = OnboardHelper.readCsvRow(r, typeIndex);
 						
-						String mobile = readMobilePhoneNumber(OnboardHelper.readCsvRow(r, mobileIndex));
+						String mobile = OnboardHelper.readCsvRow(r, mobileIndex);
 						
-						String phone = readMobilePhoneNumber(OnboardHelper.readCsvRow(r, phoneIndex));
-						
+						String phone = OnboardHelper.readCsvRow(r, phoneIndex);
 						
 						String fax = OnboardHelper.readCsvRow(r, faxIndex);
 						String address = OnboardHelper.readCsvRow(r, addressIndex);
@@ -311,6 +303,8 @@
 								StringHelper.csvValue(country),
 								StringHelper.csvValue(gst)
 						);
+						preparedData.add(rowBuilder);
+						
 						builder.append(rowBuilder);
 					}
 					
@@ -318,13 +312,22 @@
 						logger.info("Data records found: {}, Data records count: {}", horseRecords, count);
 						throw new CustomException(new ErrorInfo("Data records doesn't match!"));
 					}
+					
+					ownerErrorData = CsvHelper.validateInputFile(preparedData);
+				}
+				
+				String errorDataPath = getOutputFolder(dirName) + File.separator + "owner-input-error.csv";
+				try {
+					File file = new File(errorDataPath);
+					FileOutputStream os = new FileOutputStream(file);
+					os.write(Objects.requireNonNull(ownerErrorData).getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
 				
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
 				try {
-					File file = new File(path);
-					FileOutputStream os = new FileOutputStream(file);
-					os.write(builder.toString().getBytes());
+					Files.write(Paths.get(path), Collections.singleton(builder));
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -1359,7 +1362,7 @@
 								
 								logger.info("TRAINER/SYNDICATOR has CT in displayName: {}", displayName);
 								//E.g: Edmonds Racing
-								displayName = displayName.substring(0, ctStartedIndex).trim();
+								String realDisplayName = displayName.substring(0, ctStartedIndex).trim();
 								
 								//E.g: Toby Edmonds, Logbasex
 								String firstAndLastNameStr = displayName.substring(ctEndIndex);
@@ -1379,13 +1382,13 @@
 									
 								}
 								
-								logger.info("Successfully EXTRACTED firstName***: {}, lastName**: {}, displayName***: {}", firstName, lastName, displayName);
+								logger.info("Successfully EXTRACTED firstName***: {}, lastName**: {}, displayName***: {}", firstName, lastName, realDisplayName);
 							}
 						}
 						
 						String type = OnboardHelper.readCsvRow(r, typeIndex);
-						String mobile = readMobilePhoneNumber(OnboardHelper.readCsvRow(r, mobileIndex));
-						String phone = readMobilePhoneNumber(OnboardHelper.readCsvRow(r, phoneIndex));
+						String mobile = OnboardHelper.readCsvRow(r, mobileIndex);
+						String phone = OnboardHelper.readCsvRow(r, phoneIndex);
 						String fax = OnboardHelper.readCsvRow(r, faxIndex);
 						String address = OnboardHelper.readCsvRow(r, addressIndex);
 						String city = OnboardHelper.readCsvRow(r, cityIndex);
