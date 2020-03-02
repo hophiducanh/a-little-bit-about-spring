@@ -929,7 +929,6 @@
 				Matcher departedDateMatcher = Pattern.compile(EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN).matcher(allLines);
 				
 				Map<String, String> horseDataMap = new LinkedHashMap<>();
-				List<String> horseDataList = new ArrayList<>();
 				
 				while (departedDateMatcher.find()) {
 					String horseName = departedDateMatcher.group(1).trim();
@@ -949,11 +948,10 @@
 					
 					String horseDate = LocalDate.parse(horseDepartedDate, AUS_CUSTOM_LOCAL_DATE).format(AUS_FORMAL_LOCAL_DATE);
 					horseDataMap.put(horseName, horseDate);
-					horseDataList.add(horseName + ": " + horseDepartedDate);
+					//horseDataMap.computeIfAbsent(horseName, horseDate);
 				}
 				
 				result.put("HorseDataMap", horseDataMap);
-				result.put("HorseDataList", horseDataList);
 				result.put("ExportedDate", exportedDate);
 				Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
 				if (blankLinesMatcher.find()) {

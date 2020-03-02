@@ -33,4 +33,4 @@ out/
 .vscode/
 src/main/java/com/tellyouiam/alittlebitaboutspring/config/
 
-application.properties
+src/main/resources/application.properties
