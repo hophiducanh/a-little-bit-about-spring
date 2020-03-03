@@ -31,13 +31,24 @@ public class NoteController {
 	@Autowired
 	private NoteService noteService;
 	
-	@RequestMapping(value = "/create", method = RequestMethod.POST)
+	@PostMapping
 	@ResponseBody
 	public final ResponseEntity<Object> createNote(@Valid @RequestBody Note note) {
 		note.setCode(1000000011);
 		note.setCreatedAt(new Date(0));
 		note.setUpdatedAt(new Date(0));
 		noteRepository.save(note);
+		return new ResponseEntity<Object>(note, new HttpHeaders(), HttpStatus.OK);
+	}
+	
+	@DeleteMapping
+	@ResponseBody
+	public final ResponseEntity<Object> deleteNote(@Valid @RequestBody Note note) {
+		note.setCode(1000000011);
+		note.setCreatedAt(new Date(0));
+		note.setUpdatedAt(new Date(0));
+		noteRepository.delete(note);
+		noteRepository.delete(null);
 		return new ResponseEntity<Object>(note, new HttpHeaders(), HttpStatus.OK);
 	}
 	

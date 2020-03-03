@@ -7,7 +7,6 @@
 	import com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
 	import org.apache.commons.lang3.StringUtils;
-	import org.apache.commons.lang3.SystemUtils;
 	import org.slf4j.Logger;
 	import org.slf4j.LoggerFactory;
 	import org.springframework.mock.web.MockMultipartFile;
@@ -28,11 +27,7 @@
 	import java.nio.file.Files;
 	import java.nio.file.Path;
 	import java.nio.file.Paths;
-	import java.text.ParseException;
-	import java.text.SimpleDateFormat;
 	import java.time.LocalDate;
-	import java.time.LocalDateTime;
-	import java.time.ZoneId;
 	import java.time.format.DateTimeFormatter;
 	import java.time.format.DateTimeFormatterBuilder;
 	import java.time.format.SignStyle;
@@ -40,7 +35,6 @@
 	import java.util.Arrays;
 	import java.util.Collection;
 	import java.util.Collections;
-	import java.util.Date;
 	import java.util.HashMap;
 	import java.util.HashSet;
 	import java.util.LinkedHashMap;
@@ -624,6 +618,38 @@
 					Map<String, String> horseMap = new LinkedHashMap<>();
 					Map<String, String> horseOwnershipMap = (Map<String, String>) ownerShipResult.get("HorseDataMap");
 					
+					List<String> foaledMDYFormatList = new ArrayList<>();
+					boolean isAustraliaFormat = false;
+					for (String line : csvData) {
+						
+						if (StringUtils.isEmpty(line)) continue;
+						
+						if (line.matches("(?m)^([,]+)$")) continue;
+						
+						if (line.matches(CSV_HORSE_COUNT_PATTERN)) continue;
+						
+						String[] r = OnboardHelper.readCsvLine(line);
+						String rawFoaled = OnboardHelper.readCsvRow(r, foaledIndex);
+						
+						if (StringUtils.isNotEmpty(rawFoaled)) {
+							
+							//Process for case: 15/08/2013 15:30
+							String dateRawFoaled = rawFoaled.split("\\p{Z}")[0];
+							if (dateRawFoaled.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
+								foaledMDYFormatList.add(dateRawFoaled);
+							} else {
+								logger.info("UNKNOWN TYPE OF FOALED DATE IN HORSE FILE: {} at line : {}", rawFoaled, line);
+							}
+						}
+					}
+					
+					if (CollectionUtils.isEmpty(foaledMDYFormatList)) {
+						logger.info("TYPE OF FOALED DATE IN HORSE FILE IS DD/MM/YYY FORMAT");
+						isAustraliaFormat = true;
+					} else {
+						logger.info("TYPE OF FOALED DATE IN HORSE FILE IS DD/MM/YYY FORMAT");
+					}
+					
 					int count = 1;
 					for (String line : csvData) {
 						
@@ -652,27 +678,13 @@
 						}
 						
 						String rawFoaled = OnboardHelper.readCsvRow(r, foaledIndex);
+						//TODO add log.
+						rawFoaled = rawFoaled.split("\\p{Z}")[0];
 						String foaled = StringUtils.EMPTY;
-						
-						if (StringUtils.isNotEmpty(rawFoaled)) {
-							
-							//Process for case: 15/08/2013 15:30
-							String dateRawFoaled = rawFoaled.split("\\p{Z}")[0];
-							if (dateRawFoaled.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-								foaled = dateRawFoaled;
-							} else if (dateRawFoaled.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
-								DateTimeFormatter expectedFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-								DateTimeFormatter rawFormatter = new DateTimeFormatterBuilder()
-										.appendOptional(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("M/dd/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("MM/d/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("M/d/yyyy"))
-										.toFormatter();
-								
-								foaled = LocalDate.parse(dateRawFoaled, rawFormatter).format(expectedFormatter);
-							} else {
-								logger.info("UNKNOWN TYPE OF FOALED DATE IN HORSE FILE: {} at line : {}", rawFoaled, line);
-							}
+						if (!isAustraliaFormat && StringUtils.isNotEmpty(rawFoaled)) {
+							foaled = LocalDate.parse(rawFoaled, AMERICAN_FORMAL_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+						} else {
+							foaled = rawFoaled;
 						}
 						
 						String sire = OnboardHelper.readCsvRow(r, sireIndex);
@@ -723,8 +735,8 @@
 							}
 						} else {
 							long minusDays = Long.parseLong(dayHere);
-							LocalDate dateAtNewestLocation = LocalDate.parse(csvExportedDateStr, AUS_CUSTOM_LOCAL_DATE).minusDays(minusDays);
-							addedDateStr = dateAtNewestLocation.format(AUS_FORMAL_LOCAL_DATE);
+							LocalDate dateAtNewestLocation = LocalDate.parse(csvExportedDateStr, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(minusDays);
+							addedDateStr = dateAtNewestLocation.format(AUSTRALIA_FORMAL_DATE_FORMAT);
 						}
 						
 //						if (!addedDateStr.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
@@ -849,9 +861,9 @@
 		private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
 		private static final String CT_IN_DISPLAY_NAME_PATTERN = "CT:";
 		
-		private static final DateTimeFormatter AUS_CUSTOM_LOCAL_DATE;
+		private static final DateTimeFormatter AUSTRALIA_CUSTOM_DATE_FORMAT;
 		static {
-			AUS_CUSTOM_LOCAL_DATE = new DateTimeFormatterBuilder()
+			AUSTRALIA_CUSTOM_DATE_FORMAT = new DateTimeFormatterBuilder()
 					.appendValue(DAY_OF_MONTH, 1,2, SignStyle.NEVER)
 					.appendLiteral('/')
 					.appendValue(MONTH_OF_YEAR, 1, 2, SignStyle.NEVER)
@@ -860,14 +872,25 @@
 					.toFormatter();
 		}
 		
-		private static final DateTimeFormatter AUS_FORMAL_LOCAL_DATE;
+		private static final DateTimeFormatter AUSTRALIA_FORMAL_DATE_FORMAT;
 		static {
-			AUS_FORMAL_LOCAL_DATE = new DateTimeFormatterBuilder()
+			AUSTRALIA_FORMAL_DATE_FORMAT = new DateTimeFormatterBuilder()
 					.appendValue(DAY_OF_MONTH, 2)
 					.appendLiteral('/')
 					.appendValue(MONTH_OF_YEAR, 2)
 					.appendLiteral('/')
 					.appendValue(YEAR, 4)
+					.toFormatter();
+		}
+		
+		private static final DateTimeFormatter AMERICAN_FORMAL_LOCAL_DATE;
+		static {
+			AMERICAN_FORMAL_LOCAL_DATE = new DateTimeFormatterBuilder()
+					.appendValue(MONTH_OF_YEAR, 1, 2, SignStyle.NEVER)
+					.appendLiteral('/')
+					.appendValue(DAY_OF_MONTH, 1,2, SignStyle.NEVER)
+					.appendLiteral('/')
+					.appendValue(YEAR, 2, 4, SignStyle.NEVER)
 					.toFormatter();
 		}
 		
@@ -905,7 +928,7 @@
 					exportedDate = exportedDateMatcher.group(2).trim();
 					
 					// process for case horse file was exported before ownership file was exported. Using date info in ownership file can cause mismatching in data.
-					// exportedDate = LocalDate.parse(exportedDate, AUS_CUSTOM_LOCAL_DATE).minusDays(1).format(AUS_CUSTOM_LOCAL_DATE);
+					 exportedDate = LocalDate.parse(exportedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(1).format(AUSTRALIA_CUSTOM_DATE_FORMAT);
 					if (!exportedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
 						throw new CustomException(new ErrorInfo("The exported date was not recognized as a valid Australia format: {}", exportedDate));
 					}
@@ -946,7 +969,8 @@
 						throw new CustomException(new ErrorInfo("The departed date was not recognized as a valid Australia format: {}", horseDepartedDate));
 					}
 					
-					String horseDate = LocalDate.parse(horseDepartedDate, AUS_CUSTOM_LOCAL_DATE).format(AUS_FORMAL_LOCAL_DATE);
+					//process for case: 25/08/19 (usually 25/08/2019)
+					String horseDate = LocalDate.parse(horseDepartedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
 					horseDataMap.put(horseName, horseDate);
 					//horseDataMap.computeIfAbsent(horseName, horseDate);
 				}
@@ -1327,8 +1351,6 @@
 					//ignore process file header
 					csvData = csvData.stream().skip(1).collect(Collectors.toList());
 					
-					String csvDataStr = String.join("\n", csvData);
-					
 					final List<String> organizationNames = Arrays.asList(
 							"Company",
 							"Racing",
@@ -1352,6 +1374,38 @@
 							"Horse Transport",
 							"Club"
 							);
+					
+					List<String> foaledMDYFormatList = new ArrayList<>();
+					boolean isAustraliaFormat = false;
+					for (String line : csvData) {
+						
+						if (StringUtils.isEmpty(line)) continue;
+						
+						if (line.matches("(?m)^([,]+)$")) continue;
+						
+						if (line.matches(CSV_HORSE_COUNT_PATTERN)) continue;
+						
+						String[] r = OnboardHelper.readCsvLine(line);
+						String rawAddedDate = OnboardHelper.readCsvRow(r, addedDateIndex);
+						
+						if (StringUtils.isNotEmpty(rawAddedDate)) {
+							
+							//Process for case: 15/08/2013 15:30
+							String dateRawFoaled = rawAddedDate.split("\\p{Z}")[0];
+							if (dateRawFoaled.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
+								foaledMDYFormatList.add(dateRawFoaled);
+							} else {
+								logger.info("UNKNOWN TYPE OF FOALED DATE IN HORSE FILE: {} at line : {}", rawAddedDate, line);
+							}
+						}
+					}
+					
+					if (CollectionUtils.isEmpty(foaledMDYFormatList)) {
+						logger.info("TYPE OF FOALED DATE IN HORSE FILE IS DD/MM/YYY FORMAT");
+						isAustraliaFormat = true;
+					} else {
+						logger.info("TYPE OF FOALED DATE IN HORSE FILE IS DD/MM/YYY FORMAT");
+					}
 					
 					for (String line : csvData) {
 						String[] r = OnboardHelper.readCsvLine(line);
@@ -1415,38 +1469,41 @@
 								
 								//E.g: Toby Edmonds, Logbasex
 								String firstAndLastNameStr = displayName.substring(ctEndIndex);
-								
-								String finalRealDisplayName = realDisplayName;
-								boolean isOrganizationName = organizationNames.stream().anyMatch(name -> finalRealDisplayName.toLowerCase().contains(name.toLowerCase()));
-								if (isOrganizationName) {
-									lastName = firstAndLastNameStr;
-									firstName = StringUtils.EMPTY;
-									
-									String extractedName = String.format("%s,%s,%s,%s\n",
-											StringHelper.csvValue(displayName),
-											StringHelper.csvValue(realDisplayName),
-											StringHelper.csvValue(firstName),
-											StringHelper.csvValue(lastName)
-									);
-									organizationNameBuilder.append(extractedName);
-									
-								} else {
+
 //									StringUtils.normalizeSpace()
-									String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
-									if (firstAndLastNameArr.length > 1) {
-										lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second).orElse("");
-										String finalLastName = lastName;
-										firstName = Arrays.stream(firstAndLastNameArr).filter(i -> !i.equalsIgnoreCase(finalLastName)).collect(Collectors.joining(" ")).trim();
-									}
-									
-									String extractedName = String.format("%s,%s,%s,%s\n",
-											StringHelper.csvValue(displayName),
-											StringHelper.csvValue(realDisplayName),
-											StringHelper.csvValue(firstName),
-											StringHelper.csvValue(lastName)
-									);
-									normalNameBuilder.append(extractedName);
+								String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
+								if (firstAndLastNameArr.length > 1) {
+									lastName =
+											Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second).orElse("");
+									String finalLastName = lastName;
+									firstName =
+											Arrays.stream(firstAndLastNameArr).filter(i -> !i.equalsIgnoreCase(finalLastName)).collect(Collectors.joining(" ")).trim();
 								}
+								
+								String extractedName = String.format("%s,%s,%s,%s\n",
+										StringHelper.csvValue(displayName),
+										StringHelper.csvValue(realDisplayName),
+										StringHelper.csvValue(firstName),
+										StringHelper.csvValue(lastName)
+								);
+								normalNameBuilder.append(extractedName);
+							}
+							
+						} else {
+							boolean isOrganizationName =
+									organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
+							if (isOrganizationName) {
+								realDisplayName = displayName;
+								firstName = StringUtils.EMPTY;
+								lastName = StringUtils.EMPTY;
+								
+								String extractedName = String.format("%s,%s,%s,%s\n",
+										StringHelper.csvValue(displayName),
+										StringHelper.csvValue(realDisplayName),
+										StringHelper.csvValue(firstName),
+										StringHelper.csvValue(lastName)
+								);
+								organizationNameBuilder.append(extractedName);
 								
 							}
 						}
@@ -1464,25 +1521,14 @@
 						String share = OnboardHelper.readCsvRow(r, shareIndex);
 						
 						String rawAddedDate = OnboardHelper.readCsvRow(r, addedDateIndex);
+						rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
 						String addedDate = StringUtils.EMPTY;
 						
 						//convert addedDate read from CSV to Australia date time format.
-						if (StringUtils.isNotEmpty(rawAddedDate)) {
-							if (rawAddedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-								addedDate = rawAddedDate;
-							} else if (rawAddedDate.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
-								DateTimeFormatter expectedFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-								DateTimeFormatter rawFormatter = new DateTimeFormatterBuilder()
-										.appendOptional(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("M/dd/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("MM/d/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("M/d/yyyy"))
-										.toFormatter();
-								
-								addedDate = LocalDate.parse(rawAddedDate, rawFormatter).format(expectedFormatter);
-							} else {
-								logger.info("UNKNOWN TYPE OF ADDED DATE IN OWNERSHIP FILE: {} in line : {}", rawAddedDate, line);
-							}
+						if (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate)) {
+							addedDate = LocalDate.parse(rawAddedDate, AMERICAN_FORMAL_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+						} else {
+							addedDate = rawAddedDate;
 						}
 						
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
