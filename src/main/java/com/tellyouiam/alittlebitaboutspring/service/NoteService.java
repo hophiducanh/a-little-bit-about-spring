@@ -7,7 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public interface NoteService {
 	
-	Object automateImportOwner(MultipartFile ownerFile, String dirName);
+	Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException;
 	
 	Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile, String dirName) throws CustomException;
 	

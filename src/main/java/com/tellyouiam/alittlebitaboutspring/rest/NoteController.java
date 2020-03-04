@@ -31,13 +31,24 @@ public class NoteController {
 	@Autowired
 	private NoteService noteService;
 	
-	@RequestMapping(value = "/create", method = RequestMethod.POST)
+	@PostMapping
 	@ResponseBody
 	public final ResponseEntity<Object> createNote(@Valid @RequestBody Note note) {
 		note.setCode(1000000011);
 		note.setCreatedAt(new Date(0));
 		note.setUpdatedAt(new Date(0));
 		noteRepository.save(note);
+		return new ResponseEntity<Object>(note, new HttpHeaders(), HttpStatus.OK);
+	}
+	
+	@DeleteMapping
+	@ResponseBody
+	public final ResponseEntity<Object> deleteNote(@Valid @RequestBody Note note) {
+		note.setCode(1000000011);
+		note.setCreatedAt(new Date(0));
+		note.setUpdatedAt(new Date(0));
+		noteRepository.delete(note);
+		noteRepository.delete(null);
 		return new ResponseEntity<Object>(note, new HttpHeaders(), HttpStatus.OK);
 	}
 	
@@ -58,7 +69,12 @@ public class NoteController {
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportOwner(@RequestPart MultipartFile ownerFile,
 	                                                        @RequestParam String dirName) {
-		Object result = noteService.automateImportOwner(ownerFile, dirName);
+		Object result = null;
+		try {
+			result = noteService.automateImportOwner(ownerFile, dirName);
+		} catch (CustomException e) {
+			e.printStackTrace();
+		}
 		
 		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}
