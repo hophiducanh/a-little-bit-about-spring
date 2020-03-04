@@ -339,7 +339,7 @@
 			return null;
 		}
 		
-		public Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {
+		private Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {
 			
 			try {
 				String path = getOutputFolder(dirName) + "formatted-horse.csv";
@@ -618,37 +618,7 @@
 					Map<String, String> horseMap = new LinkedHashMap<>();
 					Map<String, String> horseOwnershipMap = (Map<String, String>) ownerShipResult.get("HorseDataMap");
 					
-					List<String> foaledMDYFormatList = new ArrayList<>();
-					boolean isAustraliaFormat = false;
-					for (String line : csvData) {
-						
-						if (StringUtils.isEmpty(line)) continue;
-						
-						if (line.matches("(?m)^([,]+)$")) continue;
-						
-						if (line.matches(CSV_HORSE_COUNT_PATTERN)) continue;
-						
-						String[] r = OnboardHelper.readCsvLine(line);
-						String rawFoaled = OnboardHelper.readCsvRow(r, foaledIndex);
-						
-						if (StringUtils.isNotEmpty(rawFoaled)) {
-							
-							//Process for case: 15/08/2013 15:30
-							String dateRawFoaled = rawFoaled.split("\\p{Z}")[0];
-							if (dateRawFoaled.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
-								foaledMDYFormatList.add(dateRawFoaled);
-							} else {
-								logger.info("UNKNOWN TYPE OF FOALED DATE IN HORSE FILE: {} at line : {}", rawFoaled, line);
-							}
-						}
-					}
-					
-					if (CollectionUtils.isEmpty(foaledMDYFormatList)) {
-						logger.info("TYPE OF FOALED DATE IN HORSE FILE IS DD/MM/YYY FORMAT");
-						isAustraliaFormat = true;
-					} else {
-						logger.info("TYPE OF FOALED DATE IN HORSE FILE IS DD/MM/YYY FORMAT");
-					}
+					boolean isAustraliaFormat = isAustraliaFormat(csvData, foaledIndex, "horse");
 					
 					int count = 1;
 					for (String line : csvData) {
@@ -710,8 +680,10 @@
 						String bonusScheme = OnboardHelper.readCsvRow(r, bonusSchemeIndex);
 						String nickName = OnboardHelper.readCsvRow(r, nickNameIndex);
 						
-						// If dayHere is empty, get addedDate in HorseName line of ownership file.
-						// If addedDate in HorseName line of ownership file is empty too, get exportedDate of csv file.
+						// If dayHere is empty, get exportedDate of ownership file. Because of:
+						// When dayHere is empty, usually departed date in horse line of ownership file also empty too.
+						// Maybe we use regex we detect 09/10/2019 as departed date (is wrong):
+						// Absorb ( Redoute's Choice - Mother Flame (NZ)) 17yo Bay Mare      Last served by Sioux Nation on 09/10/2019 - Early Scan
 						// (Normally in ownership file because ownership file and horse file are exported in the same day).
 						// If not in the same day, we have to determine what's horse file exported date is.
 						if (StringUtils.isEmpty(dayHere)) {
@@ -720,12 +692,7 @@
 							
 							if (isSameHorseName) {
 								String ownershipAddedDate = horseOwnershipMap.get(name);
-								
-								if (StringUtils.isNotEmpty(ownershipAddedDate)) {
-									addedDateStr = ownershipAddedDate;
-								} else {
-									addedDateStr = csvExportedDateStr;
-								}
+								addedDateStr = csvExportedDateStr;
 							} else {
 								// Address case addedDate, activeStatus and current location in horse file are empty.
 								// We will face an error if we keep this data intact.
@@ -1375,37 +1342,7 @@
 							"Club"
 							);
 					
-					List<String> foaledMDYFormatList = new ArrayList<>();
-					boolean isAustraliaFormat = false;
-					for (String line : csvData) {
-						
-						if (StringUtils.isEmpty(line)) continue;
-						
-						if (line.matches("(?m)^([,]+)$")) continue;
-						
-						if (line.matches(CSV_HORSE_COUNT_PATTERN)) continue;
-						
-						String[] r = OnboardHelper.readCsvLine(line);
-						String rawAddedDate = OnboardHelper.readCsvRow(r, addedDateIndex);
-						
-						if (StringUtils.isNotEmpty(rawAddedDate)) {
-							
-							//Process for case: 15/08/2013 15:30
-							String dateRawFoaled = rawAddedDate.split("\\p{Z}")[0];
-							if (dateRawFoaled.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
-								foaledMDYFormatList.add(dateRawFoaled);
-							} else {
-								logger.info("UNKNOWN TYPE OF FOALED DATE IN HORSE FILE: {} at line : {}", rawAddedDate, line);
-							}
-						}
-					}
-					
-					if (CollectionUtils.isEmpty(foaledMDYFormatList)) {
-						logger.info("TYPE OF FOALED DATE IN HORSE FILE IS DD/MM/YYY FORMAT");
-						isAustraliaFormat = true;
-					} else {
-						logger.info("TYPE OF FOALED DATE IN HORSE FILE IS DD/MM/YYY FORMAT");
-					}
+					boolean isAustraliaFormat = isAustraliaFormat(csvData, addedDateIndex, "ownership");
 					
 					for (String line : csvData) {
 						String[] r = OnboardHelper.readCsvLine(line);
@@ -1473,11 +1410,13 @@
 //									StringUtils.normalizeSpace()
 								String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
 								if (firstAndLastNameArr.length > 1) {
-									lastName =
-											Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second).orElse("");
+									lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second)
+											.orElse("");
+									
 									String finalLastName = lastName;
-									firstName =
-											Arrays.stream(firstAndLastNameArr).filter(i -> !i.equalsIgnoreCase(finalLastName)).collect(Collectors.joining(" ")).trim();
+									firstName = Arrays.stream(firstAndLastNameArr)
+											.filter(i -> !i.equalsIgnoreCase(finalLastName))
+													.collect(Collectors.joining(" ")).trim();
 								}
 								
 								String extractedName = String.format("%s,%s,%s,%s\n",
@@ -1584,7 +1523,60 @@
 			return null;
 		}
 		
-		private String getValidEmail(String finalEmailCellValue, String regexExtractedEmail, List<String> multiEmailsCell, String line) throws CustomException {
+		private boolean isAustraliaFormat(List<String> csvData, int dateIndex, String fileType) {
+			boolean isAustraliaFormat = false;
+			
+			// MM/DD/YYYY format
+			List<String> mdyFormatList = new ArrayList<>();
+			
+			// DD/MM/YYYY format
+			List<String> ausFormatList = new ArrayList<>();
+			
+			for (String line : csvData) {
+				
+				if (StringUtils.isEmpty(line)) continue;
+				
+				//ignore ,,,,,,,,,,,,,, line.
+				if (line.matches("(?m)^([,]+)$")) continue;
+				
+				//ignore header.
+				if (line.matches(CSV_HORSE_COUNT_PATTERN)) continue;
+				
+				String[] r = OnboardHelper.readCsvLine(line);
+				String rawDateTime = OnboardHelper.readCsvRow(r, dateIndex);
+				
+				if (StringUtils.isNotEmpty(rawDateTime)) {
+					
+					//Process for case: 15/08/2013 15:30
+					String date = rawDateTime.split("\\p{Z}")[0];
+					
+					if (date.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
+						ausFormatList.add(date);
+					} else if (date.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
+						mdyFormatList.add(date);
+					} else {
+						logger.info("UNKNOWN TYPE OF DATE IN {} FILE: {} at line : {}", StringUtils.upperCase(fileType), rawDateTime, line);
+					}
+				}
+			}
+			
+			// if file contains only one date like: 03/27/2019 >> MM/DD/YYYY format.
+			// if all date value in the file have format like: D/M/YYYY format (E.g: 5/6/2020) >> recheck in racingAustralia.horse
+			if (CollectionUtils.isEmpty(mdyFormatList) && !CollectionUtils.isEmpty(ausFormatList)) {
+				isAustraliaFormat = true;
+				logger.info("Type of DATE in {} file is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.", StringUtils.upperCase(fileType));
+				
+			} else if (!CollectionUtils.isEmpty(mdyFormatList)) {
+				logger.info("Type of DATE in {} file is MM/DD/YYY format", StringUtils.upperCase(fileType));
+				
+			} else {
+				logger.info("Type of DATE in {} file is UNDEFINED", StringUtils.upperCase(fileType));
+			}
+			return isAustraliaFormat;
+		}
+		
+		private String getValidEmail(String finalEmailCellValue, String regexExtractedEmail,
+		                             List<String> multiEmailsCell, String line) throws CustomException {
 			if (!CollectionUtils.isEmpty(multiEmailsCell)) {
 				for (String email : multiEmailsCell) {
 					if (!StringHelper.isValidEmail(email.trim())) {
