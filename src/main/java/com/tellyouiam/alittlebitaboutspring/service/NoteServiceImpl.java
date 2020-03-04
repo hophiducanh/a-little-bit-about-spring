@@ -1396,6 +1396,9 @@
 						//We wanna extract this name to firstName, lastName, displayName:
 						//Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
 						Matcher ctMatcher = Pattern.compile(CT_IN_DISPLAY_NAME_PATTERN, Pattern.CASE_INSENSITIVE).matcher(displayName);
+						boolean isOrganizationName =
+								organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
+						
 						if (ctMatcher.find()) {
 							if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
 								int ctStartedIndex = ctMatcher.start();
@@ -1428,23 +1431,20 @@
 								normalNameBuilder.append(extractedName);
 							}
 							
+						} else if (isOrganizationName) {
+							realDisplayName = displayName;
+							firstName = StringUtils.EMPTY;
+							lastName = StringUtils.EMPTY;
+							
+							String extractedName = String.format("%s,%s,%s,%s\n",
+									StringHelper.csvValue(displayName),
+									StringHelper.csvValue(realDisplayName),
+									StringHelper.csvValue(firstName),
+									StringHelper.csvValue(lastName)
+							);
+							organizationNameBuilder.append(extractedName);
 						} else {
-							boolean isOrganizationName =
-									organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
-							if (isOrganizationName) {
-								realDisplayName = displayName;
-								firstName = StringUtils.EMPTY;
-								lastName = StringUtils.EMPTY;
-								
-								String extractedName = String.format("%s,%s,%s,%s\n",
-										StringHelper.csvValue(displayName),
-										StringHelper.csvValue(realDisplayName),
-										StringHelper.csvValue(firstName),
-										StringHelper.csvValue(lastName)
-								);
-								organizationNameBuilder.append(extractedName);
-								
-							}
+							realDisplayName = displayName;
 						}
 						
 						String type = OnboardHelper.readCsvRow(r, typeIndex);
