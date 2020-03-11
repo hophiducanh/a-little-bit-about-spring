@@ -4,6 +4,7 @@
 	import com.tellyouiam.alittlebitaboutspring.utils.CsvHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.utils.ErrorInfo;
+	import com.tellyouiam.alittlebitaboutspring.utils.FileHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
 	import org.apache.commons.lang3.StringUtils;
@@ -56,6 +57,10 @@
 	public class NoteServiceImpl implements NoteService {
 		
 		private static final Logger logger = LoggerFactory.getLogger(NoteServiceImpl.class);
+		
+		private static final String HORSE_FILE_HEADER = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+				"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName", "Type",
+				"Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode", "Country", "GST");
 		
 		private int check(String[] arr, String... valuesToCheck) {
 			int index;
@@ -174,7 +179,7 @@
 				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
 				
-				String ownerErrorData = null;
+				String ownerErrorData = StringUtils.EMPTY;
 				
 				if (!CollectionUtils.isEmpty(csvData)) {
 					
@@ -216,13 +221,7 @@
 					int countryIndex = check(header, "Country");
 					int gstIndex = check(header, "GST");
 					
-					String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-							"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName",
-							"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-							"Country", "GST"
-					);
-					
-					builder.append(rowHeader);
+					builder.append(HORSE_FILE_HEADER);
 					
 					String allLines = String.join("", csvData);
 					Pattern recordsPattern = Pattern.compile(HORSE_RECORDS_PATTERN);
@@ -233,10 +232,7 @@
 						recordsMatcher.reset(); //only use in single-threaded
 					}
 					
-					int matcherCount = 0;
-					while (recordsMatcher.find()) {
-						matcherCount++;
-					}
+					int matcherCount = StringHelper.countMatches(recordsMatcher);
 					if (matcherCount > 1) {
 						throw new CustomException(new ErrorInfo("CSV data seem pretty weird. Please check!"));
 					}
@@ -285,7 +281,7 @@
 						String country = OnboardHelper.readCsvRow(r, countryIndex);
 						String gst = OnboardHelper.readCsvRow(r, gstIndex);
 						
-						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 								StringHelper.csvValue(ownerId),
 								StringHelper.csvValue(email),
 								StringHelper.csvValue(financeEmail),
@@ -317,20 +313,10 @@
 				}
 				
 				String errorDataPath = getOutputFolder(dirName) + File.separator + "owner-input-error.csv";
-				try {
-					File file = new File(errorDataPath);
-					FileOutputStream os = new FileOutputStream(file);
-					os.write(Objects.requireNonNull(ownerErrorData).getBytes());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				FileHelper.writeDataToFile(errorDataPath, ownerErrorData.getBytes());
 				
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
-				try {
-					Files.write(Paths.get(path), Collections.singleton(builder));
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				FileHelper.writeDataToFile(path, builder.toString().getBytes());
 				
 				return builder;
 			} catch (IOException e) {
@@ -342,7 +328,7 @@
 		private Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {
 			
 			try {
-				String path = getOutputFolder(dirName) + "formatted-horse.csv";
+				String path = getOutputFolder(dirName).concat(File.separator).concat("formatted-horse.csv");
 				
 				List<String> csvData = this.getCsvData(horseFile);
 				csvData = csvData.stream().filter(org.apache.commons.lang3.StringUtils::isNotEmpty).collect(Collectors.toList());
@@ -410,23 +396,12 @@
 						String rawFoaled = OnboardHelper.readCsvRow(r, foaledIndex);
 						String foaled = StringUtils.EMPTY;
 						
-						if (StringUtils.isNotEmpty(rawFoaled)) {
-							
-							if (rawFoaled.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-								foaled = rawFoaled;
-							} else if (rawFoaled.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
-								DateTimeFormatter expectedFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-								DateTimeFormatter rawFormatter = new DateTimeFormatterBuilder()
-										.appendOptional(DateTimeFormatter.ofPattern("MM/dd/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("M/dd/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("MM/d/yyyy"))
-										.appendOptional(DateTimeFormatter.ofPattern("M/d/yyyy"))
-										.toFormatter();
-								
-								foaled = LocalDate.parse(rawFoaled, rawFormatter).format(expectedFormatter);
-							} else {
-								logger.info("UNKNOWN TYPE OF FOALED DATE IN MISTABLE HORSE FILE: {} in line : {}", foaled, line);
-							}
+						boolean isAustraliaFormat = isAustraliaFormat(csvData, foaledIndex, "horse");
+						
+						if (!isAustraliaFormat && StringUtils.isNotEmpty(rawFoaled)) {
+							foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+						} else {
+							foaled = rawFoaled;
 						}
 						
 						String sire = OnboardHelper.readCsvRow(r, sireIndex);
@@ -650,9 +625,9 @@
 						String rawFoaled = OnboardHelper.readCsvRow(r, foaledIndex);
 						//TODO add log.
 						rawFoaled = rawFoaled.split("\\p{Z}")[0];
-						String foaled = StringUtils.EMPTY;
+						String foaled;
 						if (!isAustraliaFormat && StringUtils.isNotEmpty(rawFoaled)) {
-							foaled = LocalDate.parse(rawFoaled, AMERICAN_FORMAL_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+							foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
 						} else {
 							foaled = rawFoaled;
 						}
@@ -669,7 +644,7 @@
 						
 						String dayHere = OnboardHelper.readCsvRow(r, daysHereIndex);
 						
-						String addedDateStr = OnboardHelper.readCsvRow(r, addedDateIndex);;
+						String addedDate = OnboardHelper.readCsvRow(r, addedDateIndex);;
 						
 						String activeStatus = OnboardHelper.readCsvRow(r, activeStatusIndex);
 						
@@ -692,25 +667,25 @@
 							
 							if (isSameHorseName) {
 								String ownershipAddedDate = horseOwnershipMap.get(name);
-								addedDateStr = csvExportedDateStr;
+								addedDate = csvExportedDateStr;
 							} else {
 								// Address case addedDate, activeStatus and current location in horse file are empty.
 								// We will face an error if we keep this data intact.
-								if (StringUtils.isEmpty(addedDateStr) && StringUtils.isEmpty(activeStatus) && StringUtils.isEmpty(currentLocation)) {
-									addedDateStr = csvExportedDateStr;
+								if (StringUtils.isEmpty(addedDate) && StringUtils.isEmpty(activeStatus) && StringUtils.isEmpty(currentLocation)) {
+									addedDate = csvExportedDateStr;
 								}
 							}
 						} else {
 							long minusDays = Long.parseLong(dayHere);
 							LocalDate dateAtNewestLocation = LocalDate.parse(csvExportedDateStr, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(minusDays);
-							addedDateStr = dateAtNewestLocation.format(AUSTRALIA_FORMAL_DATE_FORMAT);
+							addedDate = dateAtNewestLocation.format(AUSTRALIA_FORMAL_DATE_FORMAT);
 						}
 						
-//						if (!addedDateStr.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-//							logger.info("UNKNOWN TYPE OF ADDED DATE IN HORSE FILE: {} in line: {}", addedDateStr, addedDateStr);
+//						if (!addedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
+//							logger.info("UNKNOWN TYPE OF ADDED DATE IN HORSE FILE: {} in line: {}", addedDate, addedDate);
 //						}
 						
-						horseMap.put(name, addedDateStr);
+						horseMap.put(name, addedDate);
 						
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 								StringHelper.csvValue(externalId),
@@ -721,7 +696,7 @@
 								StringHelper.csvValue(color),
 								StringHelper.csvValue(sex),
 								StringHelper.csvValue(avatar),
-								StringHelper.csvValue(addedDateStr),
+								StringHelper.csvValue(addedDate),
 								StringHelper.csvValue(activeStatus),
 								StringHelper.csvValue(currentLocation),
 								StringHelper.csvValue(currentStatus),
@@ -745,13 +720,7 @@
 				}
 				
 				String path = getOutputFolder(dirName) + File.separator + "formatted-horse.csv";
-				try {
-					File file = new File(path);
-					FileOutputStream os = new FileOutputStream(file);
-					os.write(builder.toString().getBytes());
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				Files.write(Paths.get(path), builder.toString().getBytes());
 				
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -850,9 +819,9 @@
 					.toFormatter();
 		}
 		
-		private static final DateTimeFormatter AMERICAN_FORMAL_LOCAL_DATE;
+		private static final DateTimeFormatter AMERICAN_CUSTOM_LOCAL_DATE;
 		static {
-			AMERICAN_FORMAL_LOCAL_DATE = new DateTimeFormatterBuilder()
+			AMERICAN_CUSTOM_LOCAL_DATE = new DateTimeFormatterBuilder()
 					.appendValue(MONTH_OF_YEAR, 1, 2, SignStyle.NEVER)
 					.appendLiteral('/')
 					.appendValue(DAY_OF_MONTH, 1,2, SignStyle.NEVER)
@@ -1465,7 +1434,7 @@
 						
 						//convert addedDate read from CSV to Australia date time format.
 						if (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate)) {
-							addedDate = LocalDate.parse(rawAddedDate, AMERICAN_FORMAL_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+							addedDate = LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
 						} else {
 							addedDate = rawAddedDate;
 						}
@@ -1572,6 +1541,7 @@
 			} else {
 				logger.info("Type of DATE in {} file is UNDEFINED", StringUtils.upperCase(fileType));
 			}
+			
 			return isAustraliaFormat;
 		}
 		

@@ -1,10 +1,13 @@
 package com.tellyouiam.alittlebitaboutspring.utils;
 
+import com.opencsv.CSVReader;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import java.io.FileReader;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -150,4 +153,15 @@ public class CsvHelper {
 		return number;
 	}
 	
+	public List<String[]> getCsvData(String filePath) {
+		List<String[]> data = null;
+		try {
+			data = new CSVReader(
+					new FileReader("C:\\Users\\conta\\OneDrive\\Desktop\\data\\POB-410-Aquagait\\POB-410 submit\\owner-submit.csv")).readAll();
+			System.out.println(data);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return data;
+	}
 }
