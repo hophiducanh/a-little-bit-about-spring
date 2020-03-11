@@ -37,4 +37,11 @@ public class StringHelper {
 		Matcher matcher = pattern.matcher(email);
 		return matcher.matches();
 	}
+	
+	public static int countMatches(Matcher matcher) {
+		int counter = 0;
+		while (matcher.find())
+			counter++;
+		return counter;
+	}
 }
