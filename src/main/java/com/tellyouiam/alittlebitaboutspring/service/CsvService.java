@@ -7,4 +7,6 @@ import org.springframework.web.multipart.MultipartFile;
 public interface CsvService {
 	
 	Object formatHorseFile(MultipartFile horseFile);
+	
+	Object formatOpeningBalanceFile(MultipartFile file);
 }
