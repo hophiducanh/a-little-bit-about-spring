@@ -37,19 +37,19 @@ public class CsvServiceImpl implements CsvService {
 	
 	@Override
 	public Object formatHorseFile(MultipartFile horseFile) {
-		try (
-				Reader reader = Files.newBufferedReader(Paths.get(SAMPLE_CSV_FILE_PATH));
-		) {
-			CsvToBean<Horse> csvToBean = new CsvToBeanBuilder<Horse>(reader)
-					.withType(Horse.class)
-					.withIgnoreLeadingWhiteSpace(true)
-					.build();
-			
-			for (Horse horseCsv : csvToBean) {
+//		try (
+//				Reader reader = Files.newBufferedReader(Paths.get(SAMPLE_CSV_FILE_PATH));
+//		) {
+//			CsvToBean<Horse> csvToBean = new CsvToBeanBuilder<Horse>(reader)
+//					.withType(Horse.class)
+//					.withIgnoreLeadingWhiteSpace(true)
+//					.build();
+//
+//			for (Horse horseCsv : csvToBean) {
 //				System.out.println("externalId : " + horseCsv.getExternalId().values().toArray(new String[1])[0]);
 //				System.out.println("name : " + horseCsv.getName().values().toArray(new String[1])[0]);
 //				System.out.println("foaled : " + horseCsv.getFoal().values().toArray(new java.time.LocalDate[0])[0]);
-				System.out.println("foaled : " + horseCsv.getFoaled());
+//				System.out.println("foaled : " + horseCsv.getFoaled());
 //				System.out.println("sire : " + horseCsv.getSire());
 //				System.out.println("dam : " + horseCsv.getDam());
 //				System.out.println("color : " + horseCsv.getColor());
@@ -63,11 +63,11 @@ public class CsvServiceImpl implements CsvService {
 //				System.out.println("category : " + horseCsv.getCategory());
 //				System.out.println("bonusScheme : " + horseCsv.getBonusScheme().values().toArray(new String[1])[0]);
 //				System.out.println("nickName : " + horseCsv.getNickName().values().toArray(new String[1])[0]);
-				System.out.println("==========================");
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+//				System.out.println("==========================");
+//			}
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
 		return null;
 	}
 	

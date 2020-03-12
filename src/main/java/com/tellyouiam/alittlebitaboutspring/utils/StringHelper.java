@@ -1,5 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.utils;
 
+import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.lang3.StringUtils;
 
 import java.text.SimpleDateFormat;
@@ -43,5 +44,15 @@ public class StringHelper {
 		while (matcher.find())
 			counter++;
 		return counter;
+	}
+
+	public static Double getMultiMapSingleDoubleValue(MultiValuedMap<String,Double> map) {
+		Double mapValue = map.values().toArray(new Double[1])[0];
+		return mapValue;
+	}
+
+	public static Double getMultiMapSingleValue(MultiValuedMap<String, Double> map) {
+		Double mapValue = map.values().toArray(new Double[1])[0];
+		return mapValue;
 	}
 }

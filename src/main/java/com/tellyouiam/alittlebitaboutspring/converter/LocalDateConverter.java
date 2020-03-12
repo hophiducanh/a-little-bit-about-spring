@@ -11,7 +11,7 @@ import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.YEAR;
 
-public class LocalDateConverter extends AbstractBeanField {
+public class LocalDateConverter extends AbstractBeanField<LocalDate> {
 	
 	private static final DateTimeFormatter AUSTRALIA_FORMAL_DATE_FORMAT;
 	static {
