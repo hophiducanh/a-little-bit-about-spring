@@ -41,7 +41,7 @@ public class OpeningBalance {
 		double net = getMultiMapSingleDoubleValue(this.net);
 
 		if (net < 0 && loanBalance == 0 && balance00 == 0 && balance30 == 0 && balance60 == 0 && balance90 == 0) {
-			return net;
+			return this.net;
 		} else {
 			return loanBalance + balance00;
 		}
