@@ -864,7 +864,7 @@
 					exportedDate = exportedDateMatcher.group(2).trim();
 					
 					// process for case horse file was exported before ownership file was exported. Using date info in ownership file can cause mismatching in data.
-					 exportedDate = LocalDate.parse(exportedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(1).format(AUSTRALIA_CUSTOM_DATE_FORMAT);
+					// exportedDate = LocalDate.parse(exportedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(1).format(AUSTRALIA_CUSTOM_DATE_FORMAT);
 					if (!exportedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
 						throw new CustomException(new ErrorInfo("The exported date was not recognized as a valid Australia format: {}", exportedDate));
 					}

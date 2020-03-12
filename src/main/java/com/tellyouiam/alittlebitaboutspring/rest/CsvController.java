@@ -19,11 +19,17 @@ public class CsvController {
 	private CsvService csvService;
 	
 	@PostMapping("/horse")
-	public final ResponseEntity<Object> automateImportHorse(@RequestPart MultipartFile horseFile,
+	public final ResponseEntity<Object> automateImportHorse(@RequestPart(required = false) MultipartFile horseFile,
 	                                                        @RequestPart(required = false) MultipartFile ownershipFile,
 	                                                        @RequestParam(required = false) String dirName) {
-		Object result;
-		result = csvService.formatHorseFile(horseFile);
+		Object result = csvService.formatHorseFile(horseFile);
+		
+		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+	}
+	
+	@PostMapping("/opening-balance")
+	public final ResponseEntity<Object> automateImportHorse(@RequestPart(required = false) MultipartFile file) {
+		Object result = csvService.formatOpeningBalanceFile(file);
 		
 		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}
