@@ -55,4 +55,8 @@ public class StringHelper {
 		Double mapValue = map.values().toArray(new Double[1])[0];
 		return mapValue;
 	}
+	
+	public static String getMultiMapSingleStringValue(MultiValuedMap<String,String> map) {
+		return map.values().toArray(new String[1])[0];
+	}
 }
