@@ -15,13 +15,9 @@ import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -30,6 +26,15 @@ public class CsvServiceImpl implements CsvService {
 	
 	@Override
 	public Object formatHorseFile(MultipartFile horseFile) {
+		String csvHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+				"ExternalId", "Name", "Foaled", "Sire", "Dam", "Color",
+				"Sex", "Avatar", "AddedDate", "ActiveStatus/Status",
+				"CurrentLocation/HorseLocation", "CurrentStatus/HorseStatus",
+				"Type", "Category", "BonusScheme", "NickName"
+		);
+		StringBuilder builder = new StringBuilder();
+		builder.append(String.join(",", csvHeader)).append("\n");
+
 		try (
 				Reader reader = new InputStreamReader(horseFile.getInputStream());
 		) {
@@ -39,7 +44,6 @@ public class CsvServiceImpl implements CsvService {
 					.withIgnoreLeadingWhiteSpace(true)
 					.build();
 
-			StringBuilder builder = new StringBuilder();
 			for (Horse horseCsv : csvToBean) {
 				builder.append(horseCsv.toStandardObject());
 			}

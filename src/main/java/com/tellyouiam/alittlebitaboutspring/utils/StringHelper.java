@@ -7,6 +7,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,6 +58,6 @@ public class StringHelper {
 	}
 	
 	public static String getMultiMapSingleStringValue(MultiValuedMap<String,String> map) {
-		return map.values().toArray(new String[1])[0];
+		return Objects.nonNull(map) ? map.values().toArray(new String[1])[0] : StringUtils.EMPTY;
 	}
 }

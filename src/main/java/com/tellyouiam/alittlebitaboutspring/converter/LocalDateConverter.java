@@ -36,9 +36,21 @@ public class LocalDateConverter extends AbstractCsvConverter {
 				.toFormatter()
 				.withResolverStyle(ResolverStyle.STRICT);
 	}
+
+	private static final DateTimeFormatter AUSTRALIA_CUSTOM_DATE_FORMAT;
+	static {
+		AUSTRALIA_CUSTOM_DATE_FORMAT = new DateTimeFormatterBuilder()
+				.appendValue(DAY_OF_MONTH, 1,2, SignStyle.NEVER)
+				.appendLiteral('/')
+				.appendValue(MONTH_OF_YEAR, 1, 2, SignStyle.NEVER)
+				.appendLiteral('/')
+				.appendValue(YEAR, 2, 4, SignStyle.NEVER)
+				.toFormatter()
+				.withResolverStyle(ResolverStyle.STRICT);
+	}
 	
 	@Override
 	public Object convertToRead(String dateStr) {
-		return LocalDate.parse(dateStr, AMERICAN_CUSTOM_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+		return LocalDate.parse(dateStr, AUSTRALIA_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
 	}
 }
