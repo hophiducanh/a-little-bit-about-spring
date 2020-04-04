@@ -1,10 +1,13 @@
 package com.tellyouiam.alittlebitaboutspring.utils;
 
+import com.opencsv.CSVReader;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.CollectionUtils;
 
+import java.io.FileReader;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -101,9 +104,9 @@ public class CsvHelper {
 				lineBuilder = new StringBuilder();
 				String[] r = OnboardHelper.readCsvLine(item);
 				
-				String mobile = OnboardHelper.readCsvRow(r, mobileIndex);
-				String phone = OnboardHelper.readCsvRow(r, phoneIndex);
-				String fax = OnboardHelper.readCsvRow(r, faxIndex);
+				String mobile = OnboardHelper.getCsvCellValue(r, mobileIndex);
+				String phone = OnboardHelper.getCsvCellValue(r, phoneIndex);
+				String fax = OnboardHelper.getCsvCellValue(r, faxIndex);
 				
 				if (isValidPhoneMobileFaxNumber(mobile))
 					lineBuilder.append(String.format("Invalid mobile:%s\n", mobile));
@@ -135,7 +138,7 @@ public class CsvHelper {
 	// 0011852 9202 0321
 	private static boolean isValidPhoneMobileFaxNumber(String number) throws CustomException {
 		if (StringUtils.isNotEmpty(number)) {
-			return !number.matches("^[\\d+()\\-\\s.]+$");
+			return !number.matches("^[\\d+()\\- .]+$");
 		}
 		return false;
 	}
@@ -150,4 +153,15 @@ public class CsvHelper {
 		return number;
 	}
 	
+	public List<String[]> getCsvData(String filePath) {
+		List<String[]> data = null;
+		try {
+			data = new CSVReader(
+					new FileReader("C:\\Users\\conta\\OneDrive\\Desktop\\data\\POB-410-Aquagait\\POB-410 submit\\owner-submit.csv")).readAll();
+			System.out.println(data);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return data;
+	}
 }

@@ -1,6 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.rest;
 
-import com.tellyouiam.alittlebitaboutspring.dto.Note;
+import com.tellyouiam.alittlebitaboutspring.dto.note.Note;
 import com.tellyouiam.alittlebitaboutspring.service.NoteService;
 import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
 import com.tellyouiam.alittlebitaboutspring.utils.HttpReqRespUtils;
@@ -37,6 +37,8 @@ public class NoteController {
 		note.setCode(1000000011);
 		note.setCreatedAt(new Date(0));
 		note.setUpdatedAt(new Date(0));
+		List<Note> notes = noteRepository.findByCode(null);
+		System.out.println(notes.size());
 		noteRepository.save(note);
 		return new ResponseEntity<Object>(note, new HttpHeaders(), HttpStatus.OK);
 	}
@@ -98,22 +100,13 @@ public class NoteController {
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportOwnerShip(@RequestPart MultipartFile ownershipFile,
 	                                                            @RequestParam(required = false) String filePath) {
-		Object result = noteService.automateImportOwnerShip(ownershipFile, filePath);
-		
-		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
-	}
-	
-	@RequestMapping(value = "/owner/prepared-ownership", method = RequestMethod.POST)
-	@ResponseBody
-	public final ResponseEntity<Object> prepareOwnership(@RequestPart MultipartFile ownershipFile,
-	                                                     @RequestParam String dirName) {
 		Object result = null;
 		try {
-			result = noteService.prepareOwnership(ownershipFile, dirName);
+			result = noteService.automateImportOwnerShip(ownershipFile, filePath);
 		} catch (CustomException e) {
 			e.printStackTrace();
 		}
-		
-		return new ResponseEntity<Object>(HttpReqRespUtils.getClientIpAddressIfServletRequestExist(), new HttpHeaders(), HttpStatus.OK);
+
+		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}
 }
