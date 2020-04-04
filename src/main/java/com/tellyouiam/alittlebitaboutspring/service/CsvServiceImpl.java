@@ -43,16 +43,15 @@ public class CsvServiceImpl implements CsvService {
 	public Object formatHorseFile(MultipartFile horseFile) {
 		String csvHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
 				"ExternalId", "Name", "Foaled", "Sire", "Dam", "Color",
-				"Sex", "Avatar", "AddedDate", "ActiveStatus/Status",
-				"CurrentLocation/HorseLocation", "CurrentStatus/HorseStatus",
-				"Type", "Category", "BonusScheme", "NickName"
+				"Sex", "Avatar", "AddedDate", "ActiveStatus",
+				"HorseLocation", "HorseStatus", "Type", "Category", "BonusScheme", "NickName"
 		);
 		StringBuilder builder = new StringBuilder();
 		builder.append(String.join(",", csvHeader)).append("\n");
 		
 		try (
 				InputStream inputStream = horseFile.getInputStream();
-				Reader reader = new BufferedReader(new InputStreamReader(inputStream));
+				BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
 		) {
 			CsvToBean<Horse> csvToBean = new CsvToBeanBuilder<Horse>(reader)
 					.withType(Horse.class)
@@ -62,10 +61,10 @@ public class CsvServiceImpl implements CsvService {
 			
 			// MM/DD/YYYY format
 			List<String> mdyFormatList = new ArrayList<>();
-			
 			// DD/MM/YYYY format
 			List<String> ausFormatList = new ArrayList<>();
-			
+
+			boolean isMDYFormat = false;
 			for (Horse horseCsv : csvToBean) {
 				
 				String date = getMultiMapSingleStringValue(horseCsv.getFoaled()).split("\\p{Z}")[0];
@@ -76,11 +75,11 @@ public class CsvServiceImpl implements CsvService {
 					mdyFormatList.add(date);
 				}
 			}
-			
-			
+
 			// if file contains only one date like: 03/27/2019 >> MM/DD/YYYY format.
 			// if all date value in the file have format like: D/M/YYYY format (E.g: 5/6/2020) >> recheck in racingAustralia.horse
 			if (CollectionUtils.isEmpty(mdyFormatList) && !CollectionUtils.isEmpty(ausFormatList)) {
+				isMDYFormat = true;
 				logger.info("Type of DATE is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.");
 				
 			} else if (!CollectionUtils.isEmpty(mdyFormatList)) {
@@ -89,14 +88,15 @@ public class CsvServiceImpl implements CsvService {
 			} else {
 				logger.info("Type of DATE is UNDEFINED");
 			}
-			
-			csvToBean = new CsvToBeanBuilder<Horse>(reader)
+
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(horseFile.getInputStream()));
+			CsvToBean<Horse> horseCsvToBean = new CsvToBeanBuilder<Horse>(bufferedReader)
 					.withType(Horse.class)
 					.withFilter(line -> new EmptyLineFilter().allowLine(line))
 					.withIgnoreLeadingWhiteSpace(true)
 					.build();
-			for (Horse horseCsv : csvToBean) {
-				builder.append(horseCsv.toStandardObject());
+			for (Horse horseCsv : horseCsvToBean) {
+				builder.append(horseCsv.toStandardObject(isMDYFormat));
 			}
 			Files.write(Paths.get("./horse.csv"), builder.toString().getBytes());
 		} catch (IOException e) {
@@ -114,15 +114,6 @@ public class CsvServiceImpl implements CsvService {
 		try (
 				Reader reader = new InputStreamReader(file.getInputStream());
 		) {
-			/*
-			 * This filter ignores empty lines from the input
-			 */
-			CsvToBean<OpeningBalance> csvToBean = new CsvToBeanBuilder<OpeningBalance>(reader)
-					.withType(OpeningBalance.class)
-					.withFilter(line -> new EmptyLineFilter().allowLine(line))
-					.withIgnoreLeadingWhiteSpace(true)
-					.build();
-
 //          Can't write Bean with BeanToCsv, you can only write CsvToBean or BeanToCsv
 //			Writer writer = new FileWriter("./abc.csv");
 //
@@ -132,7 +123,13 @@ public class CsvServiceImpl implements CsvService {
 //			final StatefulBeanToCsv<OpeningBalance> beanToCsv = new StatefulBeanToCsvBuilder<OpeningBalance>(writer)
 //					.withMappingStrategy(mappingStrategy)
 //					.build();
-			
+
+			CsvToBean<OpeningBalance> csvToBean = new CsvToBeanBuilder<OpeningBalance>(reader)
+					.withFilter(line -> new EmptyLineFilter().allowLine(line))
+					.withType(OpeningBalance.class)
+					.withIgnoreLeadingWhiteSpace(true)
+					.build();
+
 			for (OpeningBalance balanceCsv : csvToBean) {
 				String ownerName = balanceCsv.getOwnerName();
 				String current = String.valueOf(balanceCsv.getBalance());
@@ -148,8 +145,7 @@ public class CsvServiceImpl implements CsvService {
 				builder.append(row);
 			}
 			
-			Files.write(Paths.get("./opening-balance.csv"), builder.toString().getBytes());
-			
+			Files.write(Paths.get("/home/logbasex/Desktop/data/POB-479-Wylie Dalziel Racing/submit/opening-balance.csv"), builder.toString().getBytes());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

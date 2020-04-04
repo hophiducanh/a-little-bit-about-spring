@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.dto;
+package com.tellyouiam.alittlebitaboutspring.dto.googledrive;
 
 import java.io.Serializable;
 

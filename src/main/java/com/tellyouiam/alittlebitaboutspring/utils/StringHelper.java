@@ -4,10 +4,7 @@ import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.lang3.StringUtils;
 
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -59,5 +56,20 @@ public class StringHelper {
 	
 	public static String getMultiMapSingleStringValue(MultiValuedMap<String,String> map) {
 		return Objects.nonNull(map) ? map.values().toArray(new String[1])[0] : StringUtils.EMPTY;
+	}
+
+	public static List<String> customSplitSpecific(String s) {
+		List<String> words = new ArrayList<>();
+		boolean notInsideComma = true;
+		int start = 0;
+		for (int i = 0; i < s.length(); i++) {
+			if (s.charAt(i) == ',' && notInsideComma) {
+				words.add(s.substring(start, i));
+				start = i + 1;
+			} else if (s.charAt(i) == '"')
+				notInsideComma = !notInsideComma;
+		}
+		words.add(s.substring(start));
+		return words;
 	}
 }

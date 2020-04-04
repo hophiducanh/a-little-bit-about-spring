@@ -44,11 +44,13 @@
 	import java.util.Objects;
 	import java.util.Set;
 	import java.util.TreeMap;
+	import java.util.concurrent.atomic.AtomicInteger;
 	import java.util.regex.Matcher;
 	import java.util.regex.Pattern;
 	import java.util.stream.Collector;
 	import java.util.stream.Collectors;
-	
+	import java.util.stream.IntStream;
+
 	import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 	import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 	import static java.time.temporal.ChronoField.YEAR;
@@ -209,7 +211,7 @@
 					int financeEmailIndex = check(header, "FinanceEmail");
 					int firstNameIndex = check(header, "FirstName", "First Name");
 					int lastNameIndex = check(header, "LastName", "Last Name");
-					int displayNameIndex = check(header, "DisplayName", "Name");
+					int displayNameIndex = check(header, "DisplayName", "Name", "Display Name");
 					int typeIndex = check(header, "Type");
 					int mobileIndex = check(header, "Mobile", "Mobile Phone");
 					int phoneIndex = check(header, "Phone");
@@ -304,10 +306,10 @@
 						builder.append(rowBuilder);
 					}
 					
-					if (horseRecords != count) {
-						logger.info("Data records found: {}, Data records count: {}", horseRecords, count);
-						throw new CustomException(new ErrorInfo("Data records doesn't match!"));
-					}
+//					if (horseRecords != count) {
+//						logger.info("Data records found: {}, Data records count: {}", horseRecords, count);
+//						throw new CustomException(new ErrorInfo("Data records doesn't match!"));
+//					}
 					
 					ownerErrorData = CsvHelper.validateInputFile(preparedData);
 				}
@@ -425,7 +427,7 @@
 						String category = OnboardHelper.readCsvRow(r, categoryIndex);
 						String bonusScheme = OnboardHelper.readCsvRow(r, bonusSchemeIndex);
 						String nickName = OnboardHelper.readCsvRow(r, nickNameIndex);
-						
+
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 								StringHelper.csvValue(externalId),
 								StringHelper.csvValue(name),
@@ -686,7 +688,7 @@
 //						}
 						
 						horseMap.put(name, addedDate);
-						
+
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 								StringHelper.csvValue(externalId),
 								StringHelper.csvValue(name),
@@ -1035,20 +1037,23 @@
 				}
 				
 				String path = getOutputFolder(dirName);
+				File file = new File(path, "prepared-ownership.csv");
+				path = file.getAbsolutePath();
+//
+//				FileOutputStream fos = null;
+//				try {
+//					File file = new File(path, "prepared-ownership.csv");
+//					path = file.getAbsolutePath();
+//					fos = new FileOutputStream(file);
+//					fos.write(allLines.getBytes());
+//					fos.close();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
 				
-				FileOutputStream fos = null;
-				try {
-					File file = new File(path, "prepared-ownership.csv");
-					path = file.getAbsolutePath();
-					fos = new FileOutputStream(file);
-					fos.write(allLines.getBytes());
-					fos.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				
-				String[][] data = readCSVTo2DArray(path, false);
-				
+//				String[][] data = readCSVTo2DArray(path, false);
+				String[][] data = this.get2DArrayFromString(allLines);
+
 				//all possible index of cell has value.
 				List<Integer> rowHasValueIndex = new ArrayList<>();
 				
@@ -1058,35 +1063,33 @@
 				//all possible index of empty cell.
 				Set<Integer> isEmptyIndexes = new HashSet<>();
 				
-				// CSV data after using initial regex missing these header name: HorseName, AddedDate, GST
+				// CSV data after using initial regex usually missing these header name: HorseName, AddedDate, GST
 				// Can't use regex for file to find column header name addedDate and GST, better we have to find all manually.
 				// We need all column data has right header name above to process in the next step.
 				int dateIndex = -1;
 				int gstIndex = -1;
 				
 				//find all cells has empty columns.
-				int count = 0;
 				for (int i = 0; i < data.length; i++) {
-					count++;
 					for (int j = 0; j < data[i].length; j++) {
 						setAllIndexes.add(j);
-						
+
 						if (data[i][j].equalsIgnoreCase(StringUtils.EMPTY)) {
 							isEmptyIndexes.add(j);
 						}
-						
+
 						//append date header
 						if (isRecognizedAsValidDate(data[i][j])) {
 							dateIndex = j;
 							data[0][dateIndex] = "Added Date";
 						}
-						
+
 						if (data[i][j].equals("N") || data[i][j].equals("Y")) {
 							gstIndex = j;
 						}
 					}
 				}
-				
+
 				//Append Header
 				StringBuilder gstString =  new StringBuilder();
 				for (String[] row : data) {
@@ -1121,26 +1124,27 @@
 				
 				List<Integer> allIndexes = new ArrayList<>(setAllIndexes);
 				
-				try {
-					StringBuilder arrayBuilder = generateCsvDataToBuild(data);
-					
-					BufferedWriter writer = new BufferedWriter(new FileWriter(path));
-					writer.write(arrayBuilder.toString());
-					writer.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+//				try {
+//					StringBuilder arrayBuilder = generateCsvDataToBuild(data);
+//
+//					BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+//					writer.write(arrayBuilder.toString());
+//					writer.close();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
 				
 				//read with header
-				List<String> csvDataWithBankColumns = this.getCsvDataFromPath(path, false);
-				
+//				List<String> csvDataWithBankColumns = this.getCsvDataFromPath(path, false);
+				List<String> csvDataWithBankColumns = this.getListFrom2DArrString(data);
+
 				//write csv data after format original csv file >> ignored completely empty column.
 				StringBuilder builder = new StringBuilder();
 				for (String line : csvDataWithBankColumns) {
 					String[] r = OnboardHelper.readCsvLine(line);
-					
+
 					StringBuilder rowBuilder = new StringBuilder();
-					
+
 					//write all column has data based on columns index.
 					for (Integer index : allIndexes) {
 						rowBuilder.append(r[index]).append(",");
@@ -1150,19 +1154,20 @@
 				}
 				
 				//write data and continue reading data for the next processing step.
-				try {
-					File file = new File(path);
-					
-					FileOutputStream os = new FileOutputStream(file);
-					os.write(builder.toString().getBytes());
-					os.flush();
-					os.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+//				try {
+//					File file = new File(path);
+//
+//					FileOutputStream os = new FileOutputStream(file);
+//					os.write(builder.toString().getBytes());
+//					os.flush();
+//					os.close();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
 				
-				String[][] blankHorseNameData = readCSVTo2DArray(path, false);
-				
+//				String[][] blankHorseNameData = readCSVTo2DArray(path, false);
+				String[][] blankHorseNameData = this.get2DArrayFromString(builder.toString());
+
 				//fill empty horse cells with previous cell data.
 				for (int i = 1; i < blankHorseNameData.length;) {
 					if (StringUtils.isNotEmpty(blankHorseNameData[i][0])) {
@@ -1176,42 +1181,339 @@
 					}
 					i++;
 				}
-				
-				try {
-					StringBuilder arrayBuilder = generateCsvDataToBuild(blankHorseNameData);
-					BufferedWriter writer = new BufferedWriter(new FileWriter(path));
-					writer.write(arrayBuilder.toString());
-					writer.close();
-				} catch (IOException e) {
+
+					List<String> csvDataList = this.getListFrom2DArrString(blankHorseNameData);
+					StringBuilder dataBuilder = new StringBuilder();
+
+					String nameHeader = String.format("%s,%s,%s,%s\n\n","RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
+					StringBuilder nameBuilder = new StringBuilder(nameHeader);
+					StringBuilder normalNameBuilder = new StringBuilder();
+					StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
+
+					if (!CollectionUtils.isEmpty(csvDataList)) {
+
+						// ---------- cols of file ownership ---------------------------
+						// HORSE KEY (ID or NAME), can leave blank if key is horse name
+						// HORSE NAME
+						// OWNER_KEY (ID or EMAIL), can leave blank if ID is EMAIL
+						// EMAIL
+						// FINANCE EMAIL
+						// FIRST NAME
+						// LAST NAME
+						// DISPLAY NAME
+						// TYPE
+						// MOBILE
+						// PHONE
+						// FAX
+						// ADDRESS
+						// SUBURB (CITY)
+						// STATE
+						// POSTCODE
+						// COUNRTY
+						// GST = "true/false" or ot "T/F" or "Y/N"
+						// BALANCE (SHARE PERCENTAGE)
+						// FROM_DATE
+						// TO_DATE
+						// -------------------------------------------------------------
+
+						String[] header = OnboardHelper.readCsvLine(csvDataList.get(0));
+
+						int horseIdIndex = check(header, "Horse Id");
+						int horseNameIndex = check(header, "Horse Name", "Horse");
+						int ownerIdIndex = check(header, "Owner Id");
+						int commsEmailIndex = check(header, "CommsEmail", "Email");
+						int financeEmailIndex = check(header, "Finance Email", "FinanceEmail");
+						int firstNameIndex = check(header, "FirstName", "First Name");
+						int lastNameIndex = check(header, "LastName", "Last Name");
+						int displayNameIndex = check(header, "DisplayName", "Name", "Display Name");
+						int typeIndex = check(header, "Type");
+						int mobileIndex = check(header, "Mobile", "Mobile Phone");
+						int phoneIndex = check(header, "Phone");
+						int faxIndex = check(header, "Fax");
+						int addressIndex = check(header, "Address");
+						int cityIndex = check(header, "City");
+						int stateIndex = check(header, "State");
+						int postCodeIndex = check(header, "PostCode");
+						int countryIndex = check(header, "Country");
+						int shareIndex = check(header, "Shares", "Share", "Ownership", "Share %");
+						int addedDateIndex = check(header, "AddedDate", "Added Date");
+						int realGstIndex = check(header, "GST");
+
+						String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+								"HorseId", "HorseName",
+								"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
+								"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
+								"Country", "GST", "Shares", "FromDate"
+						);
+
+						dataBuilder.append(rowHeader);
+
+						//ignore process file header
+						csvDataList = csvDataList.stream().skip(1).collect(Collectors.toList());
+
+						final List<String> organizationNames = Arrays.asList(
+								"Company",
+								"Racing",
+								"Pty Ltd",
+								"Racing Pty Ltd",
+								"Breeding",
+								"stud",
+								"group",
+								"bred",
+								"breds",
+								"tbreds",
+								"Thoroughbred",
+								"Thoroughbreds",
+								"synd",
+								"syndicate",
+								"syndicates",
+								"syndication",
+								"syndications",
+								"Bloodstock",
+								"farm",
+								"Horse Transport",
+								"Club"
+						);
+
+						boolean isAustraliaFormat = isAustraliaFormat(csvDataList, addedDateIndex, "ownership");
+
+						for (String line : csvDataList) {
+							String[] r = OnboardHelper.readCsvLine(line);
+
+							String horseId = OnboardHelper.readCsvRow(r, horseIdIndex);
+							String horseName = OnboardHelper.readCsvRow(r, horseNameIndex);
+							String ownerId = OnboardHelper.readCsvRow(r, ownerIdIndex);
+							String commsEmail = OnboardHelper.readCsvRow(r, commsEmailIndex);
+							String financeEmail = OnboardHelper.readCsvRow(r, financeEmailIndex);
+
+							//shortest email ever contains at least 3 char: x@y
+							//https://stackoverflow.com/questions/1423195/what-is-the-actual-minimum-length-of-an-email-address-as-defined-by-the-ietf
+							if (StringUtils.isNotEmpty(commsEmail) && commsEmail.trim().length() < 3) {
+								commsEmail = StringUtils.EMPTY;
+								logger.warn("Found weird email: {} at line: {}", commsEmail, line);
+							}
+
+							if (StringUtils.isNotEmpty(financeEmail) && financeEmail.trim().length() < 3) {
+								financeEmail = StringUtils.EMPTY;
+								logger.warn("Found weird email: {} at line: {}", financeEmail, line);
+							}
+
+			  	        /*
+			  	         ### **Process case email cell like: Accs: accounts@marshallofbrisbane.com.au Comms:
+			  	         monopoly@bigpond.net.au**
+			  	         - [1] Extract Comms to communication email cell.
+			  	         - [2] Extract Accs to financial email cell.
+			  	        */
+							Matcher mixingEmailTypeMatcher = Pattern.compile(MIXING_COMMS_FINANCE_EMAIL_PATTERN, Pattern.CASE_INSENSITIVE).matcher(line);
+							if (mixingEmailTypeMatcher.find()) {
+
+								String tryingCommsEmail = mixingEmailTypeMatcher.group(4).trim();
+								String tryingFinanceEmail = mixingEmailTypeMatcher.group(2).trim();
+
+								List<String> multiCommsEmail = Arrays.asList(tryingCommsEmail.split(";"));
+								List<String> multiFinanceEmail = Arrays.asList(tryingFinanceEmail.split(";"));
+
+								commsEmail = getValidEmail(commsEmail, tryingCommsEmail, multiCommsEmail, line);
+
+								if (StringUtils.isEmpty(financeEmail)) {
+									financeEmail = getValidEmail(financeEmail, tryingFinanceEmail, multiFinanceEmail, line);
+								}
+							}
+
+							String firstName = OnboardHelper.readCsvRow(r, firstNameIndex);
+							String lastName = OnboardHelper.readCsvRow(r, lastNameIndex);
+							String displayName = OnboardHelper.readCsvRow(r, displayNameIndex);
+
+							String realDisplayName = null;
+							//We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
+							//We wanna extract this name to firstName, lastName, displayName:
+							//Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
+							Matcher ctMatcher = Pattern.compile(CT_IN_DISPLAY_NAME_PATTERN, Pattern.CASE_INSENSITIVE).matcher(displayName);
+							boolean isOrganizationName =
+									organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
+
+							if (ctMatcher.find()) {
+								if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
+									int ctStartedIndex = ctMatcher.start();
+									int ctEndIndex = ctMatcher.end();
+
+									//E.g: Edmonds Racing
+									realDisplayName = displayName.substring(0, ctStartedIndex).trim();
+
+									//E.g: Toby Edmonds, Logbasex
+									String firstAndLastNameStr = displayName.substring(ctEndIndex);
+
+//									StringUtils.normalizeSpace()
+									String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
+									if (firstAndLastNameArr.length > 1) {
+										lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second)
+												.orElse("");
+
+										String finalLastName = lastName;
+										firstName = Arrays.stream(firstAndLastNameArr)
+												.filter(i -> !i.equalsIgnoreCase(finalLastName))
+												.collect(Collectors.joining(" ")).trim();
+									}
+
+									String extractedName = String.format("%s,%s,%s,%s\n",
+											StringHelper.csvValue(displayName),
+											StringHelper.csvValue(realDisplayName),
+											StringHelper.csvValue(firstName),
+											StringHelper.csvValue(lastName)
+									);
+									normalNameBuilder.append(extractedName);
+								}
+
+							} else if (isOrganizationName) {
+								realDisplayName = displayName;
+								firstName = StringUtils.EMPTY;
+								lastName = StringUtils.EMPTY;
+
+								String extractedName = String.format("%s,%s,%s,%s\n",
+										StringHelper.csvValue(displayName),
+										StringHelper.csvValue(realDisplayName),
+										StringHelper.csvValue(firstName),
+										StringHelper.csvValue(lastName)
+								);
+								organizationNameBuilder.append(extractedName);
+							} else {
+								realDisplayName = displayName;
+							}
+
+							String type = OnboardHelper.readCsvRow(r, typeIndex);
+							String mobile = OnboardHelper.readCsvRow(r, mobileIndex);
+							String phone = OnboardHelper.readCsvRow(r, phoneIndex);
+							String fax = OnboardHelper.readCsvRow(r, faxIndex);
+							String address = OnboardHelper.readCsvRow(r, addressIndex);
+							String city = OnboardHelper.readCsvRow(r, cityIndex);
+							String state = OnboardHelper.readCsvRow(r, stateIndex);
+							String postCode = OnboardHelper.getPostcode(OnboardHelper.readCsvRow(r, postCodeIndex));
+							String country = OnboardHelper.readCsvRow(r, countryIndex);
+							String gst = OnboardHelper.readCsvRow(r, realGstIndex);
+							String share = OnboardHelper.readCsvRow(r, shareIndex);
+
+							String rawAddedDate = OnboardHelper.readCsvRow(r, addedDateIndex);
+							rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
+							String addedDate = StringUtils.EMPTY;
+
+							//convert addedDate read from CSV to Australia date time format.
+							if (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate)) {
+								addedDate = LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+							} else {
+								addedDate = rawAddedDate;
+							}
+
+							String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+									StringHelper.csvValue(horseId),
+									StringHelper.csvValue(horseName),
+									StringHelper.csvValue(ownerId),
+									StringHelper.csvValue(commsEmail),
+									StringHelper.csvValue(financeEmail),
+									StringHelper.csvValue(firstName),
+									StringHelper.csvValue(lastName),
+									StringHelper.csvValue(realDisplayName),
+									StringHelper.csvValue(type),
+									StringHelper.csvValue(mobile),
+									StringHelper.csvValue(phone),
+									StringHelper.csvValue(fax),
+									StringHelper.csvValue(address),
+									StringHelper.csvValue(city),
+									StringHelper.csvValue(state),
+									StringHelper.csvValue(postCode),
+									StringHelper.csvValue(country),
+									StringHelper.csvValue(gst),
+									StringHelper.csvValue(share),
+									StringHelper.csvValue(addedDate)
+							);
+							dataBuilder.append(rowBuilder);
+						}
+
+						nameBuilder.append(normalNameBuilder).append(organizationNameBuilder);
+					}
+
+					String namePath = getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
+					try {
+						Files.write(Paths.get(namePath), Collections.singleton(nameBuilder));
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+					//have two type of ownership file >> one from mistable with input is csv file, one is another with input is xlsx file.
+					String finalPath = getOutputFolder(dirName);
+					try {
+						File fileX = new File(Objects.requireNonNull(finalPath), "formatted-ownership.csv");
+
+						FileOutputStream os = new FileOutputStream(fileX);
+						os.write(dataBuilder.toString().getBytes());
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+
+					return result;
+				} catch (IOException | CustomException e) {
 					e.printStackTrace();
 				}
+//				try {
+//					StringBuilder arrayBuilder = generateCsvDataToBuild(blankHorseNameData);
+//					BufferedWriter writer = new BufferedWriter(new FileWriter(path));
+//					writer.write(arrayBuilder.toString());
+//					writer.close();
+//				} catch (IOException e) {
+//					e.printStackTrace();
+//				}
+//
+//				Path filePath = Paths.get(path);
+//				String name = "pre-format.csv";
+//				byte[] content = null;
+//				try {
+//					content = Files.readAllBytes(filePath);
+//				} catch (final IOException e) {
+//					e.printStackTrace();
+//				}
+//
+//				//content only store raw data without right format >> we need to call automateImportOwnerShip() method to process.
+//				MultipartFile ownershipMultipart = new MockMultipartFile(name, content);
+//
+//				StackTraceElement[] stackTraceElements  = Thread.currentThread().getStackTrace();
+//				List<String> callerMethods = Arrays.stream(stackTraceElements).map(StackTraceElement::getMethodName).collect(Collectors.toList());
+//
+//				Object finalResult = automateImportOwnerShip(ownershipMultipart, dirName);
+//
+//				//if only automateImport function call >> return result.
+//				if (!callerMethods.contains("automateImportHorse")) {
+//					return finalResult;
+//				}
 				
-				Path filePath = Paths.get(path);
-				String name = "pre-format.csv";
-				byte[] content = null;
-				try {
-					content = Files.readAllBytes(filePath);
-				} catch (final IOException e) {
-					e.printStackTrace();
-				}
-				
-				//content only store raw data without right format >> we need to call automateImportOwnerShip() method to process.
-				MultipartFile ownershipMultipart = new MockMultipartFile(name, content);
-				
-				StackTraceElement[] stackTraceElements  = Thread.currentThread().getStackTrace();
-				List<String> callerMethods = Arrays.stream(stackTraceElements).map(StackTraceElement::getMethodName).collect(Collectors.toList());
-				
-				Object finalResult = automateImportOwnerShip(ownershipMultipart, dirName);
-				
-				//if only automateImport function call >> return result.
-				if (!callerMethods.contains("automateImportHorse")) {
-					return finalResult;
-				}
-				
-			} catch (IOException e) {
-				e.printStackTrace();
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//
+//			return result;
+			return null;
+		}
+
+		private String[][] get2DArrayFromString(String value) {
+
+			List<List<String>> nestedListData = Arrays.stream(value.split("\n"))
+					.map(StringHelper::customSplitSpecific)
+					.collect(Collectors.toList());
+
+			return nestedListData.stream()
+					.map(l -> l.toArray(new String[0]))
+					.toArray(String[][]::new);
+		}
+
+		private List<String> getListFrom2DArrString(String[][] value) {
+			//ignore header?
+
+			List<String> result = new ArrayList<>();
+			for (String[] strings : value) {
+				String row = String.join(",", strings);
+				result.add(row);
 			}
-			
+//			return Arrays.stream(value)
+//					.flatMap(Arrays::stream)
+//					.collect(Collectors.toList());
 			return result;
 		}
 		
