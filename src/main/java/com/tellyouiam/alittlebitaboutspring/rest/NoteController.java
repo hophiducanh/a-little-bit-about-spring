@@ -100,22 +100,13 @@ public class NoteController {
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportOwnerShip(@RequestPart MultipartFile ownershipFile,
 	                                                            @RequestParam(required = false) String filePath) {
-		Object result = noteService.automateImportOwnerShip(ownershipFile, filePath);
-		
-		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
-	}
-	
-	@RequestMapping(value = "/owner/prepared-ownership", method = RequestMethod.POST)
-	@ResponseBody
-	public final ResponseEntity<Object> prepareOwnership(@RequestPart MultipartFile ownershipFile,
-	                                                     @RequestParam String dirName) {
 		Object result = null;
 		try {
-			result = noteService.prepareOwnership(ownershipFile, dirName);
+			result = noteService.automateImportOwnerShip(ownershipFile, filePath);
 		} catch (CustomException e) {
 			e.printStackTrace();
 		}
-		
-		return new ResponseEntity<Object>(HttpReqRespUtils.getClientIpAddressIfServletRequestExist(), new HttpHeaders(), HttpStatus.OK);
+
+		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}
 }
