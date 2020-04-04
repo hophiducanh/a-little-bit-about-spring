@@ -11,7 +11,5 @@ public interface NoteService {
 	
 	Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile, String dirName) throws CustomException;
 	
-	Object automateImportOwnerShip(MultipartFile horseFile, String filePath);
-	
-	Object prepareOwnership(MultipartFile ownershipFile, String dirName) throws CustomException;
+	Object automateImportOwnerShip(MultipartFile horseFile, String filePath) throws CustomException;
 }
