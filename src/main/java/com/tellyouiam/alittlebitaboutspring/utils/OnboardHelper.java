@@ -11,11 +11,13 @@ public class OnboardHelper {
 	public static String[] readCsvLine(String line) {
 		return line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
 	}
-	
+
+	public static String getCsvCellValue(String[] r, int index) {
+		return index != -1 ? readCsvRow(r, index) : org.apache.commons.lang3.StringUtils.EMPTY;
+	}
+
 	public static String readCsvRow(String[] r, int index) {
-		if (index == 100) {
-			return "";
-		}
+
 		String stringValue = r[index];
 		if (StringUtils.isEmpty(stringValue))
 			return stringValue;
