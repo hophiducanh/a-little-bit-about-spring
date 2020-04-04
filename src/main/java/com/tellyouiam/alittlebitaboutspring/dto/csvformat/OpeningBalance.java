@@ -2,8 +2,6 @@ package com.tellyouiam.alittlebitaboutspring.dto.csvformat;
 
 import com.opencsv.bean.CsvBindAndJoinByName;
 import com.opencsv.bean.CsvBindByName;
-import com.opencsv.bean.CsvCustomBindByName;
-import com.tellyouiam.alittlebitaboutspring.converter.CustomNameDoubleStringConverter;
 import com.tellyouiam.alittlebitaboutspring.converter.CustomJoinNameDoubleStringConverter;
 import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.getMultiMapSingleDoubleValue;
 import lombok.Getter;
@@ -15,38 +13,35 @@ import org.apache.commons.collections4.MultiValuedMap;
 public class OpeningBalance {
 	@CsvBindByName(column = "displayName")
 	private String ownerName;
-	
-	@CsvBindByName(column = "email")
-	private String ownerEmail;
 
-	@CsvCustomBindByName(column = "loanBal", converter = CustomNameDoubleStringConverter.class)
-	private Double loanBal;
-	
-	@CsvBindAndJoinByName(column = "bal_00", elementType = String.class, converter = CustomJoinNameDoubleStringConverter.class)
+	@CsvBindAndJoinByName(column = "(loanBal)", elementType = String.class, converter = CustomJoinNameDoubleStringConverter.class)
+	private MultiValuedMap<String, Double> loanBal;
+
+	@CsvBindAndJoinByName(column = "(bal_00)|(Balance)", elementType = String.class, converter = CustomJoinNameDoubleStringConverter.class)
 	private MultiValuedMap<String, Double> bal00;
-	
+
 	@CsvBindAndJoinByName(column = "bal_30", elementType = String.class, converter = CustomJoinNameDoubleStringConverter.class)
 	private MultiValuedMap<String, Double> bal30;
-	
+
 	@CsvBindAndJoinByName(column = "bal_60", elementType = String.class, converter = CustomJoinNameDoubleStringConverter.class)
 	private MultiValuedMap<String, Double> bal60;
-	
+
 	@CsvBindAndJoinByName(column = "^(bal_90).+$", elementType = String.class, converter = CustomJoinNameDoubleStringConverter.class)
 	private MultiValuedMap<String, Double> bal90;
-	
-	@CsvCustomBindByName(column = "net", converter = CustomNameDoubleStringConverter.class)
-	private Double net;
+
+	@CsvBindAndJoinByName(column = "net", elementType = String.class, converter = CustomJoinNameDoubleStringConverter.class)
+	private MultiValuedMap<String, Double> net;
 	
 	public double getBalance() {
-		double loanBalance = this.loanBal;
+		double loanBalance = getMultiMapSingleDoubleValue(this.loanBal);
 		double balance00 = getMultiMapSingleDoubleValue(this.bal00);
 		double balance30 = getMultiMapSingleDoubleValue(this.bal30);
 		double balance60 = getMultiMapSingleDoubleValue(this.bal60);
 		double balance90 = getMultiMapSingleDoubleValue(this.bal90);
-		double net = this.net;
+		double net = getMultiMapSingleDoubleValue(this.net);
 
 		if (net < 0 && loanBalance == 0 && balance00 == 0 && balance30 == 0 && balance60 == 0 && balance90 == 0) {
-			return this.net;
+			return net;
 		} else {
 			return loanBalance + balance00;
 		}
@@ -63,5 +58,4 @@ public class OpeningBalance {
 	public double getOver90() {
 		return getMultiMapSingleDoubleValue(this.bal90);
 	}
-	
 }

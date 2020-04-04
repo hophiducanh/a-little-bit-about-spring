@@ -1,6 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.repository;
 
-import com.tellyouiam.alittlebitaboutspring.dto.Note;
+import com.tellyouiam.alittlebitaboutspring.dto.note.Note;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;

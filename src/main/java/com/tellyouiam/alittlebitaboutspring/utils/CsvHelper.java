@@ -138,7 +138,7 @@ public class CsvHelper {
 	// 0011852 9202 0321
 	private static boolean isValidPhoneMobileFaxNumber(String number) throws CustomException {
 		if (StringUtils.isNotEmpty(number)) {
-			return !number.matches("^[\\d+()\\-\\s.]+$");
+			return !number.matches("^[\\d+()\\- .]+$");
 		}
 		return false;
 	}
