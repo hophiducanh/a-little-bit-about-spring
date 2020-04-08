@@ -1,4 +1,6 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.exception;
+
+import com.tellyouiam.alittlebitaboutspring.utils.ErrorInfo;
 
 public class CustomException extends Exception {
 

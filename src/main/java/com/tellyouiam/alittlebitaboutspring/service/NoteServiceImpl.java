@@ -1,5 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.service;
 
+import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import com.tellyouiam.alittlebitaboutspring.utils.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
