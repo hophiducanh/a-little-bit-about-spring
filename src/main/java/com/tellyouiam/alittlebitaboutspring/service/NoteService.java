@@ -1,6 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.service;
 
-import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
+import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
