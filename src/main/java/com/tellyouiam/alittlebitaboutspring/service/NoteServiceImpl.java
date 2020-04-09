@@ -5,7 +5,6 @@ import com.tellyouiam.alittlebitaboutspring.utils.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -1413,7 +1412,4 @@ public class NoteServiceImpl implements NoteService {
         return finalEmailCellValue;
     }
 
-    public static void main(String[] args) {
-        System.out.println(HttpMethod.GET.name());
-    }
 }
