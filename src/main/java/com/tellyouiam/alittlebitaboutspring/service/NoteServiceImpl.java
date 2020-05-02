@@ -706,14 +706,12 @@ public class NoteServiceImpl implements NoteService {
 
     private static final String MIXING_COMMS_FINANCE_EMAIL_PATTERN = "\"?\\bAccs\\b:\\s((.+) (?=(\\bComms\\b)))\\bComms\\b:\\s((.+)(\\.[a-zA-Z;]+)(?=,))\"?";
 
-    private static final String FILE_BEGINNING_PATTERN = "(?m)^(,\\bShare\\s%)";
-    private static final String FILE_BEGINNING_TRYING_PATTERN = "(?m)^(\\bShare\\s%)";
+    private static final String REMOVE_UNNECESSARY_DATA =
+            "(?m)^(?!((,)?Share %)|(.*(?=([\\d]{1,3})(\\.)([\\d]{1,2})%))).*$(\\n)?";
     private static final String EXTRACT_FILE_OWNER_NAME_PATTERN = "(?m)^(Horses)(.+)$(?=\\n)";
     private static final String CSV_HORSE_COUNT_PATTERN = "(?m)^(.+)Horses([,]+)$";
-    private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 7;
-
-    private static final String REMOVE_BLANK_FOOTER_PATTERN = "(?m)^[,]+$";
-
+    private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 9;
+    
     private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
     private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
     private static final String CT_IN_DISPLAY_NAME_PATTERN = "\\bCT:";
@@ -915,40 +913,27 @@ public class NoteServiceImpl implements NoteService {
 
             //remove unnecessary line like:
             // ,,With Share Ownership Information ,,,,,,,,,,,,,,,,,,,,
-            String ignoredDataHeader;
-            Matcher beginningFileMatcher = Pattern.compile(FILE_BEGINNING_PATTERN).matcher(allLines);
-            Matcher fileBeginningTryingMatcher = Pattern.compile(FILE_BEGINNING_TRYING_PATTERN).matcher(allLines);
-            if (beginningFileMatcher.find()) {
-                int startedIndex = beginningFileMatcher.start();
-                ignoredDataHeader = allLines.substring(0, startedIndex);
-                allLines = allLines.substring(startedIndex);
-
-            } else if (fileBeginningTryingMatcher.find()) {
-                allLines = allLines.replaceAll(FILE_BEGINNING_TRYING_PATTERN, ",$1");
-                int startedIndex = fileBeginningTryingMatcher.start();
-                ignoredDataHeader = allLines.substring(0, startedIndex);
-                allLines = allLines.substring(startedIndex);
-
+            Matcher unnecessaryDataMatcher = Pattern.compile(REMOVE_UNNECESSARY_DATA).matcher(allLines);
+            if (unnecessaryDataMatcher.find()) {
+                allLines = allLines.replaceAll(REMOVE_UNNECESSARY_DATA, "");
             } else {
-                throw new CustomException(new ErrorInfo("File start with an incorrect prefix! Please check!"));
+                logger.warn("Data seemingly weird. Please check!");
             }
 
-            String ignoredData = ignoredDataHeader + ignoredDataFooter;
-            int ignoredDataLines = StringUtils.countMatches(ignoredData, "\n");
-
+            unnecessaryDataMatcher.reset();
+            StringBuilder ignoredData = new StringBuilder();
+            int gossipDataCount = 0;
+            while (unnecessaryDataMatcher.find()) {
+                gossipDataCount++;
+                ignoredData.append(unnecessaryDataMatcher.group());
+            }
+            
             logger.info("******************************IGNORED DATA**********************************\n {}", ignoredData);
             //normally unnecessary lines to ignored between 5 and 10.;
-            if (ignoredDataLines > IGNORED_NON_DATA_LINE_THRESHOLD) {
+            if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
                 throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
             }
-
-            //last blank header can caused ArrayIndexOutOfBoundsException if you don't remove these lines.
-            // E.g: line[23] if blank line is: ,,,,,,,,,,,,,,
-            Matcher removeBlankFooter = Pattern.compile(REMOVE_BLANK_FOOTER_PATTERN).matcher(allLines);
-            if (removeBlankFooter.find()) {
-                allLines = allLines.replaceAll(REMOVE_BLANK_FOOTER_PATTERN, StringUtils.EMPTY);
-            }
-
+            
             String[][] data = this.get2DArrayFromString(allLines);
 
             //all possible index of cell has value.
