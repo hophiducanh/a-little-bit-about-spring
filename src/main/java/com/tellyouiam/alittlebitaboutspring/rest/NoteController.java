@@ -98,10 +98,10 @@ public class NoteController {
 	@RequestMapping(value = "/owner/automate-import-ownership", method = RequestMethod.POST)
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportOwnerShip(@RequestPart MultipartFile ownershipFile,
-	                                                            @RequestParam(required = false) String filePath) {
+	                                                            @RequestParam(required = false) String dirName) {
 		Object result = null;
 		try {
-			result = noteService.automateImportOwnerShip(ownershipFile, filePath);
+			result = noteService.automateImportOwnerShip(ownershipFile, dirName);
 		} catch (CustomException e) {
 			e.printStackTrace();
 		}

@@ -682,7 +682,7 @@ public class NoteServiceImpl implements NoteService {
     private static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
     private static final String REMOVE_LINE_BREAK_PATTERN = "\nCT\\b";
     private static final String REMOVE_INVALID_SHARES_PATTERN = "\\bInt.Party\\b";
-    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\(\\s.*";
+    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\((\\s)?.*";
     private static final String CORRECT_SHARE_COLUMN_POSITION_PATTERN = "(?m)^,(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String SHARE_COLUMN_POSITION_TRYING_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
@@ -710,7 +710,7 @@ public class NoteServiceImpl implements NoteService {
     private static final String FILE_BEGINNING_TRYING_PATTERN = "(?m)^(\\bShare\\s%)";
     private static final String EXTRACT_FILE_OWNER_NAME_PATTERN = "(?m)^(Horses)(.+)$(?=\\n)";
     private static final String CSV_HORSE_COUNT_PATTERN = "(?m)^(.+)Horses([,]+)$";
-    private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 6;
+    private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 7;
 
     private static final String REMOVE_BLANK_FOOTER_PATTERN = "(?m)^[,]+$";
 
@@ -949,8 +949,6 @@ public class NoteServiceImpl implements NoteService {
                 allLines = allLines.replaceAll(REMOVE_BLANK_FOOTER_PATTERN, StringUtils.EMPTY);
             }
 
-            String path = getOutputFolder(dirName);
-            File file = new File(path, "prepared-ownership.csv");
             String[][] data = this.get2DArrayFromString(allLines);
 
             //all possible index of cell has value.
