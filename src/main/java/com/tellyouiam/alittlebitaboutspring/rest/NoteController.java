@@ -33,7 +33,7 @@ public class NoteController {
 	@PostMapping
 	@ResponseBody
 	public final ResponseEntity<Object> createNote(@Valid @RequestBody Note note) {
-		note.setCode(1000000011);
+		note.setCode(null);
 		note.setCreatedAt(new Date(0));
 		note.setUpdatedAt(new Date(0));
 		List<Note> notes = noteRepository.findByCode(null);

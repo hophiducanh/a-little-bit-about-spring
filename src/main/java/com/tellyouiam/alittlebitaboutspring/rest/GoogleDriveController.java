@@ -44,8 +44,8 @@ import java.util.List;
 
 @Controller
 public class GoogleDriveController {
-	private static HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
-	private static JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
+	private static final HttpTransport HTTP_TRANSPORT = new NetHttpTransport();
+	private static final JsonFactory JSON_FACTORY = JacksonFactory.getDefaultInstance();
 	
 	// private static final List<String> SCOPES =
 	// Collections.singletonList(DriveScopes.DRIVE);

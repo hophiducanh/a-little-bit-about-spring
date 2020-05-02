@@ -1,8 +1,12 @@
 package com.tellyouiam.alittlebitaboutspring.service;
 
+import com.google.common.base.Splitter;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import com.tellyouiam.alittlebitaboutspring.utils.*;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.WordUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -10,6 +14,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -1411,5 +1416,41 @@ public class NoteServiceImpl implements NoteService {
         }
         return finalEmailCellValue;
     }
-
+    
+    private static String getParamValue(String link, String paramName) throws URISyntaxException {
+        List<NameValuePair> queryParams = new URIBuilder(link).getQueryParams();
+        return queryParams.stream()
+                .filter(param -> param.getName().equalsIgnoreCase(paramName))
+                .map(NameValuePair::getValue)
+                .findFirst()
+                .orElse("");
+    }
+    
+    public static void main(String[] args) throws URISyntaxException {
+        String strWrap =
+                WordUtils.wrap("A really really really really really long sentence.", 50, "\n", false);
+        System.out.println(strWrap);
+        
+        String str = StringUtils.abbreviate("Lala", 4);
+        System.out.println(str);
+    
+//        DateTimeFormatter f = DateTimeFormatter.ofPattern("MMddyyyy");
+//        LocalDate bday = null;
+//
+//        try {`
+//            bday = LocalDate.parse(args[0], f);
+//        } catch (java.time.DateTimeException e) {
+//            System.out.println("bad dates Indy");
+//            System.exit(0);
+//        }
+    
+        String url = "https://www.youtube.com/v/VIDEO_ID?version=3&loop=1&playlist=VIDEO_ID";
+        Map<Object, Object> params = StringHelper.getRequestParams(url);
+        System.out.println(params.get("v"));
+        if (params != null) {
+            params.forEach((key, value) -> System.out.println(key + " " + value));
+        }
+        String u = "https://www.youtube.com/watch?v=JgggA8Jtzyg&list=RDJgggA8Jtzyg&start_radio=1";
+        System.out.println(getParamValue(u, "v"));
+    }
 }
