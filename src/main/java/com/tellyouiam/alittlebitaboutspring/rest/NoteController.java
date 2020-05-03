@@ -3,6 +3,7 @@ package com.tellyouiam.alittlebitaboutspring.rest;
 import com.tellyouiam.alittlebitaboutspring.dto.note.Note;
 import com.tellyouiam.alittlebitaboutspring.service.NoteService;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
+import com.tellyouiam.alittlebitaboutspring.utils.FileHelper;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -13,6 +14,11 @@ import com.tellyouiam.alittlebitaboutspring.repository.NoteRepository;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -116,12 +122,17 @@ public class NoteController {
 				for (MultipartFile file : ownershipFiles) {
 					Map<Object, Object> mapData = noteService.automateImportOwnerShip(file, dirName);
 					StringBuilder ownershipData = (StringBuilder) mapData.get("ownershipData");
-					StringBuilder ownershipName = (StringBuilder) mapData.get("ownershipData");
+					StringBuilder ownershipName = (StringBuilder) mapData.get("ownershipName");
 					dataBuilder.append(ownershipData);
 					nameBuilder.append(ownershipName);
 				}
+				String extractedNamePath = FileHelper.getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
+				Files.write(Paths.get(extractedNamePath), Collections.singleton(nameBuilder));
+				
+				String formattedPath = FileHelper.getOutputFolder(dirName) + File.separator + "formatted-ownership.csv";
+				Files.write(Paths.get(formattedPath), Collections.singleton(dataBuilder));
 			}
-		} catch (CustomException e) {
+		} catch (CustomException | IOException e) {
 			e.printStackTrace();
 		}
 

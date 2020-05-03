@@ -2,6 +2,7 @@ package com.tellyouiam.alittlebitaboutspring.service;
 
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import com.tellyouiam.alittlebitaboutspring.utils.*;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.WordUtils;
 import org.apache.http.NameValuePair;
@@ -26,6 +27,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.*;
 import static java.time.temporal.ChronoField.*;
@@ -714,6 +716,7 @@ public class NoteServiceImpl implements NoteService {
             "(?m)^(?!((,)?Share %)|(.*(?=([\\d]{1,3})(\\.)([\\d]{1,2})%))).*$(\\n)?";
     private static final String EXTRACT_FILE_OWNER_NAME_PATTERN = "(?m)^(Horses)(.+)$(?=\\n)";
     private static final String CSV_HORSE_COUNT_PATTERN = "(?m)^(.+)Horses([,]+)$";
+    private static final String OWNERSHIP_HEADER_PATTERN = "(?m)^(.*)?Share %.*$";
     private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 9;
     
     private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
@@ -763,14 +766,6 @@ public class NoteServiceImpl implements NoteService {
     
     @Override
     public Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile, String dirName) {
-        StringBuilder responseDataBuilder = new StringBuilder();
-        String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                "HorseId", "HorseName",
-                "OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
-                "Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-                "Country", "GST", "Shares", "FromDate", "ExportedDate"
-        );
-        
         Map<Object, Object> result = new HashMap<>();
 
         try {
@@ -954,7 +949,17 @@ public class NoteServiceImpl implements NoteService {
             }
             
             String[][] data = this.get2DArrayFromString(allLines);
-
+            
+            //for case indexOutOfRange exception caused by missing trailing comma in header.
+            int headerLength = data[0].length;
+            int rowLength = data[1].length;
+            String tryingHeader = String.join(",", data[0]);
+            if (tryingHeader.matches(OWNERSHIP_HEADER_PATTERN) && (headerLength < rowLength)) {
+                IntStream.range(0, rowLength - headerLength).forEach(i -> {
+                    data[0] = ArrayUtils.add(data[0], "");
+                });
+            }
+        
             //all possible index of cell has value.
             List<Integer> rowHasValueIndex = new ArrayList<>();
 
@@ -973,6 +978,7 @@ public class NoteServiceImpl implements NoteService {
             //find all cells has empty columns.
             for (int i = 0; i < data.length; i++) {
                 for (int j = 0; j < data[i].length; j++) {
+                    
                     setAllIndexes.add(j);
 
                     if (data[i][j].equalsIgnoreCase(StringUtils.EMPTY)) {
@@ -996,6 +1002,7 @@ public class NoteServiceImpl implements NoteService {
             for (String[] row : data) {
                 gstString.append(row[gstIndex]);
             }
+            
             String distinctGST = gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
             if (distinctGST.matches("(YN)|(NY)|N|Y")) {
                 data[0][gstIndex] = "GST";
@@ -1127,9 +1134,7 @@ public class NoteServiceImpl implements NoteService {
                     String horseName = getCsvCellValue(r, horseNameIndex);
                     String ownerId = getCsvCellValue(r, ownerIdIndex);
                     String commsEmail = getCsvCellValue(r, commsEmailIndex);
-                    commsEmail = this.getValidEmailStr(commsEmail, line);
                     String financeEmail = getCsvCellValue(r, financeEmailIndex);
-                    financeEmail = this.getValidEmailStr(financeEmail, line);
 
 			  	        /*
 			  	         ### **Process case email cell like:
@@ -1147,6 +1152,9 @@ public class NoteServiceImpl implements NoteService {
                         if (StringUtils.isEmpty(financeEmail)) {
                             financeEmail = this.getValidEmailStr(tryingFinanceEmail, line);
                         }
+                    } else {
+                        commsEmail = this.getValidEmailStr(commsEmail, line);
+                        financeEmail = this.getValidEmailStr(financeEmail, line);
                     }
 
                     String firstName = getCsvCellValue(r, firstNameIndex);
@@ -1215,24 +1223,6 @@ public class NoteServiceImpl implements NoteService {
             result.put("ownershipData", dataBuilder);
             result.put("ownershipName", nameBuilder);
             
-            String namePath = getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
-            try {
-                Files.write(Paths.get(namePath), Collections.singleton(nameBuilder));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            //have two type of ownership file >> one from mistable with input is csv file, one is another with input is xlsx file.
-            String finalPath = getOutputFolder(dirName);
-            try {
-                File fileX = new File(Objects.requireNonNull(finalPath), "formatted-ownership.csv");
-
-                FileOutputStream os = new FileOutputStream(fileX);
-                os.write(dataBuilder.toString().getBytes());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
             return result;
         } catch (IOException | CustomException e) {
             e.printStackTrace();
@@ -1241,7 +1231,6 @@ public class NoteServiceImpl implements NoteService {
     }
 
     private String[][] get2DArrayFromString(String value) {
-
         List<List<String>> nestedListData = Arrays.stream(value.split("\n"))
                 .map(StringHelper::customSplitSpecific)
                 .collect(Collectors.toList());

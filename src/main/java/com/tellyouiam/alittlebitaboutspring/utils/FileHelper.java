@@ -27,7 +27,7 @@ public class FileHelper {
 		}
 	}
 	
-	private static String getOutputFolderPath() {
+	public static String getOutputFolderPath() {
 		String os = System.getProperty("os.name").toLowerCase();
 		
 		if (os.contains("win")) {
@@ -38,7 +38,7 @@ public class FileHelper {
 		return null;
 	}
 	
-	private static String getOutputFolder(String dirName) {
+	public static String getOutputFolder(String dirName) {
 		String initFolderPath = getOutputFolderPath();
 		Path outputDirPath = Paths.get(Objects.requireNonNull(initFolderPath), dirName, "submit");
 		
