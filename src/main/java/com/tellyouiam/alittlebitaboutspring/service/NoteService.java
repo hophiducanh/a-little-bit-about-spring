@@ -1,8 +1,11 @@
 package com.tellyouiam.alittlebitaboutspring.service;
 
-import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
+import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
+import java.util.Map;
 
 @Service
 public interface NoteService {
@@ -11,5 +14,5 @@ public interface NoteService {
 	
 	Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile, String dirName) throws CustomException;
 	
-	Object automateImportOwnerShip(MultipartFile horseFile, String filePath) throws CustomException;
+	Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile) throws CustomException;
 }

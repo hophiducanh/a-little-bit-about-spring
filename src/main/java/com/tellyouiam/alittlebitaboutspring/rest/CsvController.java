@@ -1,7 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.rest;
 
 import com.tellyouiam.alittlebitaboutspring.service.CsvService;
-import com.tellyouiam.alittlebitaboutspring.utils.CustomException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

@@ -2,7 +2,10 @@ package com.tellyouiam.alittlebitaboutspring.utils;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URLEncodedUtils;
 
+import java.net.URI;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -71,5 +74,30 @@ public class StringHelper {
 		}
 		words.add(s.substring(start));
 		return words;
+	}
+	
+	public static Map<Object, Object> getRequestParams(String url) {
+		
+		try {
+			
+			Map<Object, Object> parameters = new HashMap<Object, Object>();
+			
+			// String url =
+			// "http://www.example.com/something.html?one=1&two=2&three=3&three=3a";
+			List<NameValuePair> params = URLEncodedUtils.parse(new URI(url), "UTF-8");
+			
+			for (NameValuePair param : params) {
+				
+				String key = param.getName();
+				if (!org.springframework.util.StringUtils.isEmpty(key)) {
+					String value = param.getValue();
+					parameters.put(key, value);
+				}
+			}
+			return parameters;
+		} catch (Exception e) {
+			return null;
+		}
+		
 	}
 }

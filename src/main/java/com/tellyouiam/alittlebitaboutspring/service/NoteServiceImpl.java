@@ -1,7 +1,12 @@
 package com.tellyouiam.alittlebitaboutspring.service;
 
+import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import com.tellyouiam.alittlebitaboutspring.utils.*;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.WordUtils;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.utils.URIBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -9,6 +14,7 @@ import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -21,7 +27,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.*;
 import static java.time.temporal.ChronoField.*;
 
 @Service
@@ -83,7 +91,7 @@ public class NoteServiceImpl implements NoteService {
                         continue;
                     }
 
-                    lines.add(OnboardHelper.readCsvLine(line));
+                    lines.add(readCsvLine(line));
                 }
             }
             return lines.toArray(new String[lines.size()][]);
@@ -138,7 +146,7 @@ public class NoteServiceImpl implements NoteService {
                 // GST = "true/false" or ot "T/F" or "Y/N"
                 // -------------------------------------------------------------
 
-                String[] header = OnboardHelper.readCsvLine(csvData.get(0));
+                String[] header = readCsvLine(csvData.get(0));
 
                 int ownerIdIndex = checkColumnIndex(header, "OwnerID");
                 int emailIndex = checkColumnIndex(header, "Email");
@@ -164,7 +172,7 @@ public class NoteServiceImpl implements NoteService {
                 for (String line : csvData) {
                     if (StringUtils.isEmpty(line)) continue;
 
-                    String[] r = OnboardHelper.readCsvLine(line);
+                    String[] r = readCsvLine(line);
 
                     //rows will be ignored like:
                     //,,,,
@@ -181,25 +189,25 @@ public class NoteServiceImpl implements NoteService {
                         continue;
                     }
 
-                    String ownerId = OnboardHelper.getCsvCellValue(r, ownerIdIndex);
-                    String email = OnboardHelper.getCsvCellValue(r, emailIndex);
-                    String financeEmail = OnboardHelper.getCsvCellValue(r, financeEmailIndex);
-                    String firstName = OnboardHelper.getCsvCellValue(r, firstNameIndex);
-                    String lastName = OnboardHelper.getCsvCellValue(r, lastNameIndex);
-                    String displayName = OnboardHelper.getCsvCellValue(r, displayNameIndex);
-                    String type = OnboardHelper.getCsvCellValue(r, typeIndex);
+                    String ownerId = getCsvCellValue(r, ownerIdIndex);
+                    String email = getCsvCellValue(r, emailIndex);
+                    String financeEmail = getCsvCellValue(r, financeEmailIndex);
+                    String firstName = getCsvCellValue(r, firstNameIndex);
+                    String lastName = getCsvCellValue(r, lastNameIndex);
+                    String displayName = getCsvCellValue(r, displayNameIndex);
+                    String type = getCsvCellValue(r, typeIndex);
 
-                    String mobile = OnboardHelper.getCsvCellValue(r, mobileIndex);
+                    String mobile = getCsvCellValue(r, mobileIndex);
 
-                    String phone = OnboardHelper.getCsvCellValue(r, phoneIndex);
+                    String phone = getCsvCellValue(r, phoneIndex);
 
-                    String fax = OnboardHelper.getCsvCellValue(r, faxIndex);
-                    String address = OnboardHelper.getCsvCellValue(r, addressIndex);
-                    String city = OnboardHelper.getCsvCellValue(r, cityIndex);
-                    String state = OnboardHelper.getCsvCellValue(r, stateIndex);
-                    String postCode = OnboardHelper.getPostcode(OnboardHelper.getCsvCellValue(r, postCodeIndex));
-                    String country = OnboardHelper.getCsvCellValue(r, countryIndex);
-                    String gst = OnboardHelper.getCsvCellValue(r, gstIndex);
+                    String fax = getCsvCellValue(r, faxIndex);
+                    String address = getCsvCellValue(r, addressIndex);
+                    String city = getCsvCellValue(r, cityIndex);
+                    String state = getCsvCellValue(r, stateIndex);
+                    String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
+                    String country = getCsvCellValue(r, countryIndex);
+                    String gst = getCsvCellValue(r, gstIndex);
 
                     String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
                             StringHelper.csvValue(ownerId),
@@ -273,7 +281,7 @@ public class NoteServiceImpl implements NoteService {
                 // BONUS SCHEME
                 // NICK NAME
 
-                String[] header = OnboardHelper.readCsvLine(csvData.get(0));
+                String[] header = readCsvLine(csvData.get(0));
 
                 int externalIdIndex = checkColumnIndex(header, "ExternalId");
                 int nameIndex = checkColumnIndex(header, "Horse Name", "Name", "Horse");
@@ -303,43 +311,43 @@ public class NoteServiceImpl implements NoteService {
 
                 csvData = csvData.stream().skip(1).collect(Collectors.toList());
                 for (String line : csvData) {
-                    String[] r = OnboardHelper.readCsvLine(line);
+                    String[] r = readCsvLine(line);
 
-                    String externalId = OnboardHelper.getCsvCellValue(r, externalIdIndex);
-                    String name = OnboardHelper.getCsvCellValue(r, nameIndex);
+                    String externalId = getCsvCellValue(r, externalIdIndex);
+                    String name = getCsvCellValue(r, nameIndex);
 
-                    String rawFoaled = OnboardHelper.getCsvCellValue(r, foaledIndex);
+                    String rawFoaled = getCsvCellValue(r, foaledIndex);
                     String foaled = StringUtils.EMPTY;
 
                     boolean isAustraliaFormat = isAustraliaFormat(csvData, foaledIndex, "horse");
 
                     if (!isAustraliaFormat && StringUtils.isNotEmpty(rawFoaled)) {
-                        foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+                        foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
                     } else {
                         foaled = rawFoaled;
                     }
 
-                    String sire = OnboardHelper.getCsvCellValue(r, sireIndex);
-                    String dam = OnboardHelper.getCsvCellValue(r, damIndex);
-                    String color = OnboardHelper.getCsvCellValue(r, colorIndex);
-                    String sex = OnboardHelper.getCsvCellValue(r, sexIndex);
+                    String sire = getCsvCellValue(r, sireIndex);
+                    String dam = getCsvCellValue(r, damIndex);
+                    String color = getCsvCellValue(r, colorIndex);
+                    String sex = getCsvCellValue(r, sexIndex);
 
-                    String avatar = OnboardHelper.getCsvCellValue(r, avatarIndex);
+                    String avatar = getCsvCellValue(r, avatarIndex);
 
-                    String addedDate = OnboardHelper.getCsvCellValue(r, addedDateIndex);
+                    String addedDate = getCsvCellValue(r, addedDateIndex);
                     addedDateBuilder.append(addedDate);
 
-                    String activeStatus = OnboardHelper.getCsvCellValue(r, activeStatusIndex);
+                    String activeStatus = getCsvCellValue(r, activeStatusIndex);
                     addedDateBuilder.append(activeStatus);
 
-                    String currentLocation = OnboardHelper.getCsvCellValue(r, horseLocationIndex);
+                    String currentLocation = getCsvCellValue(r, horseLocationIndex);
                     addedDateBuilder.append(currentLocation);
 
-                    String currentStatus = OnboardHelper.getCsvCellValue(r, horseStatusIndex);
-                    String type = OnboardHelper.getCsvCellValue(r, typeIndex);
-                    String category = OnboardHelper.getCsvCellValue(r, categoryIndex);
-                    String bonusScheme = OnboardHelper.getCsvCellValue(r, bonusSchemeIndex);
-                    String nickName = OnboardHelper.getCsvCellValue(r, nickNameIndex);
+                    String currentStatus = getCsvCellValue(r, horseStatusIndex);
+                    String type = getCsvCellValue(r, typeIndex);
+                    String category = getCsvCellValue(r, categoryIndex);
+                    String bonusScheme = getCsvCellValue(r, bonusSchemeIndex);
+                    String nickName = getCsvCellValue(r, nickNameIndex);
 
                     String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                             StringHelper.csvValue(externalId),
@@ -372,7 +380,7 @@ public class NoteServiceImpl implements NoteService {
 
                     String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
                     if (!CollectionUtils.isEmpty(formattedData)) {
-                        String[] formattedHeader = OnboardHelper.readCsvLine(formattedData.get(0));
+                        String[] formattedHeader = readCsvLine(formattedData.get(0));
 
                         //Get addedDate index from header
                         int addedDateOrdinal = checkColumnIndex(formattedHeader, "AddedDate");
@@ -383,7 +391,7 @@ public class NoteServiceImpl implements NoteService {
                         //process data ignore header
                         for (String line : formattedData.stream().skip(1).collect(Collectors.toList())) {
 
-                            String[] row = OnboardHelper.readCsvLine(line);
+                            String[] row = readCsvLine(line);
 
                             for (int i = 0; i < row.length; i++) {
 
@@ -441,7 +449,7 @@ public class NoteServiceImpl implements NoteService {
             return this.importHorseFromMiStable(horseFile, dirName);
         }
 
-        Map<String, Object> ownerShipResult = (Map<String, Object>) this.automateImportOwnerShip(ownershipFile, dirName);
+        Map<Object, Object> ownerShipResult = this.automateImportOwnerShip(ownershipFile);
         Map<Object, Object> result = new HashMap<>();
 
         String csvExportedDateStr = String.valueOf(ownerShipResult.get("ExportedDate"));
@@ -471,7 +479,7 @@ public class NoteServiceImpl implements NoteService {
                 // BONUS SCHEME
                 // NICK NAME
 
-                String[] header = OnboardHelper.readCsvLine(csvData.get(0));
+                String[] header = readCsvLine(csvData.get(0));
 
                 int externalIdIndex = checkColumnIndex(header, "ExternalId");
                 int nameIndex = checkColumnIndex(header, "Horse Name", "Name", "Horse");
@@ -525,48 +533,48 @@ public class NoteServiceImpl implements NoteService {
                         continue;
                     }
 
-                    String[] r = OnboardHelper.readCsvLine(line);
+                    String[] r = readCsvLine(line);
 
-                    String externalId = OnboardHelper.getCsvCellValue(r, externalIdIndex);
-                    String name = OnboardHelper.getCsvCellValue(r, nameIndex);
+                    String externalId = getCsvCellValue(r, externalIdIndex);
+                    String name = getCsvCellValue(r, nameIndex);
 
                     if (StringUtils.isEmpty(name)) {
                         logger.info("**************************Empty Horse Name: {} at line: {}", name, line);
                         continue;
                     }
 
-                    String rawFoaled = OnboardHelper.getCsvCellValue(r, foaledIndex);
+                    String rawFoaled = getCsvCellValue(r, foaledIndex);
                     rawFoaled = rawFoaled.split("\\p{Z}")[0];
                     String foaled;
                     if (!isAustraliaFormat && StringUtils.isNotEmpty(rawFoaled)) {
-                        foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+                        foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
                     } else {
                         foaled = rawFoaled;
                     }
 
-                    String sire = OnboardHelper.getCsvCellValue(r, sireIndex);
-                    String dam = OnboardHelper.getCsvCellValue(r, damIndex);
+                    String sire = getCsvCellValue(r, sireIndex);
+                    String dam = getCsvCellValue(r, damIndex);
 
                     if (StringUtils.isEmpty(name) && StringUtils.isEmpty(sire) && StringUtils.isEmpty(dam)
                             && StringUtils.isEmpty(rawFoaled)) continue;
 
-                    String color = OnboardHelper.getCsvCellValue(r, colorIndex);
-                    String sex = OnboardHelper.getCsvCellValue(r, sexIndex);
-                    String avatar = OnboardHelper.getCsvCellValue(r, avatarIndex);
+                    String color = getCsvCellValue(r, colorIndex);
+                    String sex = getCsvCellValue(r, sexIndex);
+                    String avatar = getCsvCellValue(r, avatarIndex);
 
-                    String dayHere = OnboardHelper.getCsvCellValue(r, daysHereIndex);
+                    String dayHere = getCsvCellValue(r, daysHereIndex);
 
-                    String addedDate = OnboardHelper.getCsvCellValue(r, addedDateIndex);
+                    String addedDate = getCsvCellValue(r, addedDateIndex);
                     ;
 
-                    String activeStatus = OnboardHelper.getCsvCellValue(r, activeStatusIndex);
+                    String activeStatus = getCsvCellValue(r, activeStatusIndex);
 
-                    String currentLocation = OnboardHelper.getCsvCellValue(r, horseLocationIndex);
-                    String currentStatus = OnboardHelper.getCsvCellValue(r, horseStatusIndex);
-                    String type = OnboardHelper.getCsvCellValue(r, typeIndex);
-                    String category = OnboardHelper.getCsvCellValue(r, categoryIndex);
-                    String bonusScheme = OnboardHelper.getCsvCellValue(r, bonusSchemeIndex);
-                    String nickName = OnboardHelper.getCsvCellValue(r, nickNameIndex);
+                    String currentLocation = getCsvCellValue(r, horseLocationIndex);
+                    String currentStatus = getCsvCellValue(r, horseStatusIndex);
+                    String type = getCsvCellValue(r, typeIndex);
+                    String category = getCsvCellValue(r, categoryIndex);
+                    String bonusScheme = getCsvCellValue(r, bonusSchemeIndex);
+                    String nickName = getCsvCellValue(r, nickNameIndex);
 
                     // If dayHere is empty, get exportedDate of ownership file. Because of:
                     // When dayHere is empty, usually departed date in horse line of ownership file also empty too.
@@ -676,17 +684,21 @@ public class NoteServiceImpl implements NoteService {
     private static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
     private static final String REMOVE_LINE_BREAK_PATTERN = "\nCT\\b";
     private static final String REMOVE_INVALID_SHARES_PATTERN = "\\bInt.Party\\b";
-    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\(\\s.*";
+    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,(]*)(?=\\s\\(.*).*";
     private static final String CORRECT_SHARE_COLUMN_POSITION_PATTERN = "(?m)^,(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
-    private static final String SHARE_COLUMN_POSITION_TRYING_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
+    private static final String TRYING_SHARE_COLUMN_POSITION_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
     private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\\n,(?=([\\d]{1,3})?(\\.)?([\\d]{1,2})?%)";
-    private static final String REMOVE_UNNECESSARY_HEADER_FOOTER_PATTERN = "(?m)^(?!,Share)(.*)((?<!([YN]))(?<!(Y,|N,)))$\\n";
     private static final String IS_INSTANCEOF_DATE_PATTERN = "([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
     private static final String EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN =
             "(?m)^([^,].*)\\s\\(\\s.*([\\s]+)([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
-    private static final String EXTRACT_OWNERSHIP_EXPORTED_DATE_PATTERN =
+    private static final String NORMAL_OWNERSHIP_EXPORTED_DATE_PATTERN =
             "(?m)(\\bPrinted\\b[:\\s]+)([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
+    
+    private static final String ARDEX_OWNERSHIP_EXPORTED_DATE_PATTERN = "(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),\\s" +
+            "((\\(0[1-9]|[12][0-9]|3[01])\\s" +
+            "(Jan(uary)?|Feb(ruary)?|Mar(ch)?|Apr(il)?|May|Jun(e)?|Jul(y)?|Aug(ust)?|Sep(tember)?|Oct(ober)?|Nov(ember)?|Dec(ember)?),\\s" +
+            "((19|20)\\d\\d))";
 
     private static final String IS_DATE_MONTH_YEAR_FORMAT_PATTERN = "^(?:(?:31([/\\-.])(?:0?[13578]|1[02]))\\1|" +
             "(?:(?:29|30)([/\\-.])(?:0?[13-9]|1[0-2])\\2))(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$|" +
@@ -700,20 +712,18 @@ public class NoteServiceImpl implements NoteService {
 
     private static final String MIXING_COMMS_FINANCE_EMAIL_PATTERN = "\"?\\bAccs\\b:\\s((.+) (?=(\\bComms\\b)))\\bComms\\b:\\s((.+)(\\.[a-zA-Z;]+)(?=,))\"?";
 
-    private static final String FILE_BEGINNING_PATTERN = "(?m)^(,\\bShare\\s%)";
-    private static final String FILE_BEGINNING_TRYING_PATTERN = "(?m)^(\\bShare\\s%)";
+    private static final String REMOVE_UNNECESSARY_DATA =
+            "(?m)^(?!((,)?Share %)|(.*(?=([\\d]{1,3})(\\.)([\\d]{1,2})%))).*$(\\n)?";
     private static final String EXTRACT_FILE_OWNER_NAME_PATTERN = "(?m)^(Horses)(.+)$(?=\\n)";
     private static final String CSV_HORSE_COUNT_PATTERN = "(?m)^(.+)Horses([,]+)$";
-    private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 6;
-
-    private static final String REMOVE_BLANK_FOOTER_PATTERN = "(?m)^[,]+$";
-
+    private static final String OWNERSHIP_HEADER_PATTERN = "(?m)^(.*)?Share %.*$";
+    private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 9;
+    
     private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
     private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
     private static final String CT_IN_DISPLAY_NAME_PATTERN = "\\bCT:";
 
     private static final DateTimeFormatter AUSTRALIA_CUSTOM_DATE_FORMAT;
-
     static {
         AUSTRALIA_CUSTOM_DATE_FORMAT = new DateTimeFormatterBuilder()
                 .appendValue(DAY_OF_MONTH, 1, 2, SignStyle.NEVER)
@@ -725,7 +735,6 @@ public class NoteServiceImpl implements NoteService {
     }
 
     private static final DateTimeFormatter AUSTRALIA_FORMAL_DATE_FORMAT;
-
     static {
         AUSTRALIA_FORMAL_DATE_FORMAT = new DateTimeFormatterBuilder()
                 .appendValue(DAY_OF_MONTH, 2)
@@ -736,10 +745,9 @@ public class NoteServiceImpl implements NoteService {
                 .toFormatter();
     }
 
-    private static final DateTimeFormatter AMERICAN_CUSTOM_LOCAL_DATE;
-
+    private static final DateTimeFormatter AMERICAN_CUSTOM_DATE_FORMAT;
     static {
-        AMERICAN_CUSTOM_LOCAL_DATE = new DateTimeFormatterBuilder()
+        AMERICAN_CUSTOM_DATE_FORMAT = new DateTimeFormatterBuilder()
                 .appendValue(MONTH_OF_YEAR, 1, 2, SignStyle.NEVER)
                 .appendLiteral('/')
                 .appendValue(DAY_OF_MONTH, 1, 2, SignStyle.NEVER)
@@ -747,10 +755,18 @@ public class NoteServiceImpl implements NoteService {
                 .appendValue(YEAR, 2, 4, SignStyle.NEVER)
                 .toFormatter();
     }
-
+    
+    private static final DateTimeFormatter ARDEX_DATE_FORMAT;
+    static {
+        ARDEX_DATE_FORMAT = new DateTimeFormatterBuilder()
+                .parseCaseSensitive()
+                .appendPattern("dd MMMM, yyyy")
+                .toFormatter();
+    }
+    
     @Override
-    public Object automateImportOwnerShip(MultipartFile ownershipFile, String dirName) throws CustomException {
-        Map<String, Object> result = new HashMap<>();
+    public Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile) {
+        Map<Object, Object> result = new HashMap<>();
 
         try {
             List<String> csvData = this.getCsvData(ownershipFile);
@@ -759,16 +775,17 @@ public class NoteServiceImpl implements NoteService {
             // get file exportedDate.
             // Pattern : ,,,,,,,,,,,,,,Printed: 21/10/2019  3:41:46PM,,,,Page -1 of 1,,,,
             String exportedDate = null;
-            Matcher exportedDateMatcher = Pattern.compile(EXTRACT_OWNERSHIP_EXPORTED_DATE_PATTERN, Pattern.CASE_INSENSITIVE)
+            Matcher exportedDateMatcher = Pattern.compile(NORMAL_OWNERSHIP_EXPORTED_DATE_PATTERN, Pattern.CASE_INSENSITIVE)
                     .matcher(allLines);
 
             int exportedDateCount = 0;
 
-            String ignoredDataFooter = null;
+            boolean isNormalExportedDate = false;
             while (exportedDateMatcher.find()) {
                 exportedDateCount++;
 
                 if (exportedDateCount == 1) {
+                    isNormalExportedDate = true;
                     //get date use group(2) of regex.
                     exportedDate = exportedDateMatcher.group(2);
 
@@ -779,16 +796,17 @@ public class NoteServiceImpl implements NoteService {
                         throw new CustomException(new ErrorInfo("The exported date was not recognized as a valid Australia format: {}", exportedDate));
                     }
 
-                    int startedIndex = exportedDateMatcher.start();
-                    int commaLastIndex = allLines.lastIndexOf(",");
-                    ignoredDataFooter = allLines.substring(startedIndex, commaLastIndex);
-                    logger.info("*************************Ignored data in footer file: {}", ignoredDataFooter);
-
-                    //Printed Date usually appear in the bottom of the file.
-                    allLines = allLines.substring(0, startedIndex);
-
                 } else if (exportedDateCount > 1){
                     throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
+                }
+            }
+            
+            if (!isNormalExportedDate) {
+                Matcher ardexExportedDateMatcher = Pattern.compile(ARDEX_OWNERSHIP_EXPORTED_DATE_PATTERN, Pattern.CASE_INSENSITIVE)
+                        .matcher(allLines);
+                while (ardexExportedDateMatcher.find()) {
+                    exportedDate = ardexExportedDateMatcher.group(2);
+                    exportedDate = LocalDate.parse(exportedDate, ARDEX_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
                 }
             }
 
@@ -839,7 +857,7 @@ public class NoteServiceImpl implements NoteService {
                 lineHasFileOwnerName = extractFileOwnerName.group(2);
 
                 if (StringUtils.isEmpty(lineHasFileOwnerName)) {
-                    List<String> lineHasFileOwnerNameElements = Arrays.asList(OnboardHelper.readCsvLine(lineHasFileOwnerName));
+                    List<String> lineHasFileOwnerNameElements = Arrays.asList(readCsvLine(lineHasFileOwnerName));
 
                     String fileOwnerName = lineHasFileOwnerNameElements.stream().filter(StringUtils::isNotEmpty)
                             .collect(toSingleton());
@@ -878,13 +896,13 @@ public class NoteServiceImpl implements NoteService {
             //Ambidexter/Elancer 16 ( Ambidexter - Elancer) 3yo Brown Colt     Michael Hickmott Bloodstock - In training Michael Hickmott Bloodstock 24/12/2019 >> Ambidexter/Elancer 16
 
             Matcher correctShareColumnPosition = Pattern.compile(CORRECT_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
-            Matcher shareColumnPositionTrying = Pattern.compile(SHARE_COLUMN_POSITION_TRYING_PATTERN).matcher(allLines);
+            Matcher tryingShareColumnPosition = Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
             if (horseCount > 0) {
                 //special case: POB-345: Archer park (missing leading comma: normal case these lines don't contain horse name start with ,%share, >> POB-345 start with %share,)
                 if (correctShareColumnPosition.find()) {
                     allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
-                } else if (shareColumnPositionTrying.find()) {
-                    allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1").replaceAll(SHARE_COLUMN_POSITION_TRYING_PATTERN, ",$1");
+                } else if (tryingShareColumnPosition.find()) {
+                    allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1").replaceAll(TRYING_SHARE_COLUMN_POSITION_PATTERN, ",$1");
                 } else {
                     logger.warn("Data seemingly weird. Please check!");
                 }
@@ -909,44 +927,39 @@ public class NoteServiceImpl implements NoteService {
 
             //remove unnecessary line like:
             // ,,With Share Ownership Information ,,,,,,,,,,,,,,,,,,,,
-            String ignoredDataHeader;
-            Matcher beginningFileMatcher = Pattern.compile(FILE_BEGINNING_PATTERN).matcher(allLines);
-            Matcher fileBeginningTryingMatcher = Pattern.compile(FILE_BEGINNING_TRYING_PATTERN).matcher(allLines);
-            if (beginningFileMatcher.find()) {
-                int startedIndex = beginningFileMatcher.start();
-                ignoredDataHeader = allLines.substring(0, startedIndex);
-                allLines = allLines.substring(startedIndex);
-
-            } else if (fileBeginningTryingMatcher.find()) {
-                allLines = allLines.replaceAll(FILE_BEGINNING_TRYING_PATTERN, ",$1");
-                int startedIndex = fileBeginningTryingMatcher.start();
-                ignoredDataHeader = allLines.substring(0, startedIndex);
-                allLines = allLines.substring(startedIndex);
-
+            Matcher unnecessaryDataMatcher = Pattern.compile(REMOVE_UNNECESSARY_DATA).matcher(allLines);
+            if (unnecessaryDataMatcher.find()) {
+                allLines = allLines.replaceAll(REMOVE_UNNECESSARY_DATA, "");
             } else {
-                throw new CustomException(new ErrorInfo("File start with an incorrect prefix! Please check!"));
+                logger.warn("Data seemingly weird. Please check!");
             }
 
-            String ignoredData = ignoredDataHeader + ignoredDataFooter;
-            int ignoredDataLines = StringUtils.countMatches(ignoredData, "\n");
-
+            unnecessaryDataMatcher.reset();
+            StringBuilder ignoredData = new StringBuilder();
+            int gossipDataCount = 0;
+            while (unnecessaryDataMatcher.find()) {
+                gossipDataCount++;
+                ignoredData.append(unnecessaryDataMatcher.group());
+            }
+            
             logger.info("******************************IGNORED DATA**********************************\n {}", ignoredData);
             //normally unnecessary lines to ignored between 5 and 10.;
-            if (ignoredDataLines > IGNORED_NON_DATA_LINE_THRESHOLD) {
+            if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
                 throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
             }
-
-            //last blank header can caused ArrayIndexOutOfBoundsException if you don't remove these lines.
-            // E.g: line[23] if blank line is: ,,,,,,,,,,,,,,
-            Matcher removeBlankFooter = Pattern.compile(REMOVE_BLANK_FOOTER_PATTERN).matcher(allLines);
-            if (removeBlankFooter.find()) {
-                allLines = allLines.replaceAll(REMOVE_BLANK_FOOTER_PATTERN, StringUtils.EMPTY);
-            }
-
-            String path = getOutputFolder(dirName);
-            File file = new File(path, "prepared-ownership.csv");
+            
             String[][] data = this.get2DArrayFromString(allLines);
-
+            
+            //for case indexOutOfRange exception caused by missing trailing comma in header.
+            int headerLength = data[0].length;
+            int rowLength = data[1].length;
+            String tryingHeader = String.join(",", data[0]);
+            if (tryingHeader.matches(OWNERSHIP_HEADER_PATTERN) && (headerLength < rowLength)) {
+                IntStream.range(0, rowLength - headerLength).forEach(i -> {
+                    data[0] = ArrayUtils.add(data[0], "");
+                });
+            }
+        
             //all possible index of cell has value.
             List<Integer> rowHasValueIndex = new ArrayList<>();
 
@@ -965,6 +978,7 @@ public class NoteServiceImpl implements NoteService {
             //find all cells has empty columns.
             for (int i = 0; i < data.length; i++) {
                 for (int j = 0; j < data[i].length; j++) {
+                    
                     setAllIndexes.add(j);
 
                     if (data[i][j].equalsIgnoreCase(StringUtils.EMPTY)) {
@@ -988,6 +1002,7 @@ public class NoteServiceImpl implements NoteService {
             for (String[] row : data) {
                 gstString.append(row[gstIndex]);
             }
+            
             String distinctGST = gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
             if (distinctGST.matches("(YN)|(NY)|N|Y")) {
                 data[0][gstIndex] = "GST";
@@ -1022,7 +1037,7 @@ public class NoteServiceImpl implements NoteService {
             //write csv data after format original csv file >> ignored completely empty column.
             StringBuilder builder = new StringBuilder();
             for (String line : csvDataWithBankColumns) {
-                String[] r = OnboardHelper.readCsvLine(line);
+                String[] r = readCsvLine(line);
 
                 StringBuilder rowBuilder = new StringBuilder();
 
@@ -1053,9 +1068,8 @@ public class NoteServiceImpl implements NoteService {
             List<String> csvDataList = this.getListFrom2DArrString(blankHorseNameData);
             StringBuilder dataBuilder = new StringBuilder();
 
-            String nameHeader = String.format("%s,%s,%s,%s\n\n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
-            StringBuilder nameBuilder = new StringBuilder(nameHeader);
-            StringBuilder normalNameBuilder = new StringBuilder();
+            StringBuilder nameBuilder = new StringBuilder();
+            StringBuilder normalNameBuilder = new StringBuilder("\n***********NORMAL NAME***********\n");
             StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
 
             if (!CollectionUtils.isEmpty(csvDataList)) {
@@ -1082,9 +1096,10 @@ public class NoteServiceImpl implements NoteService {
                 // BALANCE (SHARE PERCENTAGE)
                 // FROM_DATE
                 // TO_DATE
+                // EXPORTED_DATE
                 // -------------------------------------------------------------
 
-                String[] header = OnboardHelper.readCsvLine(csvDataList.get(0));
+                String[] header = readCsvLine(csvDataList.get(0));
 
                 int horseIdIndex = checkColumnIndex(header, "Horse Id");
                 int horseNameIndex = checkColumnIndex(header, "Horse Name", "Horse");
@@ -1107,68 +1122,23 @@ public class NoteServiceImpl implements NoteService {
                 int addedDateIndex = checkColumnIndex(header, "AddedDate", "Added Date");
                 int realGstIndex = checkColumnIndex(header, "GST");
 
-                String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                        "HorseId", "HorseName",
-                        "OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
-                        "Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-                        "Country", "GST", "Shares", "FromDate"
-                );
-
-                dataBuilder.append(rowHeader);
-
                 //process file without header
                 csvDataList = csvDataList.stream().skip(1).collect(Collectors.toList());
-
-                final List<String> organizationNames = Arrays.asList(
-                        "Company",
-                        "Racing",
-                        "Pty Ltd",
-                        "Racing Pty Ltd",
-                        "Breeding",
-                        "stud",
-                        "group",
-                        "bred",
-                        "breds",
-                        "tbreds",
-                        "Thoroughbred",
-                        "Thoroughbreds",
-                        "synd",
-                        "syndicate",
-                        "syndicates",
-                        "syndication",
-                        "syndications",
-                        "Bloodstock",
-                        "farm",
-                        "Horse Transport",
-                        "Club"
-                );
 
                 boolean isAustraliaFormat = isAustraliaFormat(csvDataList, addedDateIndex, "ownership");
 
                 for (String line : csvDataList) {
-                    String[] r = OnboardHelper.readCsvLine(line);
+                    String[] r = readCsvLine(line);
 
-                    String horseId = OnboardHelper.getCsvCellValue(r, horseIdIndex);
-                    String horseName = OnboardHelper.getCsvCellValue(r, horseNameIndex);
-                    String ownerId = OnboardHelper.getCsvCellValue(r, ownerIdIndex);
-                    String commsEmail = OnboardHelper.getCsvCellValue(r, commsEmailIndex);
-                    String financeEmail = OnboardHelper.getCsvCellValue(r, financeEmailIndex);
-
-                    //shortest email ever contains at least 3 char: x@y
-                    //https://stackoverflow.com/questions/1423195/what-is-the-actual-minimum-length-of-an-email-address-as-defined-by-the-ietf
-                    if (StringUtils.isNotEmpty(commsEmail) && commsEmail.trim().length() < 3) {
-                        commsEmail = StringUtils.EMPTY;
-                        logger.warn("Found weird email: {} at line: {}", commsEmail, line);
-                    }
-
-                    if (StringUtils.isNotEmpty(financeEmail) && financeEmail.trim().length() < 3) {
-                        financeEmail = StringUtils.EMPTY;
-                        logger.warn("Found weird email: {} at line: {}", financeEmail, line);
-                    }
+                    String horseId = getCsvCellValue(r, horseIdIndex);
+                    String horseName = getCsvCellValue(r, horseNameIndex);
+                    String ownerId = getCsvCellValue(r, ownerIdIndex);
+                    String commsEmail = getCsvCellValue(r, commsEmailIndex);
+                    String financeEmail = getCsvCellValue(r, financeEmailIndex);
 
 			  	        /*
-			  	         ### **Process case email cell like: Accs: accounts@marshallofbrisbane.com.au Comms:
-			  	         monopoly@bigpond.net.au**
+			  	         ### **Process case email cell like:
+			  	         Accs: accounts@marshallofbrisbane.com.au Comms:monopoly@bigpond.net.au
 			  	         - [1] Extract Comms to communication email cell.
 			  	         - [2] Extract Accs to financial email cell.
 			  	        */
@@ -1177,101 +1147,51 @@ public class NoteServiceImpl implements NoteService {
 
                         String tryingCommsEmail = mixingEmailTypeMatcher.group(4).trim();
                         String tryingFinanceEmail = mixingEmailTypeMatcher.group(2).trim();
-
-                        List<String> multiCommsEmail = Arrays.asList(tryingCommsEmail.split(";"));
-                        List<String> multiFinanceEmail = Arrays.asList(tryingFinanceEmail.split(";"));
-
-                        commsEmail = getValidEmail(commsEmail, tryingCommsEmail, multiCommsEmail, line);
+                        commsEmail = this.getValidEmailStr(tryingCommsEmail, line);
 
                         if (StringUtils.isEmpty(financeEmail)) {
-                            financeEmail = getValidEmail(financeEmail, tryingFinanceEmail, multiFinanceEmail, line);
+                            financeEmail = this.getValidEmailStr(tryingFinanceEmail, line);
                         }
+                    } else {
+                        commsEmail = this.getValidEmailStr(commsEmail, line);
+                        financeEmail = this.getValidEmailStr(financeEmail, line);
                     }
 
-                    String firstName = OnboardHelper.getCsvCellValue(r, firstNameIndex);
-                    String lastName = OnboardHelper.getCsvCellValue(r, lastNameIndex);
-                    String displayName = OnboardHelper.getCsvCellValue(r, displayNameIndex);
-
-                    String realDisplayName = null;
+                    String firstName = getCsvCellValue(r, firstNameIndex);
+                    String lastName = getCsvCellValue(r, lastNameIndex);
+                    String displayName = getCsvCellValue(r, displayNameIndex);
+    
                     //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
                     //We wanna extract this name to firstName, lastName, displayName:
                     //Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
-                    Matcher ctMatcher = Pattern.compile(CT_IN_DISPLAY_NAME_PATTERN, Pattern.CASE_INSENSITIVE).matcher(displayName);
-                    boolean isOrganizationName =
-                            organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
+                    String realDisplayName = this.correctOwnershipName(firstName, lastName, displayName,
+                            normalNameBuilder, organizationNameBuilder);
 
-                    if (ctMatcher.find()) {
-                        if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
-                            int ctStartedIndex = ctMatcher.start();
-                            int ctEndIndex = ctMatcher.end();
+                    String type = getCsvCellValue(r, typeIndex);
+                    String mobile = getCsvCellValue(r, mobileIndex);
+                    String phone = getCsvCellValue(r, phoneIndex);
+                    String fax = getCsvCellValue(r, faxIndex);
+                    String address = getCsvCellValue(r, addressIndex);
+                    String city = getCsvCellValue(r, cityIndex);
+                    String state = getCsvCellValue(r, stateIndex);
+                    String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
+                    String country = getCsvCellValue(r, countryIndex);
+                    String gst = getCsvCellValue(r, realGstIndex);
+                    String share = getCsvCellValue(r, shareIndex);
 
-                            //E.g: Edmonds Racing
-                            realDisplayName = displayName.substring(0, ctStartedIndex).trim();
-
-                            //E.g: Toby Edmonds, Logbasex
-                            String firstAndLastNameStr = displayName.substring(ctEndIndex);
-
-//							StringUtils.normalizeSpace()
-                            String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
-                            if (firstAndLastNameArr.length > 1) {
-                                lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second)
-                                        .orElse("");
-
-                                String finalLastName = lastName;
-                                firstName = Arrays.stream(firstAndLastNameArr)
-                                        .filter(i -> !i.equalsIgnoreCase(finalLastName))
-                                        .collect(Collectors.joining(" ")).trim();
-                            }
-
-                            String extractedName = String.format("%s,%s,%s,%s\n",
-                                    StringHelper.csvValue(displayName),
-                                    StringHelper.csvValue(realDisplayName),
-                                    StringHelper.csvValue(firstName),
-                                    StringHelper.csvValue(lastName)
-                            );
-                            normalNameBuilder.append(extractedName);
-                        }
-
-                    } else if (isOrganizationName) {
-                        realDisplayName = displayName;
-                        firstName = StringUtils.EMPTY;
-                        lastName = StringUtils.EMPTY;
-
-                        String extractedName = String.format("%s,%s,%s,%s\n",
-                                StringHelper.csvValue(displayName),
-                                StringHelper.csvValue(realDisplayName),
-                                StringHelper.csvValue(firstName),
-                                StringHelper.csvValue(lastName)
-                        );
-                        organizationNameBuilder.append(extractedName);
-                    } else {
-                        realDisplayName = displayName;
-                    }
-
-                    String type = OnboardHelper.getCsvCellValue(r, typeIndex);
-                    String mobile = OnboardHelper.getCsvCellValue(r, mobileIndex);
-                    String phone = OnboardHelper.getCsvCellValue(r, phoneIndex);
-                    String fax = OnboardHelper.getCsvCellValue(r, faxIndex);
-                    String address = OnboardHelper.getCsvCellValue(r, addressIndex);
-                    String city = OnboardHelper.getCsvCellValue(r, cityIndex);
-                    String state = OnboardHelper.getCsvCellValue(r, stateIndex);
-                    String postCode = OnboardHelper.getPostcode(OnboardHelper.getCsvCellValue(r, postCodeIndex));
-                    String country = OnboardHelper.getCsvCellValue(r, countryIndex);
-                    String gst = OnboardHelper.getCsvCellValue(r, realGstIndex);
-                    String share = OnboardHelper.getCsvCellValue(r, shareIndex);
-
-                    String rawAddedDate = OnboardHelper.getCsvCellValue(r, addedDateIndex);
+                    String rawAddedDate = getCsvCellValue(r, addedDateIndex);
+                    //remove all whitespace include unicode character
                     rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
                     String addedDate;
 
                     //convert addedDate read from CSV to Australia date time format.
                     if (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate)) {
-                        addedDate = LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_LOCAL_DATE).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+                        addedDate = LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
                     } else {
                         addedDate = rawAddedDate;
                     }
 
-                    String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                    String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                             StringHelper.csvValue(horseId),
                             StringHelper.csvValue(horseName),
                             StringHelper.csvValue(ownerId),
@@ -1291,7 +1211,8 @@ public class NoteServiceImpl implements NoteService {
                             StringHelper.csvValue(country),
                             StringHelper.csvValue(gst),
                             StringHelper.csvValue(share),
-                            StringHelper.csvValue(addedDate)
+                            StringHelper.csvValue(addedDate),
+                            StringHelper.csvValue(exportedDate)
                     );
                     dataBuilder.append(rowBuilder);
                 }
@@ -1299,24 +1220,9 @@ public class NoteServiceImpl implements NoteService {
                 nameBuilder.append(normalNameBuilder).append(organizationNameBuilder);
             }
 
-            String namePath = getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
-            try {
-                Files.write(Paths.get(namePath), Collections.singleton(nameBuilder));
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            //have two type of ownership file >> one from mistable with input is csv file, one is another with input is xlsx file.
-            String finalPath = getOutputFolder(dirName);
-            try {
-                File fileX = new File(Objects.requireNonNull(finalPath), "formatted-ownership.csv");
-
-                FileOutputStream os = new FileOutputStream(fileX);
-                os.write(dataBuilder.toString().getBytes());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
+            result.put("ownershipData", dataBuilder);
+            result.put("ownershipName", nameBuilder);
+            
             return result;
         } catch (IOException | CustomException e) {
             e.printStackTrace();
@@ -1325,7 +1231,6 @@ public class NoteServiceImpl implements NoteService {
     }
 
     private String[][] get2DArrayFromString(String value) {
-
         List<List<String>> nestedListData = Arrays.stream(value.split("\n"))
                 .map(StringHelper::customSplitSpecific)
                 .collect(Collectors.toList());
@@ -1343,7 +1248,92 @@ public class NoteServiceImpl implements NoteService {
         }
         return result;
     }
+    
+    private String correctOwnershipName(String firstName, String lastName,String displayName, StringBuilder normalNameBuilder,
+                                        StringBuilder organizationNameBuilder) {
+        String realDisplayName = null;
+        final List<String> organizationNames = Arrays.asList(
+                "Company",
+                "Racing",
+                "Pty Ltd",
+                "Racing Pty Ltd",
+                "Breeding",
+                "stud",
+                "group",
+                "bred",
+                "breds",
+                "tbreds",
+                "Thoroughbred",
+                "Thoroughbreds",
+                "synd",
+                "syndicate",
+                "syndicates",
+                "syndication",
+                "syndications",
+                "Bloodstock",
+                "farm",
+                "Horse Transport",
+                "Club"
+        );
+    
+        Matcher ctMatcher = Pattern.compile(CT_IN_DISPLAY_NAME_PATTERN, Pattern.CASE_INSENSITIVE).matcher(displayName);
+        boolean isOrganizationName =
+                organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
+    
+        if (ctMatcher.find()) {
+            //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
+            //We wanna extract this name to firstName, lastName, displayName:
+            //Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
+            if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
+                int ctStartedIndex = ctMatcher.start();
+                int ctEndIndex = ctMatcher.end();
+            
+                //E.g: Edmonds Racing
+                realDisplayName = displayName.substring(0, ctStartedIndex).trim();
+            
+                //E.g: Toby Edmonds, Logbasex
+                String firstAndLastNameStr = displayName.substring(ctEndIndex);
 
+//							StringUtils.normalizeSpace()
+                String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
+                if (firstAndLastNameArr.length > 1) {
+                    lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second)
+                            .orElse("");
+                
+                    String finalLastName = lastName;
+                    firstName = Arrays.stream(firstAndLastNameArr)
+                            .filter(i -> !i.equalsIgnoreCase(finalLastName))
+                            .collect(Collectors.joining(" ")).trim();
+                }
+            
+                String extractedName = String.format("%s,%s,%s,%s\n",
+                        StringHelper.csvValue(displayName),
+                        StringHelper.csvValue(realDisplayName),
+                        StringHelper.csvValue(firstName),
+                        StringHelper.csvValue(lastName)
+                );
+                normalNameBuilder.append(extractedName);
+            }
+        
+        } else if (isOrganizationName) {
+            //if displayName is organization name >> keep it intact.
+            realDisplayName = displayName;
+            firstName = StringUtils.EMPTY;
+            lastName = StringUtils.EMPTY;
+        
+            String extractedName = String.format("%s,%s,%s,%s\n",
+                    StringHelper.csvValue(displayName),
+                    StringHelper.csvValue(realDisplayName),
+                    StringHelper.csvValue(firstName),
+                    StringHelper.csvValue(lastName)
+            );
+            organizationNameBuilder.append(extractedName);
+        } else {
+            realDisplayName = displayName;
+        }
+        return realDisplayName;
+    }
+    
     private boolean isAustraliaFormat(List<String> csvData, int dateIndex, String fileType) {
         boolean isAustraliaFormat = false;
 
@@ -1363,8 +1353,8 @@ public class NoteServiceImpl implements NoteService {
             //ignore header.
             if (line.matches(CSV_HORSE_COUNT_PATTERN)) continue;
 
-            String[] r = OnboardHelper.readCsvLine(line);
-            String rawDateTime = OnboardHelper.getCsvCellValue(r, dateIndex);
+            String[] r = readCsvLine(line);
+            String rawDateTime = getCsvCellValue(r, dateIndex);
 
             if (StringUtils.isNotEmpty(rawDateTime)) {
 
@@ -1396,19 +1386,55 @@ public class NoteServiceImpl implements NoteService {
 
         return isAustraliaFormat;
     }
-
-    private String getValidEmail(String finalEmailCellValue, String regexExtractedEmail,
-                                 List<String> multiEmailsCell, String line) throws CustomException {
-        if (!CollectionUtils.isEmpty(multiEmailsCell)) {
-            for (String email : multiEmailsCell) {
-                if (!StringHelper.isValidEmail(email.trim())) {
-                    logger.error("*********************Email is invalid: {} at line: {}. Please check!", email, line);
-                    throw new CustomException(new ErrorInfo("Invalid Email"));
-                }
+    
+    private String getValidEmailStr(String emailsStr, String line) throws CustomException {
+        if (StringUtils.isEmpty(emailsStr)) return StringUtils.EMPTY;
+        String[] emailList = emailsStr.split(";");
+        
+        for (String email : emailList) {
+            if (!StringHelper.isValidEmail(email.trim())) {
+                logger.error("*********************Email is invalid: {} at line: {}. Please check!", email, line);
+                throw new CustomException(new ErrorInfo("Invalid Email"));
             }
-            finalEmailCellValue = regexExtractedEmail;
         }
-        return finalEmailCellValue;
+        
+        return emailsStr;
     }
-
+    
+    private static String getParamValue(String link, String paramName) throws URISyntaxException {
+        List<NameValuePair> queryParams = new URIBuilder(link).getQueryParams();
+        return queryParams.stream()
+                .filter(param -> param.getName().equalsIgnoreCase(paramName))
+                .map(NameValuePair::getValue)
+                .findFirst()
+                .orElse("");
+    }
+    
+    public static void main(String[] args) throws URISyntaxException {
+        String strWrap =
+                WordUtils.wrap("A really really really really really long sentence.", 50, "\n", false);
+        System.out.println(strWrap);
+        
+        String str = StringUtils.abbreviate("Lala", 4);
+        System.out.println(str);
+    
+//        DateTimeFormatter f = DateTimeFormatter.ofPattern("MMddyyyy");
+//        LocalDate bday = null;
+//
+//        try {`
+//            bday = LocalDate.parse(args[0], f);
+//        } catch (java.time.DateTimeException e) {
+//            System.out.println("bad dates Indy");
+//            System.exit(0);
+//        }
+    
+        String url = "https://www.youtube.com/v/VIDEO_ID?version=3&loop=1&playlist=VIDEO_ID";
+        Map<Object, Object> params = StringHelper.getRequestParams(url);
+        System.out.println(params.get("v"));
+        if (params != null) {
+            params.forEach((key, value) -> System.out.println(key + " " + value));
+        }
+        String u = "https://www.youtube.com/watch?v=JgggA8Jtzyg&list=RDJgggA8Jtzyg&start_radio=1";
+        System.out.println(getParamValue(u, "v"));
+    }
 }
