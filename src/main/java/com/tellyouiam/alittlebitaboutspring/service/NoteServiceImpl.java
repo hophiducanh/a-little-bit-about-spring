@@ -447,7 +447,7 @@ public class NoteServiceImpl implements NoteService {
             return this.importHorseFromMiStable(horseFile, dirName);
         }
 
-        Map<String, Object> ownerShipResult = (Map<String, Object>) this.automateImportOwnerShip(ownershipFile, dirName);
+        Map<Object, Object> ownerShipResult = this.automateImportOwnerShip(ownershipFile, dirName);
         Map<Object, Object> result = new HashMap<>();
 
         String csvExportedDateStr = String.valueOf(ownerShipResult.get("ExportedDate"));
@@ -682,9 +682,9 @@ public class NoteServiceImpl implements NoteService {
     private static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
     private static final String REMOVE_LINE_BREAK_PATTERN = "\nCT\\b";
     private static final String REMOVE_INVALID_SHARES_PATTERN = "\\bInt.Party\\b";
-    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\((\\s)?.*";
+    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,(]*)(?=\\s\\(.*).*";
     private static final String CORRECT_SHARE_COLUMN_POSITION_PATTERN = "(?m)^,(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
-    private static final String SHARE_COLUMN_POSITION_TRYING_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
+    private static final String TRYING_SHARE_COLUMN_POSITION_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
     private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\\n,(?=([\\d]{1,3})?(\\.)?([\\d]{1,2})?%)";
     private static final String IS_INSTANCEOF_DATE_PATTERN = "([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
@@ -762,7 +762,8 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    public Object automateImportOwnerShip(MultipartFile ownershipFile, String dirName) throws CustomException {
+    public Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile, String dirName) {
+        StringBuilder responseDataBuilder = new StringBuilder();
         String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
                 "HorseId", "HorseName",
                 "OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
@@ -770,7 +771,7 @@ public class NoteServiceImpl implements NoteService {
                 "Country", "GST", "Shares", "FromDate", "ExportedDate"
         );
         
-        Map<String, Object> result = new HashMap<>();
+        Map<Object, Object> result = new HashMap<>();
 
         try {
             List<String> csvData = this.getCsvData(ownershipFile);
@@ -900,13 +901,13 @@ public class NoteServiceImpl implements NoteService {
             //Ambidexter/Elancer 16 ( Ambidexter - Elancer) 3yo Brown Colt     Michael Hickmott Bloodstock - In training Michael Hickmott Bloodstock 24/12/2019 >> Ambidexter/Elancer 16
 
             Matcher correctShareColumnPosition = Pattern.compile(CORRECT_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
-            Matcher shareColumnPositionTrying = Pattern.compile(SHARE_COLUMN_POSITION_TRYING_PATTERN).matcher(allLines);
+            Matcher tryingShareColumnPosition = Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
             if (horseCount > 0) {
                 //special case: POB-345: Archer park (missing leading comma: normal case these lines don't contain horse name start with ,%share, >> POB-345 start with %share,)
                 if (correctShareColumnPosition.find()) {
                     allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
-                } else if (shareColumnPositionTrying.find()) {
-                    allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1").replaceAll(SHARE_COLUMN_POSITION_TRYING_PATTERN, ",$1");
+                } else if (tryingShareColumnPosition.find()) {
+                    allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1").replaceAll(TRYING_SHARE_COLUMN_POSITION_PATTERN, ",$1");
                 } else {
                     logger.warn("Data seemingly weird. Please check!");
                 }
@@ -1059,10 +1060,8 @@ public class NoteServiceImpl implements NoteService {
 
             List<String> csvDataList = this.getListFrom2DArrString(blankHorseNameData);
             StringBuilder dataBuilder = new StringBuilder();
-            dataBuilder.append(ownershipHeader);
 
-            String nameHeader = String.format("%s,%s,%s,%s\n\n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
-            StringBuilder nameBuilder = new StringBuilder(nameHeader);
+            StringBuilder nameBuilder = new StringBuilder();
             StringBuilder normalNameBuilder = new StringBuilder();
             StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
 
@@ -1119,30 +1118,6 @@ public class NoteServiceImpl implements NoteService {
                 //process file without header
                 csvDataList = csvDataList.stream().skip(1).collect(Collectors.toList());
 
-                final List<String> organizationNames = Arrays.asList(
-                        "Company",
-                        "Racing",
-                        "Pty Ltd",
-                        "Racing Pty Ltd",
-                        "Breeding",
-                        "stud",
-                        "group",
-                        "bred",
-                        "breds",
-                        "tbreds",
-                        "Thoroughbred",
-                        "Thoroughbreds",
-                        "synd",
-                        "syndicate",
-                        "syndicates",
-                        "syndication",
-                        "syndications",
-                        "Bloodstock",
-                        "farm",
-                        "Horse Transport",
-                        "Club"
-                );
-
                 boolean isAustraliaFormat = isAustraliaFormat(csvDataList, addedDateIndex, "ownership");
 
                 for (String line : csvDataList) {
@@ -1157,8 +1132,8 @@ public class NoteServiceImpl implements NoteService {
                     financeEmail = this.getValidEmailStr(financeEmail, line);
 
 			  	        /*
-			  	         ### **Process case email cell like: Accs: accounts@marshallofbrisbane.com.au Comms:
-			  	         monopoly@bigpond.net.au**
+			  	         ### **Process case email cell like:
+			  	         Accs: accounts@marshallofbrisbane.com.au Comms:monopoly@bigpond.net.au
 			  	         - [1] Extract Comms to communication email cell.
 			  	         - [2] Extract Accs to financial email cell.
 			  	        */
@@ -1177,62 +1152,12 @@ public class NoteServiceImpl implements NoteService {
                     String firstName = getCsvCellValue(r, firstNameIndex);
                     String lastName = getCsvCellValue(r, lastNameIndex);
                     String displayName = getCsvCellValue(r, displayNameIndex);
-
-                    String realDisplayName = null;
+    
                     //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
                     //We wanna extract this name to firstName, lastName, displayName:
                     //Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
-                    Matcher ctMatcher = Pattern.compile(CT_IN_DISPLAY_NAME_PATTERN, Pattern.CASE_INSENSITIVE).matcher(displayName);
-                    boolean isOrganizationName =
-                            organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
-
-                    if (ctMatcher.find()) {
-                        if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
-                            int ctStartedIndex = ctMatcher.start();
-                            int ctEndIndex = ctMatcher.end();
-
-                            //E.g: Edmonds Racing
-                            realDisplayName = displayName.substring(0, ctStartedIndex).trim();
-
-                            //E.g: Toby Edmonds, Logbasex
-                            String firstAndLastNameStr = displayName.substring(ctEndIndex);
-
-//							StringUtils.normalizeSpace()
-                            String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
-                            if (firstAndLastNameArr.length > 1) {
-                                lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second)
-                                        .orElse("");
-
-                                String finalLastName = lastName;
-                                firstName = Arrays.stream(firstAndLastNameArr)
-                                        .filter(i -> !i.equalsIgnoreCase(finalLastName))
-                                        .collect(Collectors.joining(" ")).trim();
-                            }
-
-                            String extractedName = String.format("%s,%s,%s,%s\n",
-                                    StringHelper.csvValue(displayName),
-                                    StringHelper.csvValue(realDisplayName),
-                                    StringHelper.csvValue(firstName),
-                                    StringHelper.csvValue(lastName)
-                            );
-                            normalNameBuilder.append(extractedName);
-                        }
-
-                    } else if (isOrganizationName) {
-                        realDisplayName = displayName;
-                        firstName = StringUtils.EMPTY;
-                        lastName = StringUtils.EMPTY;
-
-                        String extractedName = String.format("%s,%s,%s,%s\n",
-                                StringHelper.csvValue(displayName),
-                                StringHelper.csvValue(realDisplayName),
-                                StringHelper.csvValue(firstName),
-                                StringHelper.csvValue(lastName)
-                        );
-                        organizationNameBuilder.append(extractedName);
-                    } else {
-                        realDisplayName = displayName;
-                    }
+                    String realDisplayName = this.correctOwnershipName(firstName, lastName, displayName,
+                            normalNameBuilder, organizationNameBuilder);
 
                     String type = getCsvCellValue(r, typeIndex);
                     String mobile = getCsvCellValue(r, mobileIndex);
@@ -1287,6 +1212,9 @@ public class NoteServiceImpl implements NoteService {
                 nameBuilder.append(normalNameBuilder).append(organizationNameBuilder);
             }
 
+            result.put("ownershipData", dataBuilder);
+            result.put("ownershipName", nameBuilder);
+            
             String namePath = getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
             try {
                 Files.write(Paths.get(namePath), Collections.singleton(nameBuilder));
@@ -1331,7 +1259,92 @@ public class NoteServiceImpl implements NoteService {
         }
         return result;
     }
+    
+    private String correctOwnershipName(String firstName, String lastName,String displayName, StringBuilder normalNameBuilder,
+                                        StringBuilder organizationNameBuilder) {
+        String realDisplayName = null;
+        final List<String> organizationNames = Arrays.asList(
+                "Company",
+                "Racing",
+                "Pty Ltd",
+                "Racing Pty Ltd",
+                "Breeding",
+                "stud",
+                "group",
+                "bred",
+                "breds",
+                "tbreds",
+                "Thoroughbred",
+                "Thoroughbreds",
+                "synd",
+                "syndicate",
+                "syndicates",
+                "syndication",
+                "syndications",
+                "Bloodstock",
+                "farm",
+                "Horse Transport",
+                "Club"
+        );
+    
+        Matcher ctMatcher = Pattern.compile(CT_IN_DISPLAY_NAME_PATTERN, Pattern.CASE_INSENSITIVE).matcher(displayName);
+        boolean isOrganizationName =
+                organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
+    
+        if (ctMatcher.find()) {
+            //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
+            //We wanna extract this name to firstName, lastName, displayName:
+            //Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
+            if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
+                int ctStartedIndex = ctMatcher.start();
+                int ctEndIndex = ctMatcher.end();
+            
+                //E.g: Edmonds Racing
+                realDisplayName = displayName.substring(0, ctStartedIndex).trim();
+            
+                //E.g: Toby Edmonds, Logbasex
+                String firstAndLastNameStr = displayName.substring(ctEndIndex);
 
+//							StringUtils.normalizeSpace()
+                String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
+                if (firstAndLastNameArr.length > 1) {
+                    lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second)
+                            .orElse("");
+                
+                    String finalLastName = lastName;
+                    firstName = Arrays.stream(firstAndLastNameArr)
+                            .filter(i -> !i.equalsIgnoreCase(finalLastName))
+                            .collect(Collectors.joining(" ")).trim();
+                }
+            
+                String extractedName = String.format("%s,%s,%s,%s\n",
+                        StringHelper.csvValue(displayName),
+                        StringHelper.csvValue(realDisplayName),
+                        StringHelper.csvValue(firstName),
+                        StringHelper.csvValue(lastName)
+                );
+                normalNameBuilder.append(extractedName);
+            }
+        
+        } else if (isOrganizationName) {
+            //if displayName is organization name >> keep it intact.
+            realDisplayName = displayName;
+            firstName = StringUtils.EMPTY;
+            lastName = StringUtils.EMPTY;
+        
+            String extractedName = String.format("%s,%s,%s,%s\n",
+                    StringHelper.csvValue(displayName),
+                    StringHelper.csvValue(realDisplayName),
+                    StringHelper.csvValue(firstName),
+                    StringHelper.csvValue(lastName)
+            );
+            organizationNameBuilder.append(extractedName);
+        } else {
+            realDisplayName = displayName;
+        }
+        return realDisplayName;
+    }
+    
     private boolean isAustraliaFormat(List<String> csvData, int dateIndex, String fileType) {
         boolean isAustraliaFormat = false;
 

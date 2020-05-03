@@ -3,6 +3,7 @@ package com.tellyouiam.alittlebitaboutspring.rest;
 import com.tellyouiam.alittlebitaboutspring.dto.note.Note;
 import com.tellyouiam.alittlebitaboutspring.service.NoteService;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
+import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.validation.Valid;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author : Ho Anh
@@ -97,15 +99,32 @@ public class NoteController {
 	
 	@RequestMapping(value = "/owner/automate-import-ownership", method = RequestMethod.POST)
 	@ResponseBody
-	public final ResponseEntity<Object> automateImportOwnerShip(@RequestPart MultipartFile ownershipFile,
+	public final ResponseEntity<Object> automateImportOwnerShip(@RequestPart final List<MultipartFile> ownershipFiles,
 	                                                            @RequestParam(required = false) String dirName) {
-		Object result = null;
+		String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+				"HorseId", "HorseName",
+				"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
+				"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
+				"Country", "GST", "Shares", "FromDate", "ExportedDate"
+		);
+		StringBuilder dataBuilder = new StringBuilder(ownershipHeader);
+		
+		String nameHeader = String.format("%s,%s,%s,%s\n\n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
+		StringBuilder nameBuilder = new StringBuilder(nameHeader);
 		try {
-			result = noteService.automateImportOwnerShip(ownershipFile, dirName);
+			if (CollectionUtils.isNotEmpty(ownershipFiles)) {
+				for (MultipartFile file : ownershipFiles) {
+					Map<Object, Object> mapData = noteService.automateImportOwnerShip(file, dirName);
+					StringBuilder ownershipData = (StringBuilder) mapData.get("ownershipData");
+					StringBuilder ownershipName = (StringBuilder) mapData.get("ownershipData");
+					dataBuilder.append(ownershipData);
+					nameBuilder.append(ownershipName);
+				}
+			}
 		} catch (CustomException e) {
 			e.printStackTrace();
 		}
 
-		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+		return new ResponseEntity<>(dataBuilder, new HttpHeaders(), HttpStatus.OK);
 	}
 }
