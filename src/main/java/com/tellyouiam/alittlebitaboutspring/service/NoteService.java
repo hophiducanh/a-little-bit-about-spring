@@ -14,5 +14,5 @@ public interface NoteService {
 	
 	Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile, String dirName) throws CustomException;
 	
-	Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile, String filePath) throws CustomException;
+	Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile) throws CustomException;
 }

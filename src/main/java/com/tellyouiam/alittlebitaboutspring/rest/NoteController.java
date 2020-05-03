@@ -120,7 +120,7 @@ public class NoteController {
 		try {
 			if (CollectionUtils.isNotEmpty(ownershipFiles)) {
 				for (MultipartFile file : ownershipFiles) {
-					Map<Object, Object> mapData = noteService.automateImportOwnerShip(file, dirName);
+					Map<Object, Object> mapData = noteService.automateImportOwnerShip(file);
 					StringBuilder ownershipData = (StringBuilder) mapData.get("ownershipData");
 					StringBuilder ownershipName = (StringBuilder) mapData.get("ownershipName");
 					dataBuilder.append(ownershipData);

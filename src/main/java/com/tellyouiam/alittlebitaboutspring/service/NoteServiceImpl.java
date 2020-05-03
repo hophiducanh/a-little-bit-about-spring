@@ -449,7 +449,7 @@ public class NoteServiceImpl implements NoteService {
             return this.importHorseFromMiStable(horseFile, dirName);
         }
 
-        Map<Object, Object> ownerShipResult = this.automateImportOwnerShip(ownershipFile, dirName);
+        Map<Object, Object> ownerShipResult = this.automateImportOwnerShip(ownershipFile);
         Map<Object, Object> result = new HashMap<>();
 
         String csvExportedDateStr = String.valueOf(ownerShipResult.get("ExportedDate"));
@@ -765,7 +765,7 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    public Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile, String dirName) {
+    public Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile) {
         Map<Object, Object> result = new HashMap<>();
 
         try {
@@ -1069,7 +1069,7 @@ public class NoteServiceImpl implements NoteService {
             StringBuilder dataBuilder = new StringBuilder();
 
             StringBuilder nameBuilder = new StringBuilder();
-            StringBuilder normalNameBuilder = new StringBuilder();
+            StringBuilder normalNameBuilder = new StringBuilder("\n***********NORMAL NAME***********\n");
             StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
 
             if (!CollectionUtils.isEmpty(csvDataList)) {
