@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.*;
 import static java.time.temporal.ChronoField.*;
@@ -684,7 +685,8 @@ public class NoteServiceImpl implements NoteService {
     private static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
     private static final String REMOVE_LINE_BREAK_PATTERN = "\nCT\\b";
     private static final String REMOVE_INVALID_SHARES_PATTERN = "\\bInt.Party\\b";
-    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,(]*)(?=\\s\\(.*).*";
+    //private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,(]*)(?=\\s\\(.*).*";
+    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\(\\s.*";
     private static final String CORRECT_SHARE_COLUMN_POSITION_PATTERN = "(?m)^,(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String TRYING_SHARE_COLUMN_POSITION_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
@@ -1251,6 +1253,7 @@ public class NoteServiceImpl implements NoteService {
     
     private String correctOwnershipName(String firstName, String lastName,String displayName, StringBuilder normalNameBuilder,
                                         StringBuilder organizationNameBuilder) {
+        
         String realDisplayName = null;
         final List<String> organizationNames = Arrays.asList(
                 "Company",
@@ -1280,17 +1283,38 @@ public class NoteServiceImpl implements NoteService {
         boolean isOrganizationName =
                 organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
     
+        //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
+        //We wanna extract this name to firstName, lastName, displayName:
+        //Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
         if (ctMatcher.find()) {
-            //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
-            //We wanna extract this name to firstName, lastName, displayName:
-            //Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
             if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
                 int ctStartedIndex = ctMatcher.start();
                 int ctEndIndex = ctMatcher.end();
             
                 //E.g: Edmonds Racing
+                //for case displayName contains organizationName. Ex: Michael Hickmott Bloodstock CT: Michael Hickmott;
+                // >> Convert to format: Michael Hickmott - Michael Hickmott Bloodstock
                 realDisplayName = displayName.substring(0, ctStartedIndex).trim();
-            
+                String finalRealDisplayName = realDisplayName;
+                List<String> foundOrganizationNames = organizationNames.stream()
+                        .filter(name -> {
+                            String[] displayNameElements = finalRealDisplayName.split("\\p{Z}");
+                            return Stream.of(displayNameElements).anyMatch(i -> i.equalsIgnoreCase(name));
+                        })
+                        .collect(Collectors.toList());
+    
+                String incompleteDisplayName = realDisplayName;
+                for (String foundOrganizationName : foundOrganizationNames) {
+                    incompleteDisplayName = StringUtils.removeEndIgnoreCase(incompleteDisplayName, foundOrganizationName).trim();
+                }
+                String organizationName = StringUtils.substringAfter(realDisplayName, incompleteDisplayName).trim();
+                
+                if (StringUtils.isNotEmpty(organizationName)) {
+                    realDisplayName = String.join(
+                            " - ", incompleteDisplayName, String.join(" ", incompleteDisplayName, organizationName)
+                    );
+                }
+                
                 //E.g: Toby Edmonds, Logbasex
                 String firstAndLastNameStr = displayName.substring(ctEndIndex);
 
@@ -1315,6 +1339,7 @@ public class NoteServiceImpl implements NoteService {
                 normalNameBuilder.append(extractedName);
             }
         
+            //case don't include CT in name.
         } else if (isOrganizationName) {
             //if displayName is organization name >> keep it intact.
             realDisplayName = displayName;
