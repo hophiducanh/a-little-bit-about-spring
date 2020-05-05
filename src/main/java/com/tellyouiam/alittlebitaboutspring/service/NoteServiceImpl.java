@@ -1293,32 +1293,19 @@ public class NoteServiceImpl implements NoteService {
             
                 //E.g: Edmonds Racing
                 //for case displayName contains organizationName. Ex: Michael Hickmott Bloodstock CT: Michael Hickmott;
-                // >> Convert to format: Michael Hickmott - Michael Hickmott Bloodstock
+                // >> Convert to format: Michael Hickmott(after CT) - Michael Hickmott Bloodstock(before CT)
                 realDisplayName = displayName.substring(0, ctStartedIndex).trim();
-                String finalRealDisplayName = realDisplayName;
-                List<String> foundOrganizationNames = organizationNames.stream()
-                        .filter(name -> {
-                            String[] displayNameElements = finalRealDisplayName.split("\\p{Z}");
-                            return Stream.of(displayNameElements).anyMatch(i -> i.equalsIgnoreCase(name));
-                        })
-                        .collect(Collectors.toList());
-    
-                String incompleteDisplayName = realDisplayName;
-                for (String foundOrganizationName : foundOrganizationNames) {
-                    incompleteDisplayName = StringUtils.removeEndIgnoreCase(incompleteDisplayName, foundOrganizationName).trim();
-                }
-                String organizationName = StringUtils.substringAfter(realDisplayName, incompleteDisplayName).trim();
-                
-                if (StringUtils.isNotEmpty(organizationName)) {
-                    realDisplayName = String.join(
-                            " - ", incompleteDisplayName, String.join(" ", incompleteDisplayName, organizationName)
-                    );
-                }
                 
                 //E.g: Toby Edmonds, Logbasex
-                String firstAndLastNameStr = displayName.substring(ctEndIndex);
-
-//							StringUtils.normalizeSpace()
+                String firstAndLastNameStr = displayName.substring(ctEndIndex).trim();
+    
+                String finalRealDisplayName = realDisplayName;
+                boolean isContainsOrganizationName = organizationNames.stream()
+                        .anyMatch(name -> finalRealDisplayName.toLowerCase().contains(name.toLowerCase()));
+                
+                if (isContainsOrganizationName) {
+                    realDisplayName = String.join(" - ", firstAndLastNameStr, finalRealDisplayName);
+                }
                 String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
                 if (firstAndLastNameArr.length > 1) {
                     lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second)
@@ -1327,7 +1314,7 @@ public class NoteServiceImpl implements NoteService {
                     String finalLastName = lastName;
                     firstName = Arrays.stream(firstAndLastNameArr)
                             .filter(i -> !i.equalsIgnoreCase(finalLastName))
-                            .collect(Collectors.joining(" ")).trim();
+                            .collect(Collectors.joining(StringUtils.SPACE)).trim();
                 }
             
                 String extractedName = String.format("%s,%s,%s,%s\n",
@@ -1340,7 +1327,8 @@ public class NoteServiceImpl implements NoteService {
             }
         
             //case don't include CT in name.
-        } else if (isOrganizationName) {
+            ctMatcher.reset();
+        } else if (!ctMatcher.find() && isOrganizationName) {
             //if displayName is organization name >> keep it intact.
             realDisplayName = displayName;
             firstName = StringUtils.EMPTY;
