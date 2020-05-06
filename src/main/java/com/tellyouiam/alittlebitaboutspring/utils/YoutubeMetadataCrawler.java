@@ -5,6 +5,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.springframework.util.StringUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -15,16 +16,16 @@ import java.util.regex.Pattern;
 
 public class YoutubeMetadataCrawler {
 	public static void main(String[] args) {
-		String link="";
-		Scanner s=new Scanner(System.in);
+		String link = "";
 		// TODO Auto-generated method stub
-		try {
+		try (Scanner s = new Scanner(System.in)) {
 			System.out.println("Enter the youtube video for which metadata need to be extracted");
-			link=s.nextLine();
+			link = s.nextLine().trim();
 			Document doc = Jsoup.connect(link).ignoreContentType(true).timeout(5000).get();
 			YoutubeMetadataCrawler ymc = new YoutubeMetadataCrawler();
-			String title=ymc.getTitle(doc);
-			String desc=ymc.getDesc(doc);
+			String title = ymc.getTitle(doc);
+			String desc = ymc.getDesc(doc);
+			String thumbNailUrl = ymc.getThumbnailUrl(doc);
 			//String views=ymc.getViews(doc);
 //			int subscribed=ymc.getPeopleSubscribed(doc);
 //			int liked=ymc.getPeopleLiked(doc);
@@ -33,6 +34,7 @@ public class YoutubeMetadataCrawler {
 			System.out.println("Title:" + title);
 			System.out.println("*****************************************************");
 			System.out.println("Description:" + desc);
+			System.out.println("ThumbNailUrl:" + thumbNailUrl);
 			//System.out.println("Video Views: \n"+views);
 //			System.out.println("People subscribed: \n"+subscribed);
 //			System.out.println("People who liked the video: \n"+liked);
@@ -40,10 +42,6 @@ public class YoutubeMetadataCrawler {
 			//System.out.println("Top Comments: ");
 		} catch (IOException e) {
 			System.out.println("JSoup is unable to connect to the website");
-		}
-		finally
-		{
-			s.close();
 		}
 	}
 	
@@ -69,9 +67,26 @@ public class YoutubeMetadataCrawler {
 		return doc.select(".watch-view-count").text();
 	}
 	
-	public String getDesc(Document doc)
+	private String getDesc(Document doc)
 	{
 		return doc.select("#watch-description-text").text();
+	}
+	
+	private String getThumbnailUrl(Document doc) {
+		String openGraphImageUrl = null;
+		Elements meta = doc.getElementsByTag("meta");
+		for (Element e: meta) {
+			String property = e.attr("property");
+			String name = e.attr("name");
+			if (property.equals("og:image") || property.equals("og:image:url") || property.equals("twitter:image")
+					|| (!StringUtils.isEmpty(name) && name.equals("twitter:image"))) {
+				if (!StringUtils.isEmpty(e.attr("content"))) {
+					openGraphImageUrl = e.attr("content");
+					break;
+				}
+			}
+		}
+		return openGraphImageUrl;
 	}
 	
 	public String getVideoId(String url)
