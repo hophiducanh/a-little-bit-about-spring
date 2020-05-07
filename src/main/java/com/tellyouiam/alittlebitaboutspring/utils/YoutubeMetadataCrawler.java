@@ -8,6 +8,7 @@ import org.jsoup.select.Elements;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -16,25 +17,29 @@ import java.util.regex.Pattern;
 
 public class YoutubeMetadataCrawler {
 	public static void main(String[] args) {
-		String link = "";
+		String link = "https://www.youtube.com/watch?v=L0NZW6pgSLc";
 		// TODO Auto-generated method stub
 		try (Scanner s = new Scanner(System.in)) {
-			System.out.println("Enter the youtube video for which metadata need to be extracted");
-			link = s.nextLine().trim();
 			Document doc = Jsoup.connect(link).ignoreContentType(true).timeout(5000).get();
 			YoutubeMetadataCrawler ymc = new YoutubeMetadataCrawler();
 			String title = ymc.getTitle(doc);
 			String desc = ymc.getDesc(doc);
 			String thumbNailUrl = ymc.getThumbnailUrl(doc);
+			Long duration = ymc.getVideoDuration(doc);
 			//String views=ymc.getViews(doc);
 //			int subscribed=ymc.getPeopleSubscribed(doc);
 //			int liked=ymc.getPeopleLiked(doc);
 //			int disliked=ymc.getPeopleDisliked(doc);
 			
+			String defaultCharacterEncoding = System.getProperty("file.encoding"); //window-1252
+			System.out.println(defaultCharacterEncoding);
+			System.setProperty("file.encoding", "UTF-8");
+			
 			System.out.println("Title:" + title);
 			System.out.println("*****************************************************");
 			System.out.println("Description:" + desc);
 			System.out.println("ThumbNailUrl:" + thumbNailUrl);
+			System.out.println("Duration:" + duration);
 			//System.out.println("Video Views: \n"+views);
 //			System.out.println("People subscribed: \n"+subscribed);
 //			System.out.println("People who liked the video: \n"+liked);
@@ -70,6 +75,27 @@ public class YoutubeMetadataCrawler {
 	private String getDesc(Document doc)
 	{
 		return doc.select("#watch-description-text").text();
+	}
+	
+	//https://stackoverflow.com/questions/15596753/how-do-i-get-video-durations-with-youtube-api-version-3
+	private Long getVideoDuration(Document doc) {
+		String duration = null;
+		Elements meta = doc.getElementsByTag("meta");
+		for (Element e: meta) {
+			String property = e.attr("itemprop");
+			if (property.equals("duration")) {
+				if (!StringUtils.isEmpty(e.attr("content"))) {
+					duration = e.attr("content");
+					break;
+				}
+			}
+		}
+		
+		//https://stackoverflow.com/questions/16812593/how-to-convert-youtube-api-v3-duration-in-java
+		if (duration != null) {
+			return Duration.parse(duration).getSeconds();
+		}
+		return null;
 	}
 	
 	private String getThumbnailUrl(Document doc) {
