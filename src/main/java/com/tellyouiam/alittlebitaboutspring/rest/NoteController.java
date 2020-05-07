@@ -100,42 +100,30 @@ public class NoteController {
 			e.printStackTrace();
 		}
 		
-		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+		return new ResponseEntity<>(result, new HttpHeaders(), HttpStatus.OK);
 	}
 	
 	@RequestMapping(value = "/owner/automate-import-ownership", method = RequestMethod.POST)
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportOwnerShip(@RequestPart final List<MultipartFile> ownershipFiles,
 	                                                            @RequestParam(required = false) String dirName) {
-		String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-				"HorseId", "HorseName",
-				"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
-				"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-				"Country", "GST", "Shares", "FromDate", "ExportedDate"
-		);
-		StringBuilder dataBuilder = new StringBuilder(ownershipHeader);
 		
-		String nameHeader = String.format("%s,%s,%s,%s\n\n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
-		StringBuilder nameBuilder = new StringBuilder(nameHeader);
+		Map<Object, Object> result;
 		try {
-			if (CollectionUtils.isNotEmpty(ownershipFiles)) {
-				for (MultipartFile file : ownershipFiles) {
-					Map<Object, Object> mapData = noteService.automateImportOwnerShip(file);
-					StringBuilder ownershipData = (StringBuilder) mapData.get("ownershipData");
-					StringBuilder ownershipName = (StringBuilder) mapData.get("ownershipName");
-					dataBuilder.append(ownershipData);
-					nameBuilder.append(ownershipName);
-				}
-				String extractedNamePath = FileHelper.getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
-				Files.write(Paths.get(extractedNamePath), Collections.singleton(nameBuilder));
-				
-				String formattedPath = FileHelper.getOutputFolder(dirName) + File.separator + "formatted-ownership.csv";
-				Files.write(Paths.get(formattedPath), Collections.singleton(dataBuilder));
-			}
+			result = noteService.automateImportOwnerShips(ownershipFiles);
+			StringBuilder extractedNameData = (StringBuilder) result.get("extractedName");
+			StringBuilder csvData = (StringBuilder) result.get("csvData");
+			
+			String extractedNamePath = FileHelper.getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
+			Files.write(Paths.get(extractedNamePath), Collections.singleton(extractedNameData));
+			
+			String formattedPath = FileHelper.getOutputFolder(dirName) + File.separator + "formatted-ownership.csv";
+			Files.write(Paths.get(formattedPath), Collections.singleton(csvData));
+			
 		} catch (CustomException | IOException e) {
 			e.printStackTrace();
 		}
-
-		return new ResponseEntity<>(dataBuilder, new HttpHeaders(), HttpStatus.OK);
+		
+		return new ResponseEntity<>(null, new HttpHeaders(), HttpStatus.OK);
 	}
 }

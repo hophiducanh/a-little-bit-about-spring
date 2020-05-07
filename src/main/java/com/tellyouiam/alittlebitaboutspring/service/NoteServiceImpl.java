@@ -450,7 +450,9 @@ public class NoteServiceImpl implements NoteService {
             return this.importHorseFromMiStable(horseFile, dirName);
         }
 
-        Map<Object, Object> ownerShipResult = this.automateImportOwnerShip(ownershipFile);
+        //TODO
+        //Map<Object, Object> ownerShipResult = this.automateImportOwnerShip(ownershipFile);
+        Map<Object, Object> ownerShipResult = new HashMap<>();
         Map<Object, Object> result = new HashMap<>();
 
         String csvExportedDateStr = String.valueOf(ownerShipResult.get("ExportedDate"));
@@ -767,376 +769,403 @@ public class NoteServiceImpl implements NoteService {
     }
     
     @Override
-    public Map<Object, Object> automateImportOwnerShip(MultipartFile ownershipFile) {
+    public Map<Object, Object> automateImportOwnerShips(List<MultipartFile> ownershipFiles) {
+        String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+                "HorseId", "HorseName",
+                "OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
+                "Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
+                "Country", "GST", "Shares", "FromDate", "ExportedDate"
+        );
+    
+        String nameHeader = String.format("%s,%s,%s,%s\n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
+        
         Map<Object, Object> result = new HashMap<>();
-
-        try {
-            List<String> csvData = this.getCsvData(ownershipFile);
-            String allLines = String.join("\n", csvData);
-
-            // get file exportedDate.
-            // Pattern : ,,,,,,,,,,,,,,Printed: 21/10/2019  3:41:46PM,,,,Page -1 of 1,,,,
-            String exportedDate = null;
-            Matcher exportedDateMatcher = Pattern.compile(NORMAL_OWNERSHIP_EXPORTED_DATE_PATTERN, Pattern.CASE_INSENSITIVE)
-                    .matcher(allLines);
-
-            int exportedDateCount = 0;
-
-            boolean isNormalExportedDate = false;
-            while (exportedDateMatcher.find()) {
-                exportedDateCount++;
-
-                if (exportedDateCount == 1) {
-                    isNormalExportedDate = true;
-                    //get date use group(2) of regex.
-                    exportedDate = exportedDateMatcher.group(2);
-
-                    // process for case horse file was exported before ownership file was exported.
-                    // Using date info in ownership file can cause mismatching in data.
-                    // exportedDate = LocalDate.parse(exportedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(1).format(AUSTRALIA_CUSTOM_DATE_FORMAT);
-                    if (!exportedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-                        throw new CustomException(new ErrorInfo("The exported date was not recognized as a valid Australia format: {}", exportedDate));
-                    }
-
-                } else if (exportedDateCount > 1){
-                    throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
-                }
-            }
-            
-            if (!isNormalExportedDate) {
-                Matcher ardexExportedDateMatcher = Pattern.compile(ARDEX_OWNERSHIP_EXPORTED_DATE_PATTERN, Pattern.CASE_INSENSITIVE)
+        List<String> exportedDateList = new ArrayList<>();
+        
+        StringBuilder dataBuilder = new StringBuilder(ownershipHeader);
+        StringBuilder nameBuilder = new StringBuilder(nameHeader);
+        StringBuilder normalNameBuilder = new StringBuilder("\n***********NORMAL NAME***********\n");
+        StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
+        
+        for (MultipartFile ownershipFile: ownershipFiles) {
+            try {
+                List<String> csvData = this.getCsvData(ownershipFile);
+                String allLines = String.join("\n", csvData);
+        
+                // get file exportedDate.
+                // Pattern : ,,,,,,,,,,,,,,Printed: 21/10/2019  3:41:46PM,,,,Page -1 of 1,,,,
+                String exportedDate = null;
+                Matcher exportedDateMatcher = Pattern.compile(NORMAL_OWNERSHIP_EXPORTED_DATE_PATTERN,
+                        Pattern.CASE_INSENSITIVE)
                         .matcher(allLines);
-                while (ardexExportedDateMatcher.find()) {
-                    exportedDate = ardexExportedDateMatcher.group(2);
-                    exportedDate = LocalDate.parse(exportedDate, ARDEX_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+        
+                int exportedDateCount = 0;
+        
+                boolean isNormalExportedDate = false;
+                while (exportedDateMatcher.find()) {
+                    exportedDateCount++;
+            
+                    if (exportedDateCount == 1) {
+                        isNormalExportedDate = true;
+                        //get date use group(2) of regex.
+                        exportedDate = exportedDateMatcher.group(2);
+                
+                        // process for case horse file was exported before ownership file was exported.
+                        // Using date info in ownership file can cause mismatching in data.
+                        // exportedDate = LocalDate.parse(exportedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(1)
+                        // .format(AUSTRALIA_CUSTOM_DATE_FORMAT);
+                        if (!exportedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
+                            throw new CustomException(new ErrorInfo("The exported date was not recognized as a valid " +
+                                    "Australia format: {}", exportedDate));
+                        }
+                
+                    } else if (exportedDateCount > 1) {
+                        throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
+                    }
                 }
-            }
-
-            // Line has departedDate likely to extract:
-            //Azurite (IRE) ( Azamour (IRE) - High Lite (GB)) 9yo Bay Gelding     Michael Hickmott Bloodstock - In
-            //training Michael Hickmott Bloodstock 1/08/2019 >> 1/08/2019
-            //This is required for make sure horse data after format csv are exact.
-
-            Matcher departedDateMatcher = Pattern.compile(EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN).matcher(allLines);
-
-            Map<String, String> horseDataMap = new LinkedHashMap<>();
-
-            while (departedDateMatcher.find()) {
-                String horseName = departedDateMatcher.group(1).trim();
-                String horseDepartedDate = departedDateMatcher.group(3).trim();
-
-                if (StringUtils.isEmpty(horseName))
-                    continue;
-
-                if (StringUtils.isEmpty(horseDepartedDate))
-                    logger.info("Horse without departed date: {}", horseName);
-
-                if (!horseDepartedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-                    throw new CustomException(new ErrorInfo("The departed date was not recognized as a valid Australia format: {}", horseDepartedDate));
+        
+                //Ardex exportedDate like : Tuesday, 28 April, 2020
+                if (!isNormalExportedDate) {
+                    Matcher ardexExportedDateMatcher = Pattern.compile(ARDEX_OWNERSHIP_EXPORTED_DATE_PATTERN,
+                            Pattern.CASE_INSENSITIVE)
+                            .matcher(allLines);
+                    while (ardexExportedDateMatcher.find()) {
+                        exportedDate = ardexExportedDateMatcher.group(2);
+                        exportedDate =
+                                LocalDate.parse(exportedDate, ARDEX_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+                    }
                 }
-
-                //process for case: 25/08/19 (usually 25/08/2019)
-                String horseDate = LocalDate.parse(horseDepartedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
-                horseDataMap.put(horseName, horseDate);
-            }
-
-            result.put("HorseDataMap", horseDataMap);
-            result.put("ExportedDate", exportedDate);
-            Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
-            if (blankLinesMatcher.find()) {
-                allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, StringUtils.EMPTY);
-            } else {
-                throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
-            }
-
-            //optional
-            String lineHasFileOwnerName;
-            Matcher extractFileOwnerName = Pattern.compile(EXTRACT_FILE_OWNER_NAME_PATTERN).matcher(allLines);
-            if (extractFileOwnerName.find()) {
-
-                logger.info("*******************Lines possible have owner file name:\n {}", extractFileOwnerName.group());
-
-                lineHasFileOwnerName = extractFileOwnerName.group(2);
-
-                if (StringUtils.isEmpty(lineHasFileOwnerName)) {
-                    List<String> lineHasFileOwnerNameElements = Arrays.asList(readCsvLine(lineHasFileOwnerName));
-
-                    String fileOwnerName = lineHasFileOwnerNameElements.stream().filter(StringUtils::isNotEmpty)
-                            .collect(toSingleton());
-
-                    logger.info("*********************File owner name is : {}", fileOwnerName);
+                exportedDateList.add(exportedDate);
+                
+                // Line has departedDate likely to extract:
+                //Azurite (IRE) ( Azamour (IRE) - High Lite (GB)) 9yo Bay Gelding     Michael Hickmott Bloodstock - In
+                //training Michael Hickmott Bloodstock 1/08/2019 >> 1/08/2019
+                //This is required for make sure horse data after format csv are exact.
+        
+                Matcher departedDateMatcher = Pattern.compile(EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN).matcher(allLines);
+        
+                while (departedDateMatcher.find()) {
+                    String horseName = departedDateMatcher.group(1).trim();
+                    String horseDepartedDate = departedDateMatcher.group(3).trim();
+            
+                    if (StringUtils.isEmpty(horseName))
+                        continue;
+            
+                    if (StringUtils.isEmpty(horseDepartedDate))
+                        logger.info("Horse without departed date: {}", horseName);
+            
+                    if (!horseDepartedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
+                        throw new CustomException(new ErrorInfo("The departed date was not recognized as a valid " +
+                                "Australia format: {}", horseDepartedDate));
+                    }
+            
+                    //process for case: 25/08/19 (usually 25/08/2019)
+                    String horseDate =
+                            LocalDate.parse(horseDepartedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+                    //TODO
                 }
-
-            } else {
-                logger.info("*******************Can't detect lines contain owner file name in given file.");
-            }
-
-
-            Matcher linesBreakMatcher = Pattern.compile(REMOVE_LINE_BREAK_PATTERN).matcher(allLines);
-            if (linesBreakMatcher.find()) {
-                allLines = allLines.replaceAll(REMOVE_LINE_BREAK_PATTERN, " CT");
-            } else {
-                logger.warn("Cannot apply regex: {}... for ownership file", REMOVE_LINE_BREAK_PATTERN);
-            }
-
-            //optional
-            Matcher invalidSharesMatcher = Pattern.compile(REMOVE_INVALID_SHARES_PATTERN, Pattern.CASE_INSENSITIVE).matcher(allLines);
-            if (invalidSharesMatcher.find()) {
-                allLines = allLines.replaceAll(REMOVE_INVALID_SHARES_PATTERN, "0.00%");
-            } else {
-                logger.warn("Cannot apply regex: {}... for ownership file", REMOVE_INVALID_SHARES_PATTERN);
-            }
-
-            Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(allLines);
-            int horseCount = 0;
-            while (correctHorseNameMatcher.find()) {
-                horseCount++;
-            }
-            result.put("HorseCount", horseCount);
-
-            //ignore extra data from line contains horse name >> horse name
-            //Ambidexter/Elancer 16 ( Ambidexter - Elancer) 3yo Brown Colt     Michael Hickmott Bloodstock - In training Michael Hickmott Bloodstock 24/12/2019 >> Ambidexter/Elancer 16
-
-            Matcher correctShareColumnPosition = Pattern.compile(CORRECT_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
-            Matcher tryingShareColumnPosition = Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
-            if (horseCount > 0) {
-                //special case: POB-345: Archer park (missing leading comma: normal case these lines don't contain horse name start with ,%share, >> POB-345 start with %share,)
-                if (correctShareColumnPosition.find()) {
-                    allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
-                } else if (tryingShareColumnPosition.find()) {
-                    allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1").replaceAll(TRYING_SHARE_COLUMN_POSITION_PATTERN, ",$1");
+                
+                Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
+                if (blankLinesMatcher.find()) {
+                    allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, StringUtils.EMPTY);
+                } else {
+                    throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+                }
+        
+                //optional
+                String lineHasFileOwnerName;
+                Matcher extractFileOwnerName = Pattern.compile(EXTRACT_FILE_OWNER_NAME_PATTERN).matcher(allLines);
+                if (extractFileOwnerName.find()) {
+            
+                    logger.info("*******************Lines possible have owner file name:\n {}",
+                            extractFileOwnerName.group());
+            
+                    lineHasFileOwnerName = extractFileOwnerName.group(2);
+            
+                    if (StringUtils.isEmpty(lineHasFileOwnerName)) {
+                        List<String> lineHasFileOwnerNameElements = Arrays.asList(readCsvLine(lineHasFileOwnerName));
+                
+                        String fileOwnerName = lineHasFileOwnerNameElements.stream().filter(StringUtils::isNotEmpty)
+                                .collect(toSingleton());
+                
+                        logger.info("*********************File owner name is : {}", fileOwnerName);
+                    }
+            
+                } else {
+                    logger.info("*******************Can't detect lines contain owner file name in given file.");
+                }
+        
+        
+                Matcher linesBreakMatcher = Pattern.compile(REMOVE_LINE_BREAK_PATTERN).matcher(allLines);
+                if (linesBreakMatcher.find()) {
+                    allLines = allLines.replaceAll(REMOVE_LINE_BREAK_PATTERN, " CT");
+                } else {
+                    logger.warn("Cannot apply regex: {}... for ownership file", REMOVE_LINE_BREAK_PATTERN);
+                }
+        
+                //optional
+                Matcher invalidSharesMatcher = Pattern.compile(REMOVE_INVALID_SHARES_PATTERN,
+                        Pattern.CASE_INSENSITIVE).matcher(allLines);
+                if (invalidSharesMatcher.find()) {
+                    allLines = allLines.replaceAll(REMOVE_INVALID_SHARES_PATTERN, "0.00%");
+                } else {
+                    logger.warn("Cannot apply regex: {}... for ownership file", REMOVE_INVALID_SHARES_PATTERN);
+                }
+        
+                //TODO: consider to ignore
+                Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(allLines);
+                int horseCount = 0;
+                while (correctHorseNameMatcher.find()) {
+                    horseCount++;
+                }
+                result.put("HorseCount", horseCount);
+        
+                //ignore extra data from line contains horse name >> horse name
+                //Ambidexter/Elancer 16 ( Ambidexter - Elancer) 3yo Brown Colt     Michael Hickmott Bloodstock - In
+                // training Michael Hickmott Bloodstock 24/12/2019 >> Ambidexter/Elancer 16
+        
+                Matcher correctShareColumnPosition =
+                        Pattern.compile(CORRECT_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
+                Matcher tryingShareColumnPosition =
+                        Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
+                if (horseCount > 0) {
+                    //special case: POB-345: Archer park (missing leading comma: normal case these lines don't
+                    // contain horse name start with ,%share, >> POB-345 start with %share,)
+                    if (correctShareColumnPosition.find()) {
+                        allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
+                    } else if (tryingShareColumnPosition.find()) {
+                        allLines =
+                                allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1").replaceAll(TRYING_SHARE_COLUMN_POSITION_PATTERN, ",$1");
+                    } else {
+                        logger.warn("Data seemingly weird. Please check!");
+                    }
+                } else {
+                    throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+                }
+        
+                Matcher trimHorseNameMatcher = Pattern.compile(TRIM_HORSE_NAME_PATTERN).matcher(allLines);
+                if (trimHorseNameMatcher.find()) {
+                    allLines = allLines.replaceAll(TRIM_HORSE_NAME_PATTERN, "");
+                } else {
+                    logger.info("Cannot apply regex: {}... for ownership file", TRIM_HORSE_NAME_PATTERN);
+                }
+        
+                //Bring horse name and horse data into the same line.
+                Matcher correctHorseLinePattern = Pattern.compile(MOVE_HORSE_TO_CORRECT_LINE_PATTERN).matcher(allLines);
+                if (correctHorseLinePattern.find()) {
+                    allLines = allLines.replaceAll(MOVE_HORSE_TO_CORRECT_LINE_PATTERN, "$1,");
+                } else {
+                    throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
+                }
+        
+                //remove unnecessary line like:
+                // ,,With Share Ownership Information ,,,,,,,,,,,,,,,,,,,,
+                Matcher unnecessaryDataMatcher = Pattern.compile(REMOVE_UNNECESSARY_DATA).matcher(allLines);
+                if (unnecessaryDataMatcher.find()) {
+                    allLines = allLines.replaceAll(REMOVE_UNNECESSARY_DATA, "");
                 } else {
                     logger.warn("Data seemingly weird. Please check!");
                 }
-            } else {
-                throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
-            }
-
-            Matcher trimHorseNameMatcher = Pattern.compile(TRIM_HORSE_NAME_PATTERN).matcher(allLines);
-            if (trimHorseNameMatcher.find()) {
-                allLines = allLines.replaceAll(TRIM_HORSE_NAME_PATTERN, "");
-            } else {
-                logger.info("Cannot apply regex: {}... for ownership file", TRIM_HORSE_NAME_PATTERN);
-            }
-
-            //Bring horse name and horse data into the same line.
-            Matcher correctHorseLinePattern = Pattern.compile(MOVE_HORSE_TO_CORRECT_LINE_PATTERN).matcher(allLines);
-            if (correctHorseLinePattern.find()) {
-                allLines = allLines.replaceAll(MOVE_HORSE_TO_CORRECT_LINE_PATTERN, "$1,");
-            } else {
-                throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
-            }
-
-            //remove unnecessary line like:
-            // ,,With Share Ownership Information ,,,,,,,,,,,,,,,,,,,,
-            Matcher unnecessaryDataMatcher = Pattern.compile(REMOVE_UNNECESSARY_DATA).matcher(allLines);
-            if (unnecessaryDataMatcher.find()) {
-                allLines = allLines.replaceAll(REMOVE_UNNECESSARY_DATA, "");
-            } else {
-                logger.warn("Data seemingly weird. Please check!");
-            }
-
-            unnecessaryDataMatcher.reset();
-            StringBuilder ignoredData = new StringBuilder();
-            int gossipDataCount = 0;
-            while (unnecessaryDataMatcher.find()) {
-                gossipDataCount++;
-                ignoredData.append(unnecessaryDataMatcher.group());
-            }
-            
-            logger.info("******************************IGNORED DATA**********************************\n {}", ignoredData);
-            //normally unnecessary lines to ignored between 5 and 10.;
-            if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
-                throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
-            }
-            
-            String[][] data = this.get2DArrayFromString(allLines);
-            
-            //for case indexOutOfRange exception caused by missing trailing comma in header.
-            int headerLength = data[0].length;
-            int rowLength = data[1].length;
-            String tryingHeader = String.join(",", data[0]);
-            if (tryingHeader.matches(OWNERSHIP_HEADER_PATTERN) && (headerLength < rowLength)) {
-                IntStream.range(0, rowLength - headerLength).forEach(i -> {
-                    data[0] = ArrayUtils.add(data[0], "");
-                });
-            }
         
-            //all possible index of cell has value.
-            List<Integer> rowHasValueIndex = new ArrayList<>();
-
-            //all possible index.
-            Set<Integer> setAllIndexes = new HashSet<>();
-
-            //all possible index of empty cell.
-            Set<Integer> isEmptyIndexes = new HashSet<>();
-
-            // CSV data after using initial regex usually missing these header name: HorseName, AddedDate, GST
-            // Can't use regex for file to find column header name addedDate and GST, better we have to find all manually.
-            // We need all column data has right header name above to process in the next step.
-            int dateIndex = -1;
-            int gstIndex = -1;
-
-            //find all cells has empty columns.
-            for (int i = 0; i < data.length; i++) {
-                for (int j = 0; j < data[i].length; j++) {
-                    
-                    setAllIndexes.add(j);
-
-                    if (data[i][j].equalsIgnoreCase(StringUtils.EMPTY)) {
-                        isEmptyIndexes.add(j);
-                    }
-
-                    //append date header
-                    if (isRecognizedAsValidDate(data[i][j])) {
-                        dateIndex = j;
-                        data[0][dateIndex] = "Added Date";
-                    }
-
-                    if (data[i][j].equals("N") || data[i][j].equals("Y")) {
-                        gstIndex = j;
-                    }
+                unnecessaryDataMatcher.reset();
+                StringBuilder ignoredData = new StringBuilder();
+                int gossipDataCount = 0;
+                while (unnecessaryDataMatcher.find()) {
+                    gossipDataCount++;
+                    ignoredData.append(unnecessaryDataMatcher.group());
                 }
-            }
-
-            //Append Header
-            StringBuilder gstString = new StringBuilder();
-            for (String[] row : data) {
-                gstString.append(row[gstIndex]);
-            }
-            
-            String distinctGST = gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
-            if (distinctGST.matches("(YN)|(NY)|N|Y")) {
-                data[0][gstIndex] = "GST";
-            }
-
-            //Default horse column.
-            data[0][0] = "Horse";
-
-            //remains columns always has data in all cells.
-            setAllIndexes.removeAll(isEmptyIndexes);
-
-            //find all columns with at least one cell have data, except columns always has data in all cells.
-            for (Integer index : isEmptyIndexes) {
-                StringBuilder isEmptyString = new StringBuilder();
-
-                for (String[] row : data) {
-                    isEmptyString.append(row[index]);
+        
+                logger.info("******************************IGNORED DATA**********************************\n {}",
+                        ignoredData);
+                //normally unnecessary lines to ignored between 5 and 10.;
+                if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
+                    throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
                 }
-
-                if (!isEmptyString.toString().equals(StringUtils.EMPTY)) {
-                    rowHasValueIndex.add(index);
+        
+                String[][] data = this.get2DArrayFromString(allLines);
+        
+                //for case indexOutOfRange exception caused by missing trailing comma in header.
+                int headerLength = data[0].length;
+                int rowLength = data[1].length;
+                String tryingHeader = String.join(",", data[0]);
+                if (tryingHeader.matches(OWNERSHIP_HEADER_PATTERN) && (headerLength < rowLength)) {
+                    IntStream.range(0, rowLength - headerLength).forEach(i -> {
+                        data[0] = ArrayUtils.add(data[0], "");
+                    });
                 }
-            }
-
-            //Index of non-empty columns.
-            setAllIndexes.addAll(rowHasValueIndex);
-
-            List<Integer> allIndexes = new ArrayList<>(setAllIndexes);
-
-            List<String> csvDataWithBankColumns = this.getListFrom2DArrString(data);
-
-            //write csv data after format original csv file >> ignored completely empty column.
-            StringBuilder builder = new StringBuilder();
-            for (String line : csvDataWithBankColumns) {
-                String[] r = readCsvLine(line);
-
-                StringBuilder rowBuilder = new StringBuilder();
-
-                //write all column has data based on columns index.
-                for (Integer index : allIndexes) {
-                    rowBuilder.append(r[index]).append(",");
-                }
-                rowBuilder.append("\n");
-                builder.append(rowBuilder);
-            }
-
-            String[][] blankHorseNameData = this.get2DArrayFromString(builder.toString());
-
-            //fill empty horse name cells as same as previous cell data.
-            for (int i = 1; i < blankHorseNameData.length; ) {
-                if (StringUtils.isNotEmpty(blankHorseNameData[i][0])) {
-                    for (int j = i + 1; j < blankHorseNameData.length; j++) {
-                        if (StringUtils.isNotEmpty(blankHorseNameData[j][0])) {
-                            i = j;
-                            continue;
+        
+                //all possible index of cell has value.
+                List<Integer> rowHasValueIndex = new ArrayList<>();
+        
+                //all possible index.
+                Set<Integer> setAllIndexes = new HashSet<>();
+        
+                //all possible index of empty cell.
+                Set<Integer> isEmptyIndexes = new HashSet<>();
+        
+                // CSV data after using initial regex usually missing these header name: HorseName, AddedDate, GST
+                // Can't use regex for file to find column header name addedDate and GST, better we have to find all
+                // manually.
+                // We need all column data has right header name above to process in the next step.
+                int dateIndex = -1;
+                int gstIndex = -1;
+        
+                //find all cells has empty columns.
+                for (int i = 0; i < data.length; i++) {
+                    for (int j = 0; j < data[i].length; j++) {
+                
+                        setAllIndexes.add(j);
+                
+                        if (data[i][j].equalsIgnoreCase(StringUtils.EMPTY)) {
+                            isEmptyIndexes.add(j);
                         }
-                        blankHorseNameData[j][0] = blankHorseNameData[i][0];
+                
+                        //append date header
+                        if (isRecognizedAsValidDate(data[i][j])) {
+                            dateIndex = j;
+                            data[0][dateIndex] = "Added Date";
+                        }
+                
+                        if (data[i][j].equals("N") || data[i][j].equals("Y")) {
+                            gstIndex = j;
+                        }
                     }
                 }
-                i++;
-            }
-
-            List<String> csvDataList = this.getListFrom2DArrString(blankHorseNameData);
-            StringBuilder dataBuilder = new StringBuilder();
-
-            StringBuilder nameBuilder = new StringBuilder();
-            StringBuilder normalNameBuilder = new StringBuilder("\n***********NORMAL NAME***********\n");
-            StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
-
-            if (!CollectionUtils.isEmpty(csvDataList)) {
-
-                // ---------- cols of file ownership ---------------------------
-                // HORSE KEY (ID or NAME), can leave blank if key is horse name
-                // HORSE NAME
-                // OWNER_KEY (ID or EMAIL), can leave blank if ID is EMAIL
-                // EMAIL
-                // FINANCE EMAIL
-                // FIRST NAME
-                // LAST NAME
-                // DISPLAY NAME
-                // TYPE
-                // MOBILE
-                // PHONE
-                // FAX
-                // ADDRESS
-                // SUBURB (CITY)
-                // STATE
-                // POSTCODE
-                // COUNRTY
-                // GST = "true/false" or ot "T/F" or "Y/N"
-                // BALANCE (SHARE PERCENTAGE)
-                // FROM_DATE
-                // TO_DATE
-                // EXPORTED_DATE
-                // -------------------------------------------------------------
-
-                String[] header = readCsvLine(csvDataList.get(0));
-
-                int horseIdIndex = checkColumnIndex(header, "Horse Id");
-                int horseNameIndex = checkColumnIndex(header, "Horse Name", "Horse");
-                int ownerIdIndex = checkColumnIndex(header, "Owner Id");
-                int commsEmailIndex = checkColumnIndex(header, "CommsEmail", "Email");
-                int financeEmailIndex = checkColumnIndex(header, "Finance Email", "FinanceEmail");
-                int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
-                int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name");
-                int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name");
-                int typeIndex = checkColumnIndex(header, "Type");
-                int mobileIndex = checkColumnIndex(header, "Mobile", "Mobile Phone");
-                int phoneIndex = checkColumnIndex(header, "Phone");
-                int faxIndex = checkColumnIndex(header, "Fax");
-                int addressIndex = checkColumnIndex(header, "Address");
-                int cityIndex = checkColumnIndex(header, "City");
-                int stateIndex = checkColumnIndex(header, "State");
-                int postCodeIndex = checkColumnIndex(header, "PostCode");
-                int countryIndex = checkColumnIndex(header, "Country");
-                int shareIndex = checkColumnIndex(header, "Shares", "Share", "Ownership", "Share %");
-                int addedDateIndex = checkColumnIndex(header, "AddedDate", "Added Date");
-                int realGstIndex = checkColumnIndex(header, "GST");
-
-                //process file without header
-                csvDataList = csvDataList.stream().skip(1).collect(Collectors.toList());
-
-                boolean isAustraliaFormat = isAustraliaFormat(csvDataList, addedDateIndex, "ownership");
-
-                for (String line : csvDataList) {
+        
+                //Append Header
+                StringBuilder gstString = new StringBuilder();
+                for (String[] row : data) {
+                    gstString.append(row[gstIndex]);
+                }
+        
+                String distinctGST =
+                        gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
+                if (distinctGST.matches("(YN)|(NY)|N|Y")) {
+                    data[0][gstIndex] = "GST";
+                }
+        
+                //Default horse column.
+                data[0][0] = "Horse";
+        
+                //remains columns always has data in all cells.
+                setAllIndexes.removeAll(isEmptyIndexes);
+        
+                //find all columns with at least one cell have data, except columns always has data in all cells.
+                for (Integer index : isEmptyIndexes) {
+                    StringBuilder isEmptyString = new StringBuilder();
+            
+                    for (String[] row : data) {
+                        isEmptyString.append(row[index]);
+                    }
+            
+                    if (!isEmptyString.toString().equals(StringUtils.EMPTY)) {
+                        rowHasValueIndex.add(index);
+                    }
+                }
+        
+                //Index of non-empty columns.
+                setAllIndexes.addAll(rowHasValueIndex);
+        
+                List<Integer> allIndexes = new ArrayList<>(setAllIndexes);
+        
+                List<String> csvDataWithBankColumns = this.getListFrom2DArrString(data);
+        
+                //write csv data after format original csv file >> ignored completely empty column.
+                StringBuilder builder = new StringBuilder();
+                for (String line : csvDataWithBankColumns) {
                     String[] r = readCsvLine(line);
-
-                    String horseId = getCsvCellValue(r, horseIdIndex);
-                    String horseName = getCsvCellValue(r, horseNameIndex);
-                    String ownerId = getCsvCellValue(r, ownerIdIndex);
-                    String commsEmail = getCsvCellValue(r, commsEmailIndex);
-                    String financeEmail = getCsvCellValue(r, financeEmailIndex);
+            
+                    StringBuilder rowBuilder = new StringBuilder();
+            
+                    //write all column has data based on columns index.
+                    for (Integer index : allIndexes) {
+                        rowBuilder.append(r[index]).append(",");
+                    }
+                    rowBuilder.append("\n");
+                    builder.append(rowBuilder);
+                }
+        
+                String[][] blankHorseNameData = this.get2DArrayFromString(builder.toString());
+        
+                //fill empty horse name cells as same as previous cell data.
+                for (int i = 1; i < blankHorseNameData.length; ) {
+                    if (StringUtils.isNotEmpty(blankHorseNameData[i][0])) {
+                        for (int j = i + 1; j < blankHorseNameData.length; j++) {
+                            if (StringUtils.isNotEmpty(blankHorseNameData[j][0])) {
+                                i = j;
+                                continue;
+                            }
+                            blankHorseNameData[j][0] = blankHorseNameData[i][0];
+                        }
+                    }
+                    i++;
+                }
+        
+                List<String> csvDataList = this.getListFrom2DArrString(blankHorseNameData);
+        
+                if (!CollectionUtils.isEmpty(csvDataList)) {
+            
+                    // ---------- cols of file ownership ---------------------------
+                    // HORSE KEY (ID or NAME), can leave blank if key is horse name
+                    // HORSE NAME
+                    // OWNER_KEY (ID or EMAIL), can leave blank if ID is EMAIL
+                    // EMAIL
+                    // FINANCE EMAIL
+                    // FIRST NAME
+                    // LAST NAME
+                    // DISPLAY NAME
+                    // TYPE
+                    // MOBILE
+                    // PHONE
+                    // FAX
+                    // ADDRESS
+                    // SUBURB (CITY)
+                    // STATE
+                    // POSTCODE
+                    // COUNRTY
+                    // GST = "true/false" or ot "T/F" or "Y/N"
+                    // BALANCE (SHARE PERCENTAGE)
+                    // FROM_DATE
+                    // TO_DATE
+                    // EXPORTED_DATE
+                    // -------------------------------------------------------------
+            
+                    String[] header = readCsvLine(csvDataList.get(0));
+            
+                    int horseIdIndex = checkColumnIndex(header, "Horse Id");
+                    int horseNameIndex = checkColumnIndex(header, "Horse Name", "Horse");
+                    int ownerIdIndex = checkColumnIndex(header, "Owner Id");
+                    int commsEmailIndex = checkColumnIndex(header, "CommsEmail", "Email");
+                    int financeEmailIndex = checkColumnIndex(header, "Finance Email", "FinanceEmail");
+                    int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
+                    int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name");
+                    int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name");
+                    int typeIndex = checkColumnIndex(header, "Type");
+                    int mobileIndex = checkColumnIndex(header, "Mobile", "Mobile Phone");
+                    int phoneIndex = checkColumnIndex(header, "Phone");
+                    int faxIndex = checkColumnIndex(header, "Fax");
+                    int addressIndex = checkColumnIndex(header, "Address");
+                    int cityIndex = checkColumnIndex(header, "City");
+                    int stateIndex = checkColumnIndex(header, "State");
+                    int postCodeIndex = checkColumnIndex(header, "PostCode");
+                    int countryIndex = checkColumnIndex(header, "Country");
+                    int shareIndex = checkColumnIndex(header, "Shares", "Share", "Ownership", "Share %");
+                    int addedDateIndex = checkColumnIndex(header, "AddedDate", "Added Date");
+                    int realGstIndex = checkColumnIndex(header, "GST");
+            
+                    //process file without header
+                    csvDataList = csvDataList.stream().skip(1).collect(Collectors.toList());
+            
+                    boolean isAustraliaFormat = isAustraliaFormat(csvDataList, addedDateIndex, "ownership");
+            
+                    for (String line : csvDataList) {
+                        String[] r = readCsvLine(line);
+                
+                        String horseId = getCsvCellValue(r, horseIdIndex);
+                        String horseName = getCsvCellValue(r, horseNameIndex);
+                        String ownerId = getCsvCellValue(r, ownerIdIndex);
+                        String commsEmail = getCsvCellValue(r, commsEmailIndex);
+                        String financeEmail = getCsvCellValue(r, financeEmailIndex);
 
 			  	        /*
 			  	         ### **Process case email cell like:
@@ -1144,96 +1173,99 @@ public class NoteServiceImpl implements NoteService {
 			  	         - [1] Extract Comms to communication email cell.
 			  	         - [2] Extract Accs to financial email cell.
 			  	        */
-                    Matcher mixingEmailTypeMatcher = Pattern.compile(MIXING_COMMS_FINANCE_EMAIL_PATTERN, Pattern.CASE_INSENSITIVE).matcher(line);
-                    if (mixingEmailTypeMatcher.find()) {
-
-                        String tryingCommsEmail = mixingEmailTypeMatcher.group(4).trim();
-                        String tryingFinanceEmail = mixingEmailTypeMatcher.group(2).trim();
-                        commsEmail = this.getValidEmailStr(tryingCommsEmail, line);
-
-                        if (StringUtils.isEmpty(financeEmail)) {
-                            financeEmail = this.getValidEmailStr(tryingFinanceEmail, line);
-                        }
-                    } else {
-                        commsEmail = this.getValidEmailStr(commsEmail, line);
-                        financeEmail = this.getValidEmailStr(financeEmail, line);
-                    }
-
-                    String firstName = getCsvCellValue(r, firstNameIndex);
-                    String lastName = getCsvCellValue(r, lastNameIndex);
-                    String displayName = getCsvCellValue(r, displayNameIndex);
-    
-                    //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
-                    //We wanna extract this name to firstName, lastName, displayName:
-                    //Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
-                    Map<String, String> ownershipNameMap = this.correctOwnershipName(firstName, lastName, displayName,
-                            normalNameBuilder, organizationNameBuilder);
-
-                    firstName = ownershipNameMap.get("firstName");
-                    lastName = ownershipNameMap.get("lastName");
-                    displayName = ownershipNameMap.get("displayName");
+                        Matcher mixingEmailTypeMatcher = Pattern.compile(MIXING_COMMS_FINANCE_EMAIL_PATTERN,
+                                Pattern.CASE_INSENSITIVE).matcher(line);
+                        if (mixingEmailTypeMatcher.find()) {
                     
-                    String type = getCsvCellValue(r, typeIndex);
-                    String mobile = getCsvCellValue(r, mobileIndex);
-                    String phone = getCsvCellValue(r, phoneIndex);
-                    String fax = getCsvCellValue(r, faxIndex);
-                    String address = getCsvCellValue(r, addressIndex);
-                    String city = getCsvCellValue(r, cityIndex);
-                    String state = getCsvCellValue(r, stateIndex);
-                    String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
-                    String country = getCsvCellValue(r, countryIndex);
-                    String gst = getCsvCellValue(r, realGstIndex);
-                    String share = getCsvCellValue(r, shareIndex);
-
-                    String rawAddedDate = getCsvCellValue(r, addedDateIndex);
-                    //remove all whitespace include unicode character
-                    rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
-                    String addedDate;
-
-                    //convert addedDate read from CSV to Australia date time format.
-                    if (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate)) {
-                        addedDate = LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
-                    } else {
-                        addedDate = rawAddedDate;
+                            String tryingCommsEmail = mixingEmailTypeMatcher.group(4).trim();
+                            String tryingFinanceEmail = mixingEmailTypeMatcher.group(2).trim();
+                            commsEmail = this.getValidEmailStr(tryingCommsEmail, line);
+                    
+                            if (StringUtils.isEmpty(financeEmail)) {
+                                financeEmail = this.getValidEmailStr(tryingFinanceEmail, line);
+                            }
+                        } else {
+                            commsEmail = this.getValidEmailStr(commsEmail, line);
+                            financeEmail = this.getValidEmailStr(financeEmail, line);
+                        }
+                
+                        String firstName = getCsvCellValue(r, firstNameIndex);
+                        String lastName = getCsvCellValue(r, lastNameIndex);
+                        String displayName = getCsvCellValue(r, displayNameIndex);
+                
+                        //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
+                        //We wanna extract this name to firstName, lastName, displayName:
+                        //Any thing before CT is displayName, after is firstName, if after CT contains comma
+                        // delimiter (,) >> lastName
+                        Map<String, String> ownershipNameMap = this.correctOwnershipName(firstName, lastName, displayName,
+                                normalNameBuilder, organizationNameBuilder);
+                
+                        firstName = ownershipNameMap.get("firstName");
+                        lastName = ownershipNameMap.get("lastName");
+                        displayName = ownershipNameMap.get("displayName");
+                
+                        String type = getCsvCellValue(r, typeIndex);
+                        String mobile = getCsvCellValue(r, mobileIndex);
+                        String phone = getCsvCellValue(r, phoneIndex);
+                        String fax = getCsvCellValue(r, faxIndex);
+                        String address = getCsvCellValue(r, addressIndex);
+                        String city = getCsvCellValue(r, cityIndex);
+                        String state = getCsvCellValue(r, stateIndex);
+                        String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
+                        String country = getCsvCellValue(r, countryIndex);
+                        String gst = getCsvCellValue(r, realGstIndex);
+                        String share = getCsvCellValue(r, shareIndex);
+                
+                        String rawAddedDate = getCsvCellValue(r, addedDateIndex);
+                        //remove all whitespace include unicode character
+                        rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
+                        String addedDate;
+                
+                        //convert addedDate read from CSV to Australia date time format.
+                        if (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate)) {
+                            addedDate =
+                                    LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+                        } else {
+                            addedDate = rawAddedDate;
+                        }
+                
+                        String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," +
+                                        "%s,%s\n",
+                                StringHelper.csvValue(horseId),
+                                StringHelper.csvValue(horseName),
+                                StringHelper.csvValue(ownerId),
+                                StringHelper.csvValue(commsEmail),
+                                StringHelper.csvValue(financeEmail),
+                                StringHelper.csvValue(firstName),
+                                StringHelper.csvValue(lastName),
+                                StringHelper.csvValue(displayName),
+                                StringHelper.csvValue(type),
+                                StringHelper.csvValue(mobile),
+                                StringHelper.csvValue(phone),
+                                StringHelper.csvValue(fax),
+                                StringHelper.csvValue(address),
+                                StringHelper.csvValue(city),
+                                StringHelper.csvValue(state),
+                                StringHelper.csvValue(postCode),
+                                StringHelper.csvValue(country),
+                                StringHelper.csvValue(gst),
+                                StringHelper.csvValue(share),
+                                StringHelper.csvValue(addedDate),
+                                StringHelper.csvValue(exportedDate)
+                        );
+                        dataBuilder.append(rowBuilder);
                     }
-
-                    String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-                            StringHelper.csvValue(horseId),
-                            StringHelper.csvValue(horseName),
-                            StringHelper.csvValue(ownerId),
-                            StringHelper.csvValue(commsEmail),
-                            StringHelper.csvValue(financeEmail),
-                            StringHelper.csvValue(firstName),
-                            StringHelper.csvValue(lastName),
-                            StringHelper.csvValue(displayName),
-                            StringHelper.csvValue(type),
-                            StringHelper.csvValue(mobile),
-                            StringHelper.csvValue(phone),
-                            StringHelper.csvValue(fax),
-                            StringHelper.csvValue(address),
-                            StringHelper.csvValue(city),
-                            StringHelper.csvValue(state),
-                            StringHelper.csvValue(postCode),
-                            StringHelper.csvValue(country),
-                            StringHelper.csvValue(gst),
-                            StringHelper.csvValue(share),
-                            StringHelper.csvValue(addedDate),
-                            StringHelper.csvValue(exportedDate)
-                    );
-                    dataBuilder.append(rowBuilder);
                 }
-
-                nameBuilder.append(normalNameBuilder).append(organizationNameBuilder);
+        
+            } catch (IOException | CustomException e) {
+                e.printStackTrace();
             }
-
-            result.put("ownershipData", dataBuilder);
-            result.put("ownershipName", nameBuilder);
-            
-            return result;
-        } catch (IOException | CustomException e) {
-            e.printStackTrace();
         }
-        return null;
+        
+        result.put("extractedName", nameBuilder.append(normalNameBuilder).append(organizationNameBuilder));
+        result.put("csvData", dataBuilder);
+        result.put("exportedDate", exportedDateList);
+        return result;
     }
 
     private String[][] get2DArrayFromString(String value) {
