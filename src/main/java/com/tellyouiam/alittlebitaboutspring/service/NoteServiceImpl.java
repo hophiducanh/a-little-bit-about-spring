@@ -1166,9 +1166,13 @@ public class NoteServiceImpl implements NoteService {
                     //We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
                     //We wanna extract this name to firstName, lastName, displayName:
                     //Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
-                    String realDisplayName = this.correctOwnershipName(firstName, lastName, displayName,
+                    Map<String, String> ownershipNameMap = this.correctOwnershipName(firstName, lastName, displayName,
                             normalNameBuilder, organizationNameBuilder);
 
+                    firstName = ownershipNameMap.get("firstName");
+                    lastName = ownershipNameMap.get("lastName");
+                    displayName = ownershipNameMap.get("displayName");
+                    
                     String type = getCsvCellValue(r, typeIndex);
                     String mobile = getCsvCellValue(r, mobileIndex);
                     String phone = getCsvCellValue(r, phoneIndex);
@@ -1201,7 +1205,7 @@ public class NoteServiceImpl implements NoteService {
                             StringHelper.csvValue(financeEmail),
                             StringHelper.csvValue(firstName),
                             StringHelper.csvValue(lastName),
-                            StringHelper.csvValue(realDisplayName),
+                            StringHelper.csvValue(displayName),
                             StringHelper.csvValue(type),
                             StringHelper.csvValue(mobile),
                             StringHelper.csvValue(phone),
@@ -1251,10 +1255,12 @@ public class NoteServiceImpl implements NoteService {
         return result;
     }
     
-    private String correctOwnershipName(String firstName, String lastName,String displayName, StringBuilder normalNameBuilder,
+    private Map<String, String> correctOwnershipName(String firstName, String lastName,String displayName, StringBuilder normalNameBuilder,
                                         StringBuilder organizationNameBuilder) {
         
-        String realDisplayName = null;
+        Map<String, String> ownershipNameMap = new HashMap<>();
+        
+        String formattedDisplayName = null;
         final List<String> organizationNames = Arrays.asList(
                 "Company",
                 "Racing",
@@ -1294,17 +1300,17 @@ public class NoteServiceImpl implements NoteService {
                 //E.g: Edmonds Racing
                 //for case displayName contains organizationName. Ex: Michael Hickmott Bloodstock CT: Michael Hickmott;
                 // >> Convert to format: Michael Hickmott(after CT) - Michael Hickmott Bloodstock(before CT)
-                realDisplayName = displayName.substring(0, ctStartedIndex).trim();
+                formattedDisplayName = displayName.substring(0, ctStartedIndex).trim();
                 
                 //E.g: Toby Edmonds, Logbasex
                 String firstAndLastNameStr = displayName.substring(ctEndIndex).trim();
     
-                String finalRealDisplayName = realDisplayName;
+                String finalRealDisplayName = formattedDisplayName;
                 boolean isContainsOrganizationName = organizationNames.stream()
                         .anyMatch(name -> finalRealDisplayName.toLowerCase().contains(name.toLowerCase()));
                 
                 if (isContainsOrganizationName) {
-                    realDisplayName = String.join(" - ", firstAndLastNameStr, finalRealDisplayName);
+                    formattedDisplayName = String.join(" - ", firstAndLastNameStr, finalRealDisplayName);
                 }
                 String[] firstAndLastNameArr = firstAndLastNameStr.split("\\p{Z}");
                 if (firstAndLastNameArr.length > 1) {
@@ -1319,7 +1325,7 @@ public class NoteServiceImpl implements NoteService {
             
                 String extractedName = String.format("%s,%s,%s,%s\n",
                         StringHelper.csvValue(displayName),
-                        StringHelper.csvValue(realDisplayName),
+                        StringHelper.csvValue(formattedDisplayName),
                         StringHelper.csvValue(firstName),
                         StringHelper.csvValue(lastName)
                 );
@@ -1330,21 +1336,25 @@ public class NoteServiceImpl implements NoteService {
             ctMatcher.reset();
         } else if (!ctMatcher.find() && isOrganizationName) {
             //if displayName is organization name >> keep it intact.
-            realDisplayName = displayName;
+            formattedDisplayName = displayName;
             firstName = StringUtils.EMPTY;
             lastName = StringUtils.EMPTY;
         
             String extractedName = String.format("%s,%s,%s,%s\n",
                     StringHelper.csvValue(displayName),
-                    StringHelper.csvValue(realDisplayName),
+                    StringHelper.csvValue(formattedDisplayName),
                     StringHelper.csvValue(firstName),
                     StringHelper.csvValue(lastName)
             );
             organizationNameBuilder.append(extractedName);
         } else {
-            realDisplayName = displayName;
+            formattedDisplayName = displayName;
         }
-        return realDisplayName;
+        
+        ownershipNameMap.put("firstName", firstName);
+        ownershipNameMap.put("lastName", lastName);
+        ownershipNameMap.put("displayName", formattedDisplayName);
+        return ownershipNameMap;
     }
     
     private boolean isAustraliaFormat(List<String> csvData, int dateIndex, String fileType) {
