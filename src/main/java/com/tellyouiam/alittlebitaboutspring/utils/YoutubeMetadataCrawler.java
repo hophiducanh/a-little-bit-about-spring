@@ -15,6 +15,7 @@ import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+//https://cooltrickshome.blogspot.com/2016/12/create-youtube-metadata-crawler-using.html
 public class YoutubeMetadataCrawler {
 	public static void main(String[] args) {
 		String link = "https://www.youtube.com/watch?v=L0NZW6pgSLc";
