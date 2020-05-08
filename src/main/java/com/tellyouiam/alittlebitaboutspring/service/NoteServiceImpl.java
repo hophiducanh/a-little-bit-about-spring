@@ -23,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.SignStyle;
 import java.util.*;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collector;
@@ -912,37 +913,58 @@ public class NoteServiceImpl implements NoteService {
                     logger.warn("Cannot apply regex: {}... for ownership file", REMOVE_INVALID_SHARES_PATTERN);
                 }
         
-                //TODO: consider to ignore
-                Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(allLines);
+                //Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(allLines);
+                csvData = Arrays.asList(allLines.split("\n"));
+                
                 int horseCount = 0;
-                while (correctHorseNameMatcher.find()) {
-                    horseCount++;
+                
+                List<String> newArrays =  new ArrayList<>();
+                for (String line : csvData) {
+                    
+                    Matcher correctHorseNameMatcher = Pattern.compile("^([^,].*)\\s\\(.*").matcher(line);
+                    Matcher tryingShareColumnPosition =
+                            Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
+                    
+                    if (correctHorseNameMatcher.find()) {
+                        horseCount++;
+                        
+                        List<Integer> leftIndexes = new ArrayList<>();
+                        List<Integer> rightIndexes = new ArrayList<>();
+    
+                        for (MatchResult match : allMatches(Pattern.compile("(\\((?:[^)(]+|\\((?:[^)(]+|\\([^)(]*\\))*\\))*\\))"), line)) {
+                            int start = match.start();
+                            int end = match.end();
+                            leftIndexes.add(start);
+                            rightIndexes.add(end);
+                        }
+    
+                        int startSireDamInfoIndex = Collections.max(leftIndexes);
+                        int endSireDamInfoIndex = Collections.max(rightIndexes);
+                        String sireDamPart = StringUtils.substring(line, startSireDamInfoIndex, endSireDamInfoIndex);
+                        String namePart = StringUtils.substringBeforeLast(line, sireDamPart);
+                        String additionalInfoPart = StringUtils.substringAfterLast(line, sireDamPart);
+                        
+                        if (!additionalInfoPart.contains("yo")) {
+                            logger.warn("Wired data");
+                        }
+                        line = namePart;
+                        newArrays.add(line);
+                    } else if (tryingShareColumnPosition.find()) {
+                        line = line.replaceAll(TRYING_SHARE_COLUMN_POSITION_PATTERN, ",$1");
+                        newArrays.add(line);
+                    } else {
+                        newArrays.add(line);
+                    }
                 }
+                
+                allLines = String.join("\n", newArrays);
+                
                 result.put("HorseCount", horseCount);
         
                 //ignore extra data from line contains horse name >> horse name
                 //Ambidexter/Elancer 16 ( Ambidexter - Elancer) 3yo Brown Colt     Michael Hickmott Bloodstock - In
                 // training Michael Hickmott Bloodstock 24/12/2019 >> Ambidexter/Elancer 16
-        
-                Matcher correctShareColumnPosition =
-                        Pattern.compile(CORRECT_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
-                Matcher tryingShareColumnPosition =
-                        Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
-                if (horseCount > 0) {
-                    //special case: POB-345: Archer park (missing leading comma: normal case these lines don't
-                    // contain horse name start with ,%share, >> POB-345 start with %share,)
-                    if (correctShareColumnPosition.find()) {
-                        allLines = allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1");
-                    } else if (tryingShareColumnPosition.find()) {
-                        allLines =
-                                allLines.replaceAll(CORRECT_HORSE_NAME_PATTERN, "$1").replaceAll(TRYING_SHARE_COLUMN_POSITION_PATTERN, ",$1");
-                    } else {
-                        logger.warn("Data seemingly weird. Please check!");
-                    }
-                } else {
-                    throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
-                }
-        
+
                 Matcher trimHorseNameMatcher = Pattern.compile(TRIM_HORSE_NAME_PATTERN).matcher(allLines);
                 if (trimHorseNameMatcher.find()) {
                     allLines = allLines.replaceAll(TRIM_HORSE_NAME_PATTERN, "");
@@ -1055,7 +1077,11 @@ public class NoteServiceImpl implements NoteService {
                     StringBuilder isEmptyString = new StringBuilder();
             
                     for (String[] row : data) {
-                        isEmptyString.append(row[index]);
+                        try {
+                            isEmptyString.append(row[index]);
+                        } catch (ArrayIndexOutOfBoundsException e) {
+                            e.printStackTrace();
+                        }
                     }
             
                     if (!isEmptyString.toString().equals(StringUtils.EMPTY)) {
@@ -1267,7 +1293,37 @@ public class NoteServiceImpl implements NoteService {
         result.put("exportedDate", exportedDateList);
         return result;
     }
-
+    
+    private static Iterable<MatchResult> allMatches(final Pattern p, final CharSequence input) {
+        return () -> new Iterator<MatchResult>() {
+            // Use a matcher internally.
+            final Matcher matcher = p.matcher(input);
+            // Keep a match around that supports any interleaving of hasNext/next calls.
+            MatchResult pending;
+            
+            public boolean hasNext() {
+                // Lazily fill pending, and avoid calling find() multiple times if the
+                // clients call hasNext() repeatedly before sampling via next().
+                if (pending == null && matcher.find()) {
+                    pending = matcher.toMatchResult();
+                }
+                return pending != null;
+            }
+            
+            public MatchResult next() {
+                // Fill pending if necessary (as when clients call next() without
+                // checking hasNext()), throw if not possible.
+                if (!hasNext()) {
+                    throw new NoSuchElementException();
+                }
+                // Consume pending so next call to hasNext() does a find().
+                MatchResult next = pending;
+                pending = null;
+                return next;
+            }
+        };
+    }
+    
     private String[][] get2DArrayFromString(String value) {
         List<List<String>> nestedListData = Arrays.stream(value.split("\n"))
                 .map(StringHelper::customSplitSpecific)
