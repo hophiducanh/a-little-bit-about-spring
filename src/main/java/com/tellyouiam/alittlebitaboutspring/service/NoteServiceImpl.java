@@ -607,10 +607,6 @@ public class NoteServiceImpl implements NoteService {
                         addedDate = dateAtNewestLocation.format(AUSTRALIA_FORMAL_DATE_FORMAT);
                     }
 
-//						if (!addedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-//							logger.info("UNKNOWN TYPE OF ADDED DATE IN HORSE FILE: {} in line: {}", addedDate, addedDate);
-//						}
-
                     horseMap.put(name, addedDate);
 
                     String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
@@ -921,9 +917,9 @@ public class NoteServiceImpl implements NoteService {
                 List<String> newArrays =  new ArrayList<>();
                 for (String line : csvData) {
                     
-                    Matcher correctHorseNameMatcher = Pattern.compile("^([^,].*)\\s\\(.*").matcher(line);
+                    Matcher correctHorseNameMatcher = Pattern.compile("^([^,]*)(?=\\s\\(.*).*$").matcher(line);
                     Matcher tryingShareColumnPosition =
-                            Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(allLines);
+                            Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(line);
                     
                     if (correctHorseNameMatcher.find()) {
                         horseCount++;
@@ -1005,7 +1001,8 @@ public class NoteServiceImpl implements NoteService {
                 }
         
                 String[][] data = this.get2DArrayFromString(allLines);
-        
+    
+                //int length = Arrays.stream(array).max(Comparator.comparingInt(ArrayUtils::getLength)).get().length
                 //for case indexOutOfRange exception caused by missing trailing comma in header.
                 int headerLength = data[0].length;
                 int rowLength = data[1].length;
