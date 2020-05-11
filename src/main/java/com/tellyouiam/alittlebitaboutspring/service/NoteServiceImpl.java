@@ -77,8 +77,7 @@ public class NoteServiceImpl implements NoteService {
     }
 
     private static boolean isRecognizedAsValidDate(String dateStr) {
-        Matcher dateMatcher = Pattern.compile(IS_INSTANCEOF_DATE_PATTERN).matcher(dateStr);
-        return dateMatcher.matches();
+        return dateStr.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN) || dateStr.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN);
     }
 
     private static String[][] readCSVTo2DArray(String path, boolean ignoreHeader) throws FileNotFoundException, IOException {
@@ -684,8 +683,7 @@ public class NoteServiceImpl implements NoteService {
     private static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
     private static final String REMOVE_LINE_BREAK_PATTERN = "\nCT\\b";
     private static final String REMOVE_INVALID_SHARES_PATTERN = "\\bInt.Party\\b";
-    //private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,(]*)(?=\\s\\(.*).*";
-    private static final String CORRECT_HORSE_NAME_PATTERN = "(?m)^([^,].*)\\s\\(\\s.*";
+    private static final String CORRECT_HORSE_NAME_PATTERN = "^([^,]*)(?=\\s\\(.*).*$";
     private static final String CORRECT_SHARE_COLUMN_POSITION_PATTERN = "(?m)^,(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String TRYING_SHARE_COLUMN_POSITION_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
@@ -876,11 +874,36 @@ public class NoteServiceImpl implements NoteService {
                 csvData = Arrays.asList(allLines.split("\n"));
                 
                 int horseCount = 0;
+    
+                /**
+                 * Preprocess data sample:
+                 .-----------------------------------------------------------------------------------------------------------------------------------------------.------------.---------------------------------------------------.
+                 |                                                                    Share %                                                                    |            |                   Display Name                    |
+                 :-----------------------------------------------------------------------------------------------------------------------------------------------+------------+---------------------------------------------------:
+                 | Ambidexter/Elancer 16 ( Ambidexter - Elancer) 3yo Brown Colt Michael Hickmott Bloodstock - In training Michael Hickmott Bloodstock 24/12/2019 |            |                                                   |
+                 :-----------------------------------------------------------------------------------------------------------------------------------------------+------------+---------------------------------------------------:
+                 | 50.00%                                                                                                                                        | 31/03/2018 | "Andrew Maloney Trading Syndicate Andrew Maloney" |
+                 :-----------------------------------------------------------------------------------------------------------------------------------------------+------------+---------------------------------------------------:
+                 | 25.00%                                                                                                                                        | 31/03/2018 | Cornerstone Stud                                  |
+                 '-----------------------------------------------------------------------------------------------------------------------------------------------'------------'---------------------------------------------------'
+                 * Expected after processing data:
+                 * - Horse name is extracted [required for all case]
+                 * - Locate share percentage column is next to horse name column (for case share percentage as above) [rare case].
+                 *
+                 .-----------------------.---------.------------.-----------------------------------.
+                 |                       | Share % |            |           Display Name            |
+                 :-----------------------+---------+------------+-----------------------------------:
+                 | Ambidexter/Elancer 16 |         |            |                                   |
+                 :-----------------------+---------+------------+-----------------------------------:
+                 |                       | 50.00%  | 31/03/2018 | "Andrew Maloney Trading Syndicate |
+                 :-----------------------+---------+------------+-----------------------------------:
+                 |                       | 25.00%  | 31/03/2018 | Cornerstone Stud                  |
+                 * */
                 
                 List<String> correctHorseNameArr =  new ArrayList<>();
                 for (String line : csvData) {
                     
-                    Matcher correctHorseNameMatcher = Pattern.compile("^([^,]*)(?=\\s\\(.*).*$").matcher(line);
+                    Matcher correctHorseNameMatcher = Pattern.compile(CORRECT_HORSE_NAME_PATTERN).matcher(line);
                     Matcher tryingShareColumnPosition =
                             Pattern.compile(TRYING_SHARE_COLUMN_POSITION_PATTERN).matcher(line);
                     
@@ -909,9 +932,13 @@ public class NoteServiceImpl implements NoteService {
                         line = namePart;
                         correctHorseNameArr.add(line);
                     } else if (tryingShareColumnPosition.find()) {
+                        
+                        //we read ownership CSV data by header column name.
                         line = line.replaceAll(TRYING_SHARE_COLUMN_POSITION_PATTERN, ",$1");
                         correctHorseNameArr.add(line);
                     } else if (line.contains("Share %,") && !line.contains(",Share %")) {
+    
+                        //we read ownership CSV data by header column name.
                         line = line.replace("Share %", ",Share %");
                         correctHorseNameArr.add(line);
                     } else {
