@@ -690,7 +690,6 @@ public class NoteServiceImpl implements NoteService {
     private static final String TRYING_SHARE_COLUMN_POSITION_PATTERN = "(?m)^(([\\d]{1,3})(\\.)([\\d]{1,2})%)";
     private static final String TRIM_HORSE_NAME_PATTERN = "(?m)^\\s";
     private static final String MOVE_HORSE_TO_CORRECT_LINE_PATTERN = "(?m)^([^,].*)\\n,(?=([\\d]{1,3})?(\\.)?([\\d]{1,2})?%)";
-    private static final String IS_INSTANCEOF_DATE_PATTERN = "([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
     private static final String EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN =
             "(?m)^([^,].*)\\s\\(\\s.*([\\s]+)([0-9]{0,2}([/\\-.])[0-9]{0,2}([/\\-.])[0-9]{0,4})";
     private static final String NORMAL_OWNERSHIP_EXPORTED_DATE_PATTERN =
@@ -700,16 +699,6 @@ public class NoteServiceImpl implements NoteService {
             "((\\(0[1-9]|[12][0-9]|3[01])\\s" +
             "(Jan(uary)?|Feb(ruary)?|Mar(ch)?|Apr(il)?|May|Jun(e)?|Jul(y)?|Aug(ust)?|Sep(tember)?|Oct(ober)?|Nov(ember)?|Dec(ember)?),\\s" +
             "((19|20)\\d\\d))";
-
-    private static final String IS_DATE_MONTH_YEAR_FORMAT_PATTERN = "^(?:(?:31([/\\-.])(?:0?[13578]|1[02]))\\1|" +
-            "(?:(?:29|30)([/\\-.])(?:0?[13-9]|1[0-2])\\2))(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$|" +
-            "^(?:29([/\\-.])0?2\\3(?:(?:1[6-9]|[2-9]\\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00)))$|" +
-            "^(?:0?[1-9]|1\\d|2[0-8])([/\\-.])(?:(?:0?[1-9])|(?:1[0-2]))\\4(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$";
-
-    private static final String IS_MONTH_DATE_YEAR_FORMAT_PATTERN = "^(?:(?:(?:0?[13578]|1[02])([/\\-.])31)\\1|" +
-            "(?:(?:0?[13-9]|1[0-2])([/\\-.])(?:29|30)\\2))(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$|" +
-            "^(?:0?2([/\\-.])29\\3(?:(?:1[6-9]|[2-9]\\d)?(?:0[48]|[2468][048]|[13579][26])|(?:(?:16|[2468][048]|[3579][26])00)))$|" +
-            "^(?:(?:0?[1-9])|(?:1[0-2]))([/\\-.])(?:0?[1-9]|1\\d|2[0-8])\\4(?:(?:1[6-9]|[2-9]\\d)?\\d{2})$";
 
     private static final String MIXING_COMMS_FINANCE_EMAIL_PATTERN = "\"?\\bAccs\\b:\\s((.+) (?=(\\bComms\\b)))\\bComms\\b:\\s((.+)(\\.[a-zA-Z;]+)(?=,))\"?";
 
