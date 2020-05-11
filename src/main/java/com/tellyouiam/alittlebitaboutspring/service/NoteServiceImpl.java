@@ -22,6 +22,8 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.time.format.SignStyle;
 import java.util.*;
 import java.util.regex.MatchResult;
@@ -76,8 +78,8 @@ public class NoteServiceImpl implements NoteService {
         return data;
     }
 
-    private static boolean isRecognizedAsValidDate(String dateStr) {
-        return dateStr.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN) || dateStr.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN);
+    private boolean isRecognizedAsValidDate(String dateStr) {
+        return isDMYFormat(dateStr) || isMDYFormat(dateStr);
     }
 
     private static String[][] readCSVTo2DArray(String path, boolean ignoreHeader) throws FileNotFoundException, IOException {
@@ -730,7 +732,8 @@ public class NoteServiceImpl implements NoteService {
                 .appendValue(MONTH_OF_YEAR, 1, 2, SignStyle.NEVER)
                 .appendLiteral('/')
                 .appendValue(YEAR, 2, 4, SignStyle.NEVER)
-                .toFormatter();
+                .toFormatter()
+                .withResolverStyle(ResolverStyle.STRICT);
     }
 
     private static final DateTimeFormatter AUSTRALIA_FORMAL_DATE_FORMAT;
@@ -741,7 +744,8 @@ public class NoteServiceImpl implements NoteService {
                 .appendValue(MONTH_OF_YEAR, 2)
                 .appendLiteral('/')
                 .appendValue(YEAR, 4)
-                .toFormatter();
+                .toFormatter()
+                .withResolverStyle(ResolverStyle.STRICT);
     }
 
     private static final DateTimeFormatter AMERICAN_CUSTOM_DATE_FORMAT;
@@ -752,15 +756,18 @@ public class NoteServiceImpl implements NoteService {
                 .appendValue(DAY_OF_MONTH, 1, 2, SignStyle.NEVER)
                 .appendLiteral('/')
                 .appendValue(YEAR, 2, 4, SignStyle.NEVER)
-                .toFormatter();
+                .toFormatter()
+                .withResolverStyle(ResolverStyle.STRICT);
     }
     
+    //ResolverStyle should using yyyy instead of uuuu
     private static final DateTimeFormatter ARDEX_DATE_FORMAT;
     static {
         ARDEX_DATE_FORMAT = new DateTimeFormatterBuilder()
+                .appendPattern("dd MMMM, uuuu")
                 .parseCaseSensitive()
-                .appendPattern("dd MMMM, yyyy")
-                .toFormatter();
+                .toFormatter()
+                .withResolverStyle(ResolverStyle.STRICT);
     }
     
     @Override
@@ -805,7 +812,7 @@ public class NoteServiceImpl implements NoteService {
                     // Using date info in ownership file can cause mismatching in data.
                     // exportedDate = LocalDate.parse(exportedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(1)
                     // .format(AUSTRALIA_CUSTOM_DATE_FORMAT);
-                    if (!exportedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
+                    if (!isDMYFormat(exportedDate)) {
                        logger.error("The exported date was not recognized as a valid Australia format: {}", exportedDate);
                     }
                 }
@@ -1464,6 +1471,27 @@ public class NoteServiceImpl implements NoteService {
         return ownershipNameMap;
     }
     
+    
+    private boolean isDMYFormat(String date) {
+        boolean isParsable = true;
+        try {
+            LocalDate.parse(date, AUSTRALIA_CUSTOM_DATE_FORMAT);
+        } catch (DateTimeParseException e) {
+            isParsable = false;
+        }
+         return isParsable;
+    }
+    
+    private boolean isMDYFormat(String date) {
+        boolean isParsable = true;
+        try {
+            LocalDate.parse(date, AMERICAN_CUSTOM_DATE_FORMAT);
+        } catch (DateTimeParseException e) {
+            isParsable = false;
+        }
+        return isParsable;
+    }
+    
     private boolean isAustraliaFormat(List<String> csvData, int dateIndex, String fileType) {
         boolean isAustraliaFormat = false;
 
@@ -1491,9 +1519,9 @@ public class NoteServiceImpl implements NoteService {
                 //Process for case: 15/08/2013 15:30
                 String date = rawDateTime.split("\\p{Z}")[0];
 
-                if (date.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
+                if (isDMYFormat(date)) {
                     ausFormatList.add(date);
-                } else if (date.matches(IS_MONTH_DATE_YEAR_FORMAT_PATTERN)) {
+                } else if (isMDYFormat(date)) {
                     mdyFormatList.add(date);
                 } else {
                     logger.info("UNKNOWN TYPE OF DATE IN {} FILE: {} at line : {}", StringUtils.upperCase(fileType), rawDateTime, line);
