@@ -4,6 +4,7 @@ import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import com.tellyouiam.alittlebitaboutspring.utils.*;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.commons.text.WordUtils;
 import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URIBuilder;
@@ -29,7 +30,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.*;
 import static java.time.temporal.ChronoField.*;
@@ -717,7 +717,7 @@ public class NoteServiceImpl implements NoteService {
             "(?m)^(?!((,)?Share %)|(.*(?=([\\d]{1,3})(\\.)([\\d]{1,2})%))).*$(\\n)?";
     private static final String EXTRACT_FILE_OWNER_NAME_PATTERN = "(?m)^(Horses)(.+)$(?=\\n)";
     private static final String CSV_HORSE_COUNT_PATTERN = "(?m)^(.+)Horses([,]+)$";
-    private static final String OWNERSHIP_HEADER_PATTERN = "(?m)^(.*)?Share %.*$";
+    private static final String OWNERSHIP_STANDARD_HEADER_PATTERN = "(?m)^(.*)?Share %.*$";
     private static final int IGNORED_NON_DATA_LINE_THRESHOLD = 9;
     
     private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
@@ -796,28 +796,19 @@ public class NoteServiceImpl implements NoteService {
                         Pattern.CASE_INSENSITIVE)
                         .matcher(allLines);
         
-                int exportedDateCount = 0;
-        
                 boolean isNormalExportedDate = false;
                 while (exportedDateMatcher.find()) {
-                    exportedDateCount++;
-            
-                    if (exportedDateCount == 1) {
-                        isNormalExportedDate = true;
-                        //get date use group(2) of regex.
-                        exportedDate = exportedDateMatcher.group(2);
-                
-                        // process for case horse file was exported before ownership file was exported.
-                        // Using date info in ownership file can cause mismatching in data.
-                        // exportedDate = LocalDate.parse(exportedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(1)
-                        // .format(AUSTRALIA_CUSTOM_DATE_FORMAT);
-                        if (!exportedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-                            throw new CustomException(new ErrorInfo("The exported date was not recognized as a valid " +
-                                    "Australia format: {}", exportedDate));
-                        }
-                
-                    } else if (exportedDateCount > 1) {
-                        throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
+    
+                    isNormalExportedDate = true;
+                    //get date use group(2) of regex.
+                    exportedDate = exportedDateMatcher.group(2);
+    
+                    // process for case horse file was exported before ownership file was exported.
+                    // Using date info in ownership file can cause mismatching in data.
+                    // exportedDate = LocalDate.parse(exportedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).minusDays(1)
+                    // .format(AUSTRALIA_CUSTOM_DATE_FORMAT);
+                    if (!exportedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
+                       logger.error("The exported date was not recognized as a valid Australia format: {}", exportedDate);
                     }
                 }
         
@@ -833,34 +824,6 @@ public class NoteServiceImpl implements NoteService {
                     }
                 }
                 exportedDateList.add(exportedDate);
-                
-                // Line has departedDate likely to extract:
-                //Azurite (IRE) ( Azamour (IRE) - High Lite (GB)) 9yo Bay Gelding     Michael Hickmott Bloodstock - In
-                //training Michael Hickmott Bloodstock 1/08/2019 >> 1/08/2019
-                //This is required for make sure horse data after format csv are exact.
-        
-                Matcher departedDateMatcher = Pattern.compile(EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN).matcher(allLines);
-        
-                while (departedDateMatcher.find()) {
-                    String horseName = departedDateMatcher.group(1).trim();
-                    String horseDepartedDate = departedDateMatcher.group(3).trim();
-            
-                    if (StringUtils.isEmpty(horseName))
-                        continue;
-            
-                    if (StringUtils.isEmpty(horseDepartedDate))
-                        logger.info("Horse without departed date: {}", horseName);
-            
-                    if (!horseDepartedDate.matches(IS_DATE_MONTH_YEAR_FORMAT_PATTERN)) {
-                        throw new CustomException(new ErrorInfo("The departed date was not recognized as a valid " +
-                                "Australia format: {}", horseDepartedDate));
-                    }
-            
-                    //process for case: 25/08/19 (usually 25/08/2019)
-                    String horseDate =
-                            LocalDate.parse(horseDepartedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
-                    //TODO
-                }
                 
                 Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
                 if (blankLinesMatcher.find()) {
@@ -914,7 +877,7 @@ public class NoteServiceImpl implements NoteService {
                 
                 int horseCount = 0;
                 
-                List<String> newArrays =  new ArrayList<>();
+                List<String> correctHorseNameArr =  new ArrayList<>();
                 for (String line : csvData) {
                     
                     Matcher correctHorseNameMatcher = Pattern.compile("^([^,]*)(?=\\s\\(.*).*$").matcher(line);
@@ -944,16 +907,19 @@ public class NoteServiceImpl implements NoteService {
                             logger.warn("Wired data");
                         }
                         line = namePart;
-                        newArrays.add(line);
+                        correctHorseNameArr.add(line);
                     } else if (tryingShareColumnPosition.find()) {
                         line = line.replaceAll(TRYING_SHARE_COLUMN_POSITION_PATTERN, ",$1");
-                        newArrays.add(line);
+                        correctHorseNameArr.add(line);
+                    } else if (line.contains("Share %,") && !line.contains(",Share %")) {
+                        line = line.replace("Share %", ",Share %");
+                        correctHorseNameArr.add(line);
                     } else {
-                        newArrays.add(line);
+                        correctHorseNameArr.add(line);
                     }
                 }
                 
-                allLines = String.join("\n", newArrays);
+                allLines = String.join("\n", correctHorseNameArr);
                 
                 result.put("HorseCount", horseCount);
         
@@ -1007,7 +973,7 @@ public class NoteServiceImpl implements NoteService {
                 int headerLength = data[0].length;
                 int rowLength = data[1].length;
                 String tryingHeader = String.join(",", data[0]);
-                if (tryingHeader.matches(OWNERSHIP_HEADER_PATTERN) && (headerLength < rowLength)) {
+                if (tryingHeader.matches(OWNERSHIP_STANDARD_HEADER_PATTERN) && (headerLength < rowLength)) {
                     IntStream.range(0, rowLength - headerLength).forEach(i -> {
                         data[0] = ArrayUtils.add(data[0], "");
                     });
@@ -1072,13 +1038,9 @@ public class NoteServiceImpl implements NoteService {
                 //find all columns with at least one cell have data, except columns always has data in all cells.
                 for (Integer index : isEmptyIndexes) {
                     StringBuilder isEmptyString = new StringBuilder();
-            
+    
                     for (String[] row : data) {
-                        try {
-                            isEmptyString.append(row[index]);
-                        } catch (ArrayIndexOutOfBoundsException e) {
-                            e.printStackTrace();
-                        }
+                        isEmptyString.append(row[index]);
                     }
             
                     if (!isEmptyString.toString().equals(StringUtils.EMPTY)) {
@@ -1111,8 +1073,10 @@ public class NoteServiceImpl implements NoteService {
                 String[][] blankHorseNameData = this.get2DArrayFromString(builder.toString());
         
                 //fill empty horse name cells as same as previous cell data.
+	            //ignore reading header
                 for (int i = 1; i < blankHorseNameData.length; ) {
                     if (StringUtils.isNotEmpty(blankHorseNameData[i][0])) {
+                    	
                         for (int j = i + 1; j < blankHorseNameData.length; j++) {
                             if (StringUtils.isNotEmpty(blankHorseNameData[j][0])) {
                                 i = j;
@@ -1121,7 +1085,38 @@ public class NoteServiceImpl implements NoteService {
                             blankHorseNameData[j][0] = blankHorseNameData[i][0];
                         }
                     }
-                    i++;
+                    ++i;
+                }
+                
+                //check if total share percentage of a horse is 100%
+                for (int i = blankHorseNameData.length - 1; i > 0;) {
+                    
+                    String currentHorseName = blankHorseNameData[i][0];
+                    String previousHorseName = blankHorseNameData[i - 1][0];
+                    
+	                double sharePercentCount = 0.00;
+	                do {
+		                String shareStr = blankHorseNameData[i - 1][1].trim();
+		                double sharePercent = 0.00;
+		                
+		                if (StringUtils.isEmpty(shareStr)) {
+			                sharePercent = 0.00;
+		                } else {
+			                shareStr = shareStr.replace("%", "");
+			                
+			                if(NumberUtils.isParsable(shareStr)) {
+				                sharePercent = Double.parseDouble(shareStr);
+			                }
+		                }
+		    
+		                sharePercentCount += sharePercent;
+		                
+		                i--;
+	                } while (i > 0 && currentHorseName.equals(previousHorseName));
+	
+	                if (sharePercentCount != 100.00) {
+		                logger.error("Horse with inadequate share percentage: {}", currentHorseName);
+	                }
                 }
         
                 List<String> csvDataList = this.getListFrom2DArrString(blankHorseNameData);
