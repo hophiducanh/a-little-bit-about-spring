@@ -28,7 +28,8 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
-    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    //https://www.baeldung.com/spring-boot-devtools
+    //developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
 
@@ -75,5 +76,13 @@ dependencies {
 
     // https://mvnrepository.com/artifact/org.apache.commons/commons-text
     compile group: 'org.apache.commons', name: 'commons-text', version: '1.8'
+
+    //OCR
+    // https://mvnrepository.com/artifact/net.sourceforge.tess4j/tess4j
+    compile group: 'net.sourceforge.tess4j', name: 'tess4j', version: '4.5.1'
+
+    // https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox
+    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.19'
+
 }
 
