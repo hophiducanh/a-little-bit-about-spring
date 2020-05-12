@@ -1,10 +1,9 @@
 package com.tellyouiam.alittlebitaboutspring.rest;
 
 import com.tellyouiam.alittlebitaboutspring.dto.note.Note;
-import com.tellyouiam.alittlebitaboutspring.service.NoteService;
+import com.tellyouiam.alittlebitaboutspring.service.note.NoteService;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import com.tellyouiam.alittlebitaboutspring.utils.FileHelper;
-import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

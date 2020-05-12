@@ -1,6 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.rest;
 
-import com.tellyouiam.alittlebitaboutspring.service.MasterDataCrawlService;
+import com.tellyouiam.alittlebitaboutspring.service.masterdata.MasterDataCrawlService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

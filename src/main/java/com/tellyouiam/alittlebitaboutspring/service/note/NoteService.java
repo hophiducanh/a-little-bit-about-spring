@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.service;
+package com.tellyouiam.alittlebitaboutspring.service.note;
 
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import org.springframework.stereotype.Service;

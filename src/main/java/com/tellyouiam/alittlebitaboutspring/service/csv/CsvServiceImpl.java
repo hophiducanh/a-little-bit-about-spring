@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.service;
+package com.tellyouiam.alittlebitaboutspring.service.csv;
 
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;

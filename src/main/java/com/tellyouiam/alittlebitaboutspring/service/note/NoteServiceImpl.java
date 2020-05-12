@@ -1,4 +1,4 @@
-	package com.tellyouiam.alittlebitaboutspring.service;
+	package com.tellyouiam.alittlebitaboutspring.service.note;
 	
 	import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.utils.*;
@@ -1260,15 +1260,12 @@
 							String rawAddedDate = getCsvCellValue(r, addedDateIndex);
 							//remove all whitespace include unicode character
 							rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
-							String addedDate;
-					
+							
 							//convert addedDate read from CSV to Australia date time format.
-							if (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate)) {
-								addedDate =
-										LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
-							} else {
-								addedDate = rawAddedDate;
-							}
+							String addedDate = (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate))
+									? LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT)
+									: rawAddedDate;
+							
 					
 							String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," +
 											"%s,%s\n",

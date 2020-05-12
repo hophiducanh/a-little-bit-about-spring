@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.service;
+package com.tellyouiam.alittlebitaboutspring.service.csv;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

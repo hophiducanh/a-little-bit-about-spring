@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.service;
+package com.tellyouiam.alittlebitaboutspring.service.masterdata;
 
 import org.springframework.stereotype.Service;
 
