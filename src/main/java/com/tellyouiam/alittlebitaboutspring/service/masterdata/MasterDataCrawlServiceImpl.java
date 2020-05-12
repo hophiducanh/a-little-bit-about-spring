@@ -1,5 +1,7 @@
 package com.tellyouiam.alittlebitaboutspring.service.masterdata;
 
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.parser.PdfTextExtractor;
 import com.tellyouiam.alittlebitaboutspring.utils.LambdaExceptionHelper;
 import lombok.SneakyThrows;
 import net.sourceforge.tess4j.Tesseract;
@@ -29,6 +31,9 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static com.tellyouiam.alittlebitaboutspring.utils.LambdaExceptionHelper.*;
 
 @Service
 public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
@@ -72,6 +77,7 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 			//tesseract.setDatapath("./tesseract/libs/Tess4J/tessdata");
 			
 			File file = new File("src\\main\\resources\\tesseract\\images\\pdf-image.png");
+			//set DPI (Dot per inch) for an image: https://stackoverflow.com/questions/321736/how-to-set-dpi-information-in-an-image
 			String text = tesseract.doOCR(file);
 			//String text1 = tesseract.doOCR(new File("C:\\Users\\conta\\OneDrive\\Desktop\\Trainer Onboarding _ Prism.pdf"), new Rectangle(0,200,1448, 200));
 			System.out.print(text);
@@ -80,7 +86,7 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 			String value = Files.walk(Paths.get("src\\main\\resources\\tesseract\\images"))
 					.filter(Files::isRegularFile)
 					.map(Path::toFile)
-					.map(LambdaExceptionHelper.unchecked(tesseract::doOCR))
+					.map(unchecked(tesseract::doOCR))
 					.collect(Collectors.joining("\n"));
 			
 			System.out.println(value);
@@ -117,5 +123,31 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 		}
 		
 		//generateImageFromPDF(filePath, "png");
+		
+		try {
+			
+			PdfReader reader = new PdfReader(filePath);
+			
+			// pageNumber = 1
+			String textFromPage = PdfTextExtractor.getTextFromPage(reader, 1);
+			System.out.println(textFromPage);
+			
+			String value = IntStream.range(1, reader.getNumberOfPages())
+					.mapToObj(i -> {
+						try {
+							return PdfTextExtractor.getTextFromPage(reader, i);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						return null;
+					})
+					.collect(Collectors.joining("\n"));
+			System.out.println(value);
+			
+			reader.close();
+			
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 }
