@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.rest;
+package com.tellyouiam.alittlebitaboutspring.rest.note;
 
 import com.tellyouiam.alittlebitaboutspring.dto.note.Note;
 import com.tellyouiam.alittlebitaboutspring.service.note.NoteService;
@@ -9,7 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.tellyouiam.alittlebitaboutspring.repository.NoteRepository;
+import com.tellyouiam.alittlebitaboutspring.repository.note.NoteRepository;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;

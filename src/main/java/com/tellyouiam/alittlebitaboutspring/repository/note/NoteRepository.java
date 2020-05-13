@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.repository;
+package com.tellyouiam.alittlebitaboutspring.repository.note;
 
 import com.tellyouiam.alittlebitaboutspring.dto.note.Note;
 import org.springframework.data.jpa.repository.JpaRepository;

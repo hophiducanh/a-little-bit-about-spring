@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.rest;
+package com.tellyouiam.alittlebitaboutspring.rest.masterdata;
 
 import com.tellyouiam.alittlebitaboutspring.service.masterdata.MasterDataCrawlService;
 import org.springframework.beans.factory.annotation.Autowired;

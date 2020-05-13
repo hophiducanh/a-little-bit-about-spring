@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.rest;
+package com.tellyouiam.alittlebitaboutspring.rest.image;
 
 import com.tellyouiam.alittlebitaboutspring.service.image.ImageService;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.rest;
+package com.tellyouiam.alittlebitaboutspring.rest.file;
 
 import org.springframework.web.bind.annotation.RestController;
 

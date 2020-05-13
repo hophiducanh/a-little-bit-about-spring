@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.rest;
+package com.tellyouiam.alittlebitaboutspring.rest.csv;
 
 import com.tellyouiam.alittlebitaboutspring.service.csv.CsvService;
 import org.springframework.beans.factory.annotation.Autowired;
