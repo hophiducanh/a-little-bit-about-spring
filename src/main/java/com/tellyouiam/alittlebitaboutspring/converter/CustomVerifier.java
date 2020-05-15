@@ -2,7 +2,7 @@ package com.tellyouiam.alittlebitaboutspring.converter;
 
 import com.opencsv.bean.BeanVerifier;
 import com.opencsv.exceptions.CsvConstraintViolationException;
-import com.tellyouiam.alittlebitaboutspring.dto.csvformat.Horse;
+import com.tellyouiam.alittlebitaboutspring.entity.csvformat.Horse;
 
 public class CustomVerifier implements BeanVerifier<Horse> {
 

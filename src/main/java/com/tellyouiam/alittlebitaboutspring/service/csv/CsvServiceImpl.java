@@ -2,8 +2,8 @@ package com.tellyouiam.alittlebitaboutspring.service.csv;
 
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
-import com.tellyouiam.alittlebitaboutspring.dto.csvformat.Horse;
-import com.tellyouiam.alittlebitaboutspring.dto.csvformat.OpeningBalance;
+import com.tellyouiam.alittlebitaboutspring.entity.csvformat.Horse;
+import com.tellyouiam.alittlebitaboutspring.entity.csvformat.OpeningBalance;
 import com.tellyouiam.alittlebitaboutspring.filter.EmptyLineFilter;
 import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
 import org.apache.commons.collections4.CollectionUtils;

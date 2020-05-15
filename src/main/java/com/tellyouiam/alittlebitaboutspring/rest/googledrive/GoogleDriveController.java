@@ -19,7 +19,7 @@ import com.google.api.services.drive.DriveScopes;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.FileList;
 import com.google.api.services.drive.model.Permission;
-import com.tellyouiam.alittlebitaboutspring.dto.googledrive.FileItemDTO;
+import com.tellyouiam.alittlebitaboutspring.entity.googledrive.FileItemDTO;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Controller;

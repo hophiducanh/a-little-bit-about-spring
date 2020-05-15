@@ -1,6 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.rest.note;
 
-import com.tellyouiam.alittlebitaboutspring.dto.note.Note;
+import com.tellyouiam.alittlebitaboutspring.entity.note.Note;
 import com.tellyouiam.alittlebitaboutspring.service.note.NoteService;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import com.tellyouiam.alittlebitaboutspring.utils.FileHelper;

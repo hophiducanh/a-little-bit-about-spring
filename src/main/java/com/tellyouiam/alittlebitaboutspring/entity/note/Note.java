@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.dto.note;
+package com.tellyouiam.alittlebitaboutspring.entity.note;
 
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;

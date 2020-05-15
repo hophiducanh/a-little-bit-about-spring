@@ -1,6 +1,7 @@
 package com.tellyouiam.alittlebitaboutspring.service.car;
 
-import com.tellyouiam.alittlebitaboutspring.dto.car.Car;
+import com.tellyouiam.alittlebitaboutspring.dto.car.CarRequest;
+import com.tellyouiam.alittlebitaboutspring.entity.car.Car;
 import com.tellyouiam.alittlebitaboutspring.repository.car.CarRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -29,10 +30,14 @@ public class CarService {
 	}
 	
 	public int getTotalCarsByModelEntity(String model) {
-		return carRepository.getTotalCarsByModelEntiy(model);
+		return carRepository.getTotalCarsByModel(model);
 	}
 	
 	public List<Car> findCarsAfterYear(Integer year) {
 		return carRepository.findCarsAfterYear(year);
+	}
+	
+	public List<Car> getTotalCarsByModelEntityImpl(CarRequest request) {
+		return carRepository.getTotalCarsByModelEntityImpl(request);
 	}
 }

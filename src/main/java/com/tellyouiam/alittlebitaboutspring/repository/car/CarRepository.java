@@ -1,6 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.repository.car;
 
-import com.tellyouiam.alittlebitaboutspring.dto.car.Car;
+import com.tellyouiam.alittlebitaboutspring.entity.car.Car;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.query.Procedure;
@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface CarRepository extends JpaRepository<Car, Long> {
+public interface CarRepository extends JpaRepository<Car, Long>, CarRepositoryCustom {
 	@Procedure
 	int GET_TOTAL_CARS_BY_MODEL(String model);
 	

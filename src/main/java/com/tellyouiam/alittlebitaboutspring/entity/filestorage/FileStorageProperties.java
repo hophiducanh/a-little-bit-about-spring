@@ -1,8 +1,7 @@
-package com.tellyouiam.alittlebitaboutspring.dto.filestorage;
+package com.tellyouiam.alittlebitaboutspring.entity.filestorage;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @Getter
 @Setter

@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.dto.csvformat;
+package com.tellyouiam.alittlebitaboutspring.entity.csvformat;
 
 import com.opencsv.bean.CsvBindAndJoinByName;
 import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.getMultiMapSingleStringValue;

@@ -1,6 +1,7 @@
 package com.tellyouiam.alittlebitaboutspring.rest.car;
 
-import com.tellyouiam.alittlebitaboutspring.dto.car.Car;
+import com.tellyouiam.alittlebitaboutspring.dto.car.CarRequest;
+import com.tellyouiam.alittlebitaboutspring.entity.car.Car;
 import com.tellyouiam.alittlebitaboutspring.service.car.CarService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -42,5 +43,10 @@ public class CarController {
 	@GetMapping(path = "/carsafteryear")
 	public List<Car> findCarsAfterYear(@RequestParam("year") Integer year) {
 		return carService.findCarsAfterYear(year);
+	}
+	
+	@GetMapping(path = "/carsByYear")
+	public List<Car> findCarsByYear(CarRequest request) {
+		return carService.getTotalCarsByModelEntityImpl(request);
 	}
 }

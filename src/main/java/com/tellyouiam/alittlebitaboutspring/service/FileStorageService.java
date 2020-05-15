@@ -1,6 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.service;
 
-import com.tellyouiam.alittlebitaboutspring.dto.filestorage.FileStorageProperties;
+import com.tellyouiam.alittlebitaboutspring.entity.filestorage.FileStorageProperties;
 import com.tellyouiam.alittlebitaboutspring.exception.FileStorageException;
 import com.tellyouiam.alittlebitaboutspring.exception.MyFileNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;

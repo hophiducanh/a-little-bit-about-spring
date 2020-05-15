@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.dto.car;
+package com.tellyouiam.alittlebitaboutspring.entity.car;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;
