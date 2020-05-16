@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+
 @RestController
 @RequestMapping(value = "/image")
 public class ImageController {
@@ -18,10 +20,14 @@ public class ImageController {
 	@Autowired
 	private ImageService imageSv;
 	
-	@PostMapping("/screen-shot")
-	public final ResponseEntity<Object> automateImportHorse(@RequestPart(required = false) MultipartFile file) {
-		Object result = imageSv.takeScreenShot(file);
+	@PostMapping("/pdf")
+	public final ResponseEntity<Object> manipulatePdf() {
+		try {
+			imageSv.manipulatePdf();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
-		return new ResponseEntity<>(result, new HttpHeaders(), HttpStatus.OK);
+		return new ResponseEntity<>( HttpStatus.OK);
 	}
 }
