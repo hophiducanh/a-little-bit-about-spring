@@ -17,6 +17,8 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.IntFunction;
 import java.util.regex.Matcher;
@@ -29,6 +31,7 @@ import static com.tellyouiam.alittlebitaboutspring.utils.LambdaExceptionHelper.*
 @Service
 public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 	private static final String MASTER_DATA_LINK_URL = "https://www.prism.horse/onboarding?t=f&uuid=a0d7fef0-feb4-4d52-835c-9b31ca595fec&type=config";
+	//https://www.prism.horse/onboarding?t=f&type=config&uuid=f62d3a3b-69f0-40c3-935c-8535f54b4467
 	
 	@Override
 	public Object crawMasterData(String masterDataLink) throws IOException {
@@ -72,7 +75,37 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 			String data = IntStream.range(1, reader.getNumberOfPages())
 					.mapToObj(pdfToTextMapper)
 					.collect(Collectors.joining("\n"));
-			System.out.println(data);
+			
+			String locationSegment = StringUtils
+					.substringBetween(data, "Geelong, Rosemont", "STATUS\nPlease provide a");
+			
+			List<String> locationList = Arrays.stream(locationSegment.split("\n"))
+					.filter(StringUtils::isNotEmpty)
+					.collect(Collectors.toList());
+			
+			StringBuilder locationBuilder = new StringBuilder("Name\n");
+			for (String location : locationList) {
+				locationBuilder.append(location).append("\n");
+			}
+			Files.write(Paths.get("src/main/resources/masterdata/location.csv"),
+					Collections.singleton(locationBuilder));
+			
+			//-------------------------------------------------------------
+			
+			String statusSegment = StringUtils
+					.substringBetween(data, "eg., Full Training, Pre-Training, Spelling", "BARN AND BOX LIST");
+			
+			List<String> statusList = Arrays.stream(statusSegment.split("\n"))
+					.filter(StringUtils::isNotEmpty)
+					.collect(Collectors.toList());
+			
+			StringBuilder statusBuilder = new StringBuilder("Name\n");
+			for (String status : statusList) {
+				statusBuilder.append(status).append("\n");
+			}
+			Files.write(Paths.get("src/main/resources/masterdata/status.csv"),
+					Collections.singleton(statusBuilder));
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
