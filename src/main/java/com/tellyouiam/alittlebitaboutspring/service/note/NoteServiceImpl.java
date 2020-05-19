@@ -1306,6 +1306,7 @@
 			return result;
 		}
 		
+		//https://stackoverflow.com/questions/27880505/lambda-expression-in-iterable-implementation
 		private static Iterable<MatchResult> allMatches(final Pattern p, final CharSequence input) {
 			return () -> new Iterator<MatchResult>() {
 				// Use a matcher internally.
