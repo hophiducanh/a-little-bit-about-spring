@@ -5,11 +5,15 @@ import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.parser.*;
 import com.tellyouiam.alittlebitaboutspring.utils.LambdaExceptionHelper;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.text.PDFTextStripperByArea;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
+import java.awt.geom.Rectangle2D;
 import java.io.*;
 import java.net.URL;
 import java.nio.channels.Channels;
@@ -20,6 +24,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.IntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -69,7 +74,9 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 			float width = reader.getPageSize(1).getWidth();//612
 			
 			IntFunction<String> pdfToTextMapper = intUnchecked(
-					pageIndex -> PdfTextExtractor.getTextFromPage(reader, pageIndex, new FilteredTextRenderListener(new LocationTextExtractionStrategy(), filter))
+					pageIndex -> PdfTextExtractor
+							.getTextFromPage(reader, pageIndex,
+									new FilteredTextRenderListener(new LocationTextExtractionStrategy(), filter))
 			);
 			
 			String data = IntStream.range(1, reader.getNumberOfPages())
@@ -87,8 +94,8 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 			for (String location : locationList) {
 				locationBuilder.append(location).append("\n");
 			}
-			Files.write(Paths.get("src/main/resources/masterdata/location.csv"),
-					Collections.singleton(locationBuilder));
+//			Files.write(Paths.get("src/main/resources/masterdata/location.csv"),
+//					Collections.singleton(locationBuilder));
 			
 			//-------------------------------------------------------------
 			
@@ -103,11 +110,13 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 			for (String status : statusList) {
 				statusBuilder.append(status).append("\n");
 			}
-			Files.write(Paths.get("src/main/resources/masterdata/status.csv"),
-					Collections.singleton(statusBuilder));
-			
+//			Files.write(Paths.get("src/main/resources/masterdata/status.csv"),
+//					Collections.singleton(statusBuilder));
+		
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		
+		
 	}
 }
