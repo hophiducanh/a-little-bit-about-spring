@@ -908,7 +908,9 @@
 							
 							List<Integer> leftIndexes = new ArrayList<>();
 							List<Integer> rightIndexes = new ArrayList<>();
-		
+							
+							//replace the quote in line that contains horse name, keep it intact can cause mismatch column's data.
+							line = line.replace("\"",  "");
 							for (MatchResult match : allMatches(Pattern.compile("(\\((?:[^)(]+|\\((?:[^)(]+|\\([^)(]*\\))*\\))*\\))"), line)) {
 								int start = match.start();
 								int end = match.end();
@@ -990,18 +992,17 @@
 					}
 			
 					String[][] data = this.get2DArrayFromString(allLines);
-		
-					//int length = Arrays.stream(array).max(Comparator.comparingInt(ArrayUtils::getLength)).get().length
-					//for case indexOutOfRange exception caused by missing trailing comma in header.
-					int headerLength = data[0].length;
-					int rowLength = data[1].length;
-					String tryingHeader = String.join(",", data[0]);
-					if (tryingHeader.matches(OWNERSHIP_STANDARD_HEADER_PATTERN) && (headerLength < rowLength)) {
-						IntStream.range(0, rowLength - headerLength).forEach(i -> {
-							data[0] = ArrayUtils.add(data[0], "");
-						});
+					
+					//Trying to prevent arrayIndexOutOfBoundException. Unify the row's length in the two-dimensional array.
+					int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength)).get().length;
+					for (int i = 0; i < data.length; i++) {
+						if (data[i].length < rowLength) {
+							for (int j = 0; j <= rowLength - data[i].length; j++) {
+								data[i] = ArrayUtils.add(data[i], "");
+							}
+						}
 					}
-			
+					
 					//all possible index of cell has value.
 					List<Integer> rowHasValueIndex = new ArrayList<>();
 			
@@ -1046,6 +1047,7 @@
 						gstString.append(row[gstIndex]);
 					}
 			
+					//TODO Pattern match
 					String distinctGST =
 							gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
 					if (distinctGST.matches("(YN)|(NY)|N|Y")) {
@@ -1581,5 +1583,16 @@
 			}
 			String u = "https://www.youtube.com/watch?v=JgggA8Jtzyg&list=RDJgggA8Jtzyg&start_radio=1";
 			System.out.println(getParamValue(u, "v"));
+			
+			//precedence
+			String ss = "\" Agassi (IRE) (( Pierro (AUS) - Halle Rocks (AUS)) 4yo Bay Colt     Departed Cummings, " +
+					"Anthony 3/09/2018       \",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,," +
+					" a,,,,,,,,".replace("\"",  "");
+			
+			String sss = ("\" Agassi (IRE) (( Pierro (AUS) - Halle Rocks (AUS)) 4yo Bay Colt     Departed Cummings, " +
+					"Anthony 3/09/2018       \",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,," +
+					" a,,,,,,,,").replace("\"",  "");
+			
+			System.out.println(ss);
 		}
 	}
