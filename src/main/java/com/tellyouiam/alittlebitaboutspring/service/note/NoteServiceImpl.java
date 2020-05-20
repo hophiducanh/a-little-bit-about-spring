@@ -26,15 +26,18 @@
 	import java.time.format.ResolverStyle;
 	import java.time.format.SignStyle;
 	import java.util.*;
+	import java.util.concurrent.atomic.AtomicInteger;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
 	import java.util.regex.Pattern;
 	import java.util.stream.Collector;
 	import java.util.stream.Collectors;
 	import java.util.stream.IntStream;
+	import java.util.stream.Stream;
 	
 	import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.*;
 	import static java.time.temporal.ChronoField.*;
+	import static java.util.stream.Collectors.*;
 	
 	@Service
 	public class NoteServiceImpl implements NoteService {
@@ -67,7 +70,7 @@
 	
 		private List<String> getCsvData(BufferedReader bufReader, boolean ignoreHeader) throws IOException {
 			List<String> data = new ArrayList<>();
-			String line = null;
+			String line;
 			int count = 0;
 			while ((line = bufReader.readLine()) != null) {
 				count++;
@@ -117,6 +120,28 @@
 			return dirExists ? outputDirPath.toAbsolutePath().toString() : Objects.requireNonNull(path).toString();
 		}
 	
+		public boolean containsIgnoreCase(String src, String what) {
+			final int length = what.length();
+			
+			if (length == 0)
+				return true; // Empty string is contained
+			
+			final char firstLo = Character.toLowerCase(what.charAt(0));
+			final char firstUp = Character.toUpperCase(what.charAt(0));
+			
+			for (int i = src.length() - length; i >= 0; i--) {
+				// Quick check before calling the more expensive regionMatches() method:
+				final char ch = src.charAt(i);
+				if (ch != firstLo && ch != firstUp)
+					continue;
+				
+				if (src.regionMatches(true, i, what, 0, length))
+					return true;
+			}
+			
+			return false;
+		}
+		
 		private static final String HORSE_RECORDS_PATTERN = "([\\d]+)\\sRecords"; //like: 162 records
 	
 		@Override
@@ -149,7 +174,11 @@
 					// GST = "true/false" or ot "T/F" or "Y/N"
 					// -------------------------------------------------------------
 	
-					String[] header = readCsvLine(csvData.get(0));
+					String headerLine = csvData.stream().filter(i -> Stream.of("Name", "Address", "Phone", "Mobile")
+							.anyMatch(u -> containsIgnoreCase(i, u)))
+							.findFirst().orElse("");
+					
+					String[] header = readCsvLine(headerLine);
 	
 					int ownerIdIndex = checkColumnIndex(header, "OwnerID");
 					int emailIndex = checkColumnIndex(header, "Email");
@@ -169,12 +198,24 @@
 					int gstIndex = checkColumnIndex(header, "GST");
 	
 					builder.append(HORSE_FILE_HEADER);
-	
-					csvData = csvData.stream().skip(1).collect(Collectors.toList());
+					
+					AtomicInteger atomicInteger = new AtomicInteger(0);
+					final Integer[] headerLineNumber = {null};
+					csvData.forEach(s -> {
+						atomicInteger.getAndIncrement();
+						if (s.equals(headerLine)) {
+							headerLineNumber[0] = atomicInteger.intValue();
+						}
+					});
+					
+					Integer headerLineNum = headerLineNumber[0];
+					csvData = csvData.stream().skip(headerLineNum).collect(toList());
 	
 					for (String line : csvData) {
 						if (StringUtils.isEmpty(line)) continue;
 	
+						if (line.matches("^(,+)$")) continue;;
+						
 						String[] r = readCsvLine(line);
 	
 						//rows will be ignored like:
@@ -230,8 +271,13 @@
 								StringHelper.csvValue(country),
 								StringHelper.csvValue(gst)
 						);
+						
+						//ignore non-data line.
+						if (StringUtils.isEmpty(
+								rowBuilder.replaceAll("[\",\\s]+", "")
+						)) continue;
+						
 						preparedData.add(rowBuilder);
-	
 						builder.append(rowBuilder);
 					}
 	
@@ -257,7 +303,7 @@
 				String path = getOutputFolder(dirName).concat(File.separator).concat("formatted-horse.csv");
 	
 				List<String> csvData = this.getCsvData(horseFile);
-				csvData = csvData.stream().filter(org.apache.commons.lang3.StringUtils::isNotEmpty).collect(Collectors.toList());
+				csvData = csvData.stream().filter(org.apache.commons.lang3.StringUtils::isNotEmpty).collect(toList());
 				StringBuilder builder = new StringBuilder();
 	
 				StringBuilder addedDateBuilder = new StringBuilder();
@@ -312,7 +358,7 @@
 	
 					builder.append(rowHeader);
 	
-					csvData = csvData.stream().skip(1).collect(Collectors.toList());
+					csvData = csvData.stream().skip(1).collect(toList());
 					for (String line : csvData) {
 						String[] r = readCsvLine(line);
 	
@@ -392,7 +438,7 @@
 							dataBuilder.append(formattedData.get(0)).append("\n");
 	
 							//process data ignore header
-							for (String line : formattedData.stream().skip(1).collect(Collectors.toList())) {
+							for (String line : formattedData.stream().skip(1).collect(toList())) {
 	
 								String[] row = readCsvLine(line);
 	
@@ -447,21 +493,21 @@
 		}
 	
 		@SuppressWarnings("unchecked")
-		public Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile, String dirName) throws CustomException {
-			if (Objects.isNull(ownershipFile)) {
+		public Object automateImportHorse(MultipartFile horseFile, List<MultipartFile> ownershipFiles, String dirName) {
+			if (CollectionUtils.isEmpty(ownershipFiles)) {
 				return this.importHorseFromMiStable(horseFile, dirName);
 			}
 	
 			//TODO
-			//Map<Object, Object> ownerShipResult = this.automateImportOwnerShip(ownershipFile);
-			Map<Object, Object> ownerShipResult = new HashMap<>();
+			Map<Object, Object> ownerShipResult = this.automateImportOwnerShips(ownershipFiles);
 			Map<Object, Object> result = new HashMap<>();
 	
-			String csvExportedDateStr = String.valueOf(ownerShipResult.get("ExportedDate"));
+			List<String> csvExportedDates = (List<String>)ownerShipResult.get("exportedDate");
+			String csvExportedDateStr = csvExportedDates.get(0);
 	
 			try {
 				List<String> csvData = this.getCsvData(horseFile);
-				csvData = csvData.stream().filter(StringUtils::isNotEmpty).collect(Collectors.toList());
+				csvData = csvData.stream().filter(StringUtils::isNotEmpty).collect(toList());
 	
 				StringBuilder builder = new StringBuilder();
 				if (!CollectionUtils.isEmpty(csvData)) {
@@ -514,10 +560,10 @@
 	
 					builder.append(rowHeader);
 	
-					csvData = csvData.stream().skip(1).collect(Collectors.toList());
+					csvData = csvData.stream().skip(1).collect(toList());
 	
 					Map<String, String> horseMap = new LinkedHashMap<>();
-					Map<String, String> horseOwnershipMap = (Map<String, String>) ownerShipResult.get("HorseDataMap");
+					Map<String, String> horseOwnershipMap = (Map<String, String>) ownerShipResult.get("horseDataMap");
 	
 					boolean isAustraliaFormat = isAustraliaFormat(csvData, foaledIndex, "horse");
 	
@@ -566,14 +612,9 @@
 						String color = getCsvCellValue(r, colorIndex);
 						String sex = getCsvCellValue(r, sexIndex);
 						String avatar = getCsvCellValue(r, avatarIndex);
-	
 						String dayHere = getCsvCellValue(r, daysHereIndex);
-	
 						String addedDate = getCsvCellValue(r, addedDateIndex);
-						;
-	
 						String activeStatus = getCsvCellValue(r, activeStatusIndex);
-	
 						String currentLocation = getCsvCellValue(r, horseLocationIndex);
 						String currentStatus = getCsvCellValue(r, horseStatusIndex);
 						String type = getCsvCellValue(r, typeIndex);
@@ -591,7 +632,7 @@
 						if (StringUtils.isEmpty(dayHere)) {
 							Set<String> ownershipKeyMap = horseOwnershipMap.keySet();
 							boolean isSameHorseName = ownershipKeyMap.stream().anyMatch(name::equalsIgnoreCase);
-	
+
 							if (isSameHorseName) {
 								String ownershipAddedDate = horseOwnershipMap.get(name);
 								addedDate = csvExportedDateStr;
@@ -636,8 +677,8 @@
 					Set<String> keyHorse = fromHorseFile.keySet();
 					Map<String, String> fromOwnerShipFile = horseOwnershipMap.entrySet().stream()
 							.filter(x -> keyHorse.contains(x.getKey()))
-							.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-	
+							.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+
 					result.put("Diff From Horse File", new TreeMap<>(fromHorseFile));
 					result.put("Diff From OwnerShip File", new TreeMap<>(fromOwnerShipFile));
 				}
@@ -653,8 +694,8 @@
 	
 		private static <T> Collector<T, ?, T> toSingleton() throws CustomException {
 			try {
-				return Collectors.collectingAndThen(
-						Collectors.toList(),
+				return collectingAndThen(
+						toList(),
 						list -> {
 							if (list.size() != 1) {
 								throw new IllegalStateException();
@@ -818,6 +859,36 @@
 						}
 					}
 					exportedDateList.add(exportedDate);
+					
+					// Line has departedDate likely to extract:
+					//Azurite (IRE) ( Azamour (IRE) - High Lite (GB)) 9yo Bay Gelding     Michael Hickmott Bloodstock - In
+					//training Michael Hickmott Bloodstock 1/08/2019 >> 1/08/2019
+					//This is required for make sure horse data after format csv are exact.
+					
+					Matcher departedDateMatcher = Pattern.compile(EXTRACT_DEPARTED_DATE_OF_HORSE_PATTERN).matcher(allLines);
+					
+					Map<String, String> horseDataMap = new LinkedHashMap<>();
+					
+					while (departedDateMatcher.find()) {
+						String horseName = departedDateMatcher.group(1).trim();
+						String horseDepartedDate = departedDateMatcher.group(3).trim();
+						
+						if (StringUtils.isEmpty(horseName))
+							continue;
+						
+						if (StringUtils.isEmpty(horseDepartedDate))
+							logger.info("Horse without departed date: {}", horseName);
+						
+						if (!isDMYFormat(horseDepartedDate)) {
+							throw new CustomException(new ErrorInfo("The departed date was not recognized as a valid Australia format: {}", horseDepartedDate));
+						}
+						
+						//process for case: 25/08/19 (usually 25/08/2019)
+						String horseDate = LocalDate.parse(horseDepartedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+						horseDataMap.put(horseName, horseDate);
+					}
+					
+					result.put("horseDataMap", horseDataMap);
 					
 					Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
 					if (blankLinesMatcher.find()) {
@@ -1049,7 +1120,7 @@
 			
 					//TODO Pattern match
 					String distinctGST =
-							gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(Collectors.joining());
+							gstString.toString().chars().distinct().mapToObj(c -> String.valueOf((char) c)).collect(joining());
 					if (distinctGST.matches("(YN)|(NY)|N|Y")) {
 						data[0][gstIndex] = "GST";
 					}
@@ -1197,7 +1268,7 @@
 						int realGstIndex = checkColumnIndex(header, "GST");
 				
 						//process file without header
-						csvDataList = csvDataList.stream().skip(1).collect(Collectors.toList());
+						csvDataList = csvDataList.stream().skip(1).collect(toList());
 				
 						boolean isAustraliaFormat = isAustraliaFormat(csvDataList, addedDateIndex, "ownership");
 				
@@ -1342,7 +1413,7 @@
 		private String[][] get2DArrayFromString(String value) {
 			List<List<String>> nestedListData = Arrays.stream(value.split("\n"))
 					.map(StringHelper::customSplitSpecific)
-					.collect(Collectors.toList());
+					.collect(toList());
 	
 			return nestedListData.stream()
 					.map(l -> l.toArray(new String[0]))
@@ -1423,7 +1494,7 @@
 						String finalLastName = lastName;
 						firstName = Arrays.stream(firstAndLastNameArr)
 								.filter(i -> !i.equalsIgnoreCase(finalLastName))
-								.collect(Collectors.joining(StringUtils.SPACE)).trim();
+								.collect(joining(StringUtils.SPACE)).trim();
 					}
 				
 					String extractedName = String.format("%s,%s,%s,%s\n",

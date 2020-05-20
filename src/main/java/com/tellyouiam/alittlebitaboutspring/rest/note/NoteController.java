@@ -84,21 +84,20 @@ public class NoteController {
 			e.printStackTrace();
 		}
 		
-		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+		return new ResponseEntity<>(result, new HttpHeaders(), HttpStatus.OK);
 	}
 	
 	@RequestMapping(value = "/owner/automate-import-horse", method = RequestMethod.POST)
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportHorse(@RequestPart MultipartFile horseFile,
-                                                            @RequestPart(required = false) MultipartFile ownershipFile,
+                                                            @RequestPart(required = false) List<MultipartFile> ownershipFiles,
 	                                                        @RequestParam String dirName) {
 		Object result = null;
 		try {
-			result = noteService.automateImportHorse(horseFile, ownershipFile, dirName);
+			result = noteService.automateImportHorse(horseFile, ownershipFiles, dirName);
 		} catch (CustomException e) {
 			e.printStackTrace();
 		}
-		
 		return new ResponseEntity<>(result, new HttpHeaders(), HttpStatus.OK);
 	}
 	

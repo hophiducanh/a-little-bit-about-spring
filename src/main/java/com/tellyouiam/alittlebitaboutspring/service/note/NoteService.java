@@ -12,7 +12,7 @@ public interface NoteService {
 	
 	Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException;
 	
-	Object automateImportHorse(MultipartFile horseFile, MultipartFile ownershipFile, String dirName) throws CustomException;
+	Object automateImportHorse(MultipartFile horseFile, List<MultipartFile> ownershipFiles, String dirName) throws CustomException;
 	
 	Map<Object, Object> automateImportOwnerShips(List<MultipartFile> ownershipFiles) throws CustomException;
 }
