@@ -27,6 +27,7 @@
 	import java.time.format.SignStyle;
 	import java.util.*;
 	import java.util.concurrent.atomic.AtomicInteger;
+	import java.util.function.Function;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
 	import java.util.regex.Pattern;
@@ -120,7 +121,8 @@
 			return dirExists ? outputDirPath.toAbsolutePath().toString() : Objects.requireNonNull(path).toString();
 		}
 	
-		public boolean containsIgnoreCase(String src, String what) {
+		//https://stackoverflow.com/questions/86780/how-to-check-if-a-string-contains-another-string-in-a-case-insensitive-manner-in
+		private boolean containsIgnoreCase(String src, String what) {
 			final int length = what.length();
 			
 			if (length == 0)
@@ -177,7 +179,7 @@
 					String headerLine = csvData.stream().filter(i -> Stream.of("Name", "Address", "Phone", "Mobile")
 							.anyMatch(u -> containsIgnoreCase(i, u)))
 							.findFirst().orElse("");
-					
+							
 					String[] header = readCsvLine(headerLine);
 	
 					int ownerIdIndex = checkColumnIndex(header, "OwnerID");
@@ -1626,6 +1628,15 @@
 					.map(NameValuePair::getValue)
 					.findFirst()
 					.orElse("");
+		}
+		
+		
+		//https://stackoverflow.com/questions/2843366/how-to-add-new-elements-to-an-array
+		public static <T> T[] append(T[] arr, T element) {
+			final int N = arr.length;
+			arr = Arrays.copyOf(arr, N + 1);
+			arr[N] = element;
+			return arr;
 		}
 		
 		public static void main(String[] args) throws URISyntaxException {
