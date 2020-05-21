@@ -1,5 +1,6 @@
 	package com.tellyouiam.alittlebitaboutspring.service.note;
 	
+	import com.google.common.collect.Multimap;
 	import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.utils.*;
 	import org.apache.commons.lang3.ArrayUtils;
@@ -12,8 +13,11 @@
 	import org.slf4j.LoggerFactory;
 	import org.springframework.stereotype.Service;
 	import org.springframework.util.CollectionUtils;
+	import org.springframework.util.LinkedMultiValueMap;
+	import org.springframework.util.MultiValueMap;
 	import org.springframework.web.multipart.MultipartFile;
 	
+	import javax.persistence.criteria.CriteriaBuilder;
 	import java.io.*;
 	import java.net.URISyntaxException;
 	import java.nio.file.Files;
@@ -145,7 +149,202 @@
 		}
 		
 		private static final String HORSE_RECORDS_PATTERN = "([\\d]+)\\sRecords"; //like: 162 records
-	
+		
+		//Process Address
+		private static final String ARDEX_ADDRESS_PATTERN = "(.*)\\s+(NSW|QLD|SA|S.A|TAS|VIC|Vic|WA|ACT|TASMANIA|VICTORIA|NT|N.T|NEW SOUTH WALES)$";
+		private static final String SUBURB_PATTERN = ".*[a-z0-9]\\s+([A-Z]+[A-Z\\s]+)$";
+		private static final String POSTAL_CODE_PATTERN_1 = ".*\\s+([0-9-]+)$";
+		public static final String POSTAL_CODE_PATTERN_2 = "^([0-9-]+)\\s*";
+		
+		// all other countries we found after process by sublime REGEX for current
+		// trainer
+		private static List<String> TRAINER_COUNTRIES = new ArrayList<>(Arrays.asList(
+				
+				"AUS",
+				
+				"AUSTRALIA",
+				
+				"CHINA",
+				
+				"ENGLAND",
+				
+				"FRANCE",
+				
+				"HONG KONG",
+				
+				"HONG KONG NEW TERRITORIES",
+				
+				"INDONESIA",
+				
+				"IRELAND",
+				
+				"JAPAN",
+				
+				"MALAYSIA",
+				
+				"NEW ZEALAND",
+				
+				"PHILLIPINES",
+				
+				"SIGNAPORE",
+				
+				"SCOTLAND",
+				
+				"SINGAPORE",
+				
+				"SRI LANKA",
+				
+				"STH AFRICA",
+				
+				"SWITZERLAND",
+				
+				"THAILAND",
+				
+				"U K",
+				
+				"UK",
+				
+				"UNITED KINGDOM",
+				
+				"UNITED STATES OF AMERICA",
+				
+				"USA",
+				
+				"VIETNAM"));
+		
+		//remove case-insensitive
+		private static String removeText(String input, String remove) {
+			return input.replaceAll(String.format("(?i)%s", remove), "").trim();
+		}
+		
+		private static Map<String, String> splitAddress(String input) {
+			Map<String, String> result = new HashMap<>();
+			
+			String address = input.trim();
+			String suburb = "";
+			String state = "";
+			String postcode = "";
+			String country = "";
+			
+			// if address end with postal code
+			// sample: "Racecourse 1 Turf Club Avenue SINGAPORE 738078" "26 Melliodora Crescent GREENSBOROUGH 3088 VIC"
+			String number = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
+			if (!StringUtils.isEmpty(number)) {
+				postcode = number;
+				address = removeText(address, postcode);
+			}
+			
+			// if this address belong to other countries (not Australia)
+			for (String c : TRAINER_COUNTRIES) {
+				if (address.toUpperCase().endsWith(c)) {
+					country = c;
+					break;
+				}
+			}
+			
+			if (!StringUtils.isEmpty(country)) {
+				try {
+					address = removeText(address, country);
+				} catch (Exception e) {
+					logger.error("Error here {} >> {}", address, country);
+				}
+			}
+			
+			if (StringUtils.isEmpty(postcode)) {
+				number = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
+				if (!StringUtils.isEmpty(number)) {
+					postcode = number;
+					address = removeText(address, postcode);
+				}
+			}
+			
+			// try to detect Australia address (contain provided states)
+			Pattern ardexAddressPattern = Pattern.compile(ARDEX_ADDRESS_PATTERN);
+			Matcher matcher = ardexAddressPattern.matcher(address);
+			
+			// pattern matched (contain Australia states)
+			if (matcher.matches()) {
+				country = "Australia";
+				
+				// group 2 is state info
+				state = matcher.group(2).trim();
+				address = removeText(address, state);
+				
+				// sample 1: "26 Melliodora Crescent GREENSBOROUGH 3088"
+				// sample 2: "Ngaroma 736 Windellama Road SUNDARY"
+				String beforeStateText = matcher.group(1).trim();
+				
+				if (StringUtils.isEmpty(postcode)) {
+					// extract postal code >> 4 digits at end of text (postal code is before state)
+					postcode = StringHelper.extract(beforeStateText, POSTAL_CODE_PATTERN_1);
+					
+					// reduce address if found postal code
+					if (!StringUtils.isEmpty(postcode)) {
+						address = removeText(beforeStateText, postcode);
+					} else {
+						// this case postal code is after state)
+						address = beforeStateText;
+					}
+				}
+				
+				// in group 1 we can extract suburb info >> all-upper-case text
+				// sample: "GREENSBOROUGH"
+				if (!StringUtils.isEmpty(address)) {
+					
+					// only can extract suburb if text mix beetween lower case and upper case
+					// sample: 26 Melliodora Crescent GREENSBOROUGH >> extract "GREENSBOROUGH"
+					if (!StringUtils.isEmpty(StringHelper.extract(address, ".*([a-z]).*"))) {
+						suburb = StringHelper.extract(address, SUBURB_PATTERN);
+						
+						// continue reduce address if found suburd
+						if (!StringUtils.isEmpty(suburb))
+							address = removeText(address, suburb);
+					}
+				}
+			} else {
+				// process for other countries
+				
+				// try to extract postal code & suburb info
+				if (!StringUtils.isEmpty(address)) {
+					if (StringUtils.isEmpty(postcode)) {
+						// extract post code number if available
+						postcode = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
+						
+						// remain text: "11-1, Roppongi 6-Chroe Minato-ku TOKYO"
+						if (!StringUtils.isEmpty(postcode))
+							address = removeText(address, postcode);
+					}
+					
+					// extract suburb if available (consecutive upper case text)
+					if (!StringUtils.isEmpty(address)) {
+						// only can extract suburb if text mix beetween lower case and upper case
+						// sample: 26 Melliodora Crescent GREENSBOROUGH >> extract "GREENSBOROUGH"
+						if (!StringUtils.isEmpty(StringHelper.extract(address, ".*([a-z]).*"))) {
+							suburb = StringHelper.extract(address, SUBURB_PATTERN);
+							
+							if (!StringUtils.isEmpty(suburb))
+								address = removeText(address, suburb);
+							
+							// try to extract postcal code if available
+							if (!StringUtils.isEmpty(address) && StringUtils.isEmpty(postcode)) {
+								postcode = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
+								if (!StringUtils.isEmpty(postcode))
+									address = removeText(address, postcode);
+							}
+						}
+					}
+				}
+			}
+			
+			result.put("address", address);
+			result.put("suburb", suburb);
+			result.put("state", state);
+			result.put("postcode", postcode);
+			result.put("country", country);
+			
+			return result;
+		}
+		
 		@Override
 		public Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException {
 			try {
@@ -198,8 +397,14 @@
 					int postCodeIndex = checkColumnIndex(header, "PostCode");
 					int countryIndex = checkColumnIndex(header, "Country");
 					int gstIndex = checkColumnIndex(header, "GST");
-	
-					builder.append(HORSE_FILE_HEADER);
+					
+					List<Integer> indexes = Arrays.asList(ownerIdIndex, emailIndex, financeEmailIndex, firstNameIndex,
+							lastNameIndex,
+							displayNameIndex, typeIndex, mobileIndex, phoneIndex, faxIndex, addressIndex, cityIndex,
+							stateIndex,
+							postCodeIndex, countryIndex, gstIndex);
+					
+ 					builder.append(HORSE_FILE_HEADER);
 					
 					AtomicInteger atomicInteger = new AtomicInteger(0);
 					final Integer[] headerLineNumber = {null};
@@ -211,8 +416,34 @@
 					});
 					
 					Integer headerLineNum = headerLineNumber[0];
-					csvData = csvData.stream().skip(headerLineNum).collect(toList());
-	
+					csvData = csvData.stream().skip(headerLineNum - 1).collect(toList());
+					
+					List<String> finalCsvData = csvData;
+//					Multimap<Integer, List<String>> checkedDataMap = indexes.stream().map(i -> new AbstractMap.SimpleImmutableEntry<>(
+//							i, finalCsvData.stream().map(line -> {
+//						String[] r = readCsvLine(line);
+//						return getCsvCellValue(r, i);
+//					}).distinct().collect(toList()))).collect(MultimapCollector.toMultimap(Map.Entry::getKey, Map.Entry::getValue));
+					
+					String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
+					int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength)).orElse(header).length;
+					
+					Multimap<Integer, List<String>> checkedDataMap = Stream.iterate(0, n -> n + 1)
+							.limit(rowLength - 1)
+							.map(i -> new AbstractMap.SimpleImmutableEntry<>(i, finalCsvData.stream().map(line -> {
+									String[] r = readCsvLine(line);
+									return getCsvCellValue(r, i);
+								}).collect(toList())))
+							.collect(MultimapCollector.toMultimap(Map.Entry::getKey, Map.Entry::getValue));
+					
+					Collection<Map.Entry<Integer, List<String>>> entries = checkedDataMap.entries().parallelStream()
+							.filter(i -> (i.getValue().stream().distinct().count() > 2 || StringUtils.isNotEmpty(i.getValue().get(0))))
+							.collect(toCollection(LinkedHashSet::new));
+					
+					System.out.println(entries);
+					
+					System.out.println(checkedDataMap.entries());
+					
 					for (String line : csvData) {
 						if (StringUtils.isEmpty(line)) continue;
 	
@@ -693,27 +924,7 @@
 			}
 			return result;
 		}
-	
-		private static <T> Collector<T, ?, T> toSingleton() throws CustomException {
-			try {
-				return collectingAndThen(
-						toList(),
-						list -> {
-							if (list.size() != 1) {
-								throw new IllegalStateException();
-							}
-							return list.get(0);
-						}
-				);
-			} catch (RuntimeException e) {
-				if (e.getCause() instanceof IllegalStateException) {
-					throw new CustomException(
-							new ErrorInfo("Can't detect owner file name. CSV data seemingly a little weird. Please check!"));
-				}
-				throw e;
-			}
-		}
-	
+		
 		private static String getOutputFolderPath() {
 			String os = System.getProperty("os.name").toLowerCase();
 	
@@ -898,31 +1109,7 @@
 					} else {
 						throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
 					}
-			
-					//optional
-					String lineHasFileOwnerName;
-					Matcher extractFileOwnerName = Pattern.compile(EXTRACT_FILE_OWNER_NAME_PATTERN).matcher(allLines);
-					if (extractFileOwnerName.find()) {
-				
-						logger.info("*******************Lines possible have owner file name:\n {}",
-								extractFileOwnerName.group());
-				
-						lineHasFileOwnerName = extractFileOwnerName.group(2);
-				
-						if (StringUtils.isEmpty(lineHasFileOwnerName)) {
-							List<String> lineHasFileOwnerNameElements = Arrays.asList(readCsvLine(lineHasFileOwnerName));
 					
-							String fileOwnerName = lineHasFileOwnerNameElements.stream().filter(StringUtils::isNotEmpty)
-									.collect(toSingleton());
-					
-							logger.info("*********************File owner name is : {}", fileOwnerName);
-						}
-				
-					} else {
-						logger.info("*******************Can't detect lines contain owner file name in given file.");
-					}
-			
-			
 					Matcher linesBreakMatcher = Pattern.compile(REMOVE_LINE_BREAK_PATTERN).matcher(allLines);
 					if (linesBreakMatcher.find()) {
 						allLines = allLines.replaceAll(REMOVE_LINE_BREAK_PATTERN, " CT");
@@ -1366,6 +1553,11 @@
 									StringHelper.csvValue(addedDate),
 									StringHelper.csvValue(exportedDate)
 							);
+							
+							if (StringUtils.isEmpty(
+									rowBuilder.replaceAll("[\",\\s]+", "")
+							)) continue;
+							
 							dataBuilder.append(rowBuilder);
 						}
 					}
@@ -1637,44 +1829,5 @@
 			arr = Arrays.copyOf(arr, N + 1);
 			arr[N] = element;
 			return arr;
-		}
-		
-		public static void main(String[] args) throws URISyntaxException {
-			String strWrap =
-					WordUtils.wrap("A really really really really really long sentence.", 50, "\n", false);
-			System.out.println(strWrap);
-			
-			String str = StringUtils.abbreviate("Lala", 4);
-			System.out.println(str);
-		
-	//        DateTimeFormatter f = DateTimeFormatter.ofPattern("MMddyyyy");
-	//        LocalDate bday = null;
-	//
-	//        try {`
-	//            bday = LocalDate.parse(args[0], f);
-	//        } catch (java.time.DateTimeException e) {
-	//            System.out.println("bad dates Indy");
-	//            System.exit(0);
-	//        }
-		
-			String url = "https://www.youtube.com/v/VIDEO_ID?version=3&loop=1&playlist=VIDEO_ID";
-			Map<Object, Object> params = StringHelper.getRequestParams(url);
-			System.out.println(params.get("v"));
-			if (params != null) {
-				params.forEach((key, value) -> System.out.println(key + " " + value));
-			}
-			String u = "https://www.youtube.com/watch?v=JgggA8Jtzyg&list=RDJgggA8Jtzyg&start_radio=1";
-			System.out.println(getParamValue(u, "v"));
-			
-			//precedence
-			String ss = "\" Agassi (IRE) (( Pierro (AUS) - Halle Rocks (AUS)) 4yo Bay Colt     Departed Cummings, " +
-					"Anthony 3/09/2018       \",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,," +
-					" a,,,,,,,,".replace("\"",  "");
-			
-			String sss = ("\" Agassi (IRE) (( Pierro (AUS) - Halle Rocks (AUS)) 4yo Bay Colt     Departed Cummings, " +
-					"Anthony 3/09/2018       \",,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,," +
-					" a,,,,,,,,").replace("\"",  "");
-			
-			System.out.println(ss);
 		}
 	}
