@@ -9,6 +9,7 @@
 	import org.apache.commons.text.WordUtils;
 	import org.apache.http.NameValuePair;
 	import org.apache.http.client.utils.URIBuilder;
+	import org.apache.poi.ss.formula.functions.T;
 	import org.slf4j.Logger;
 	import org.slf4j.LoggerFactory;
 	import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@
 	import java.time.format.SignStyle;
 	import java.util.*;
 	import java.util.concurrent.atomic.AtomicInteger;
+	import java.util.function.BiFunction;
 	import java.util.function.Function;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
@@ -42,7 +44,9 @@
 	
 	import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.*;
 	import static java.time.temporal.ChronoField.*;
+	import static java.util.Objects.*;
 	import static java.util.stream.Collectors.*;
+	import static org.apache.commons.lang3.StringUtils.*;
 	
 	@Service
 	public class NoteServiceImpl implements NoteService {
@@ -111,7 +115,7 @@
 	
 		private String getOutputFolder(String dirName) {
 			String initFolderPath = getOutputFolderPath();
-			Path outputDirPath = Paths.get(Objects.requireNonNull(initFolderPath), dirName, "submit");
+			Path outputDirPath = Paths.get(requireNonNull(initFolderPath), dirName, "submit");
 	
 			Path path = null;
 			boolean dirExists = Files.exists(outputDirPath);
@@ -122,7 +126,7 @@
 					logger.error("Error occur when create the folder at: {}", outputDirPath.toAbsolutePath().toString());
 				}
 			}
-			return dirExists ? outputDirPath.toAbsolutePath().toString() : Objects.requireNonNull(path).toString();
+			return dirExists ? outputDirPath.toAbsolutePath().toString() : requireNonNull(path).toString();
 		}
 	
 		//https://stackoverflow.com/questions/86780/how-to-check-if-a-string-contains-another-string-in-a-case-insensitive-manner-in
@@ -229,7 +233,7 @@
 			// if address end with postal code
 			// sample: "Racecourse 1 Turf Club Avenue SINGAPORE 738078" "26 Melliodora Crescent GREENSBOROUGH 3088 VIC"
 			String number = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
-			if (!StringUtils.isEmpty(number)) {
+			if (!isEmpty(number)) {
 				postcode = number;
 				address = removeText(address, postcode);
 			}
@@ -242,7 +246,7 @@
 				}
 			}
 			
-			if (!StringUtils.isEmpty(country)) {
+			if (!isEmpty(country)) {
 				try {
 					address = removeText(address, country);
 				} catch (Exception e) {
@@ -250,9 +254,9 @@
 				}
 			}
 			
-			if (StringUtils.isEmpty(postcode)) {
+			if (isEmpty(postcode)) {
 				number = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
-				if (!StringUtils.isEmpty(number)) {
+				if (!isEmpty(number)) {
 					postcode = number;
 					address = removeText(address, postcode);
 				}
@@ -274,12 +278,12 @@
 				// sample 2: "Ngaroma 736 Windellama Road SUNDARY"
 				String beforeStateText = matcher.group(1).trim();
 				
-				if (StringUtils.isEmpty(postcode)) {
+				if (isEmpty(postcode)) {
 					// extract postal code >> 4 digits at end of text (postal code is before state)
 					postcode = StringHelper.extract(beforeStateText, POSTAL_CODE_PATTERN_1);
 					
 					// reduce address if found postal code
-					if (!StringUtils.isEmpty(postcode)) {
+					if (!isEmpty(postcode)) {
 						address = removeText(beforeStateText, postcode);
 					} else {
 						// this case postal code is after state)
@@ -289,15 +293,15 @@
 				
 				// in group 1 we can extract suburb info >> all-upper-case text
 				// sample: "GREENSBOROUGH"
-				if (!StringUtils.isEmpty(address)) {
+				if (!isEmpty(address)) {
 					
 					// only can extract suburb if text mix beetween lower case and upper case
 					// sample: 26 Melliodora Crescent GREENSBOROUGH >> extract "GREENSBOROUGH"
-					if (!StringUtils.isEmpty(StringHelper.extract(address, ".*([a-z]).*"))) {
+					if (!isEmpty(StringHelper.extract(address, ".*([a-z]).*"))) {
 						suburb = StringHelper.extract(address, SUBURB_PATTERN);
 						
 						// continue reduce address if found suburd
-						if (!StringUtils.isEmpty(suburb))
+						if (!isEmpty(suburb))
 							address = removeText(address, suburb);
 					}
 				}
@@ -305,30 +309,30 @@
 				// process for other countries
 				
 				// try to extract postal code & suburb info
-				if (!StringUtils.isEmpty(address)) {
-					if (StringUtils.isEmpty(postcode)) {
+				if (!isEmpty(address)) {
+					if (isEmpty(postcode)) {
 						// extract post code number if available
 						postcode = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
 						
 						// remain text: "11-1, Roppongi 6-Chroe Minato-ku TOKYO"
-						if (!StringUtils.isEmpty(postcode))
+						if (!isEmpty(postcode))
 							address = removeText(address, postcode);
 					}
 					
 					// extract suburb if available (consecutive upper case text)
-					if (!StringUtils.isEmpty(address)) {
+					if (!isEmpty(address)) {
 						// only can extract suburb if text mix beetween lower case and upper case
 						// sample: 26 Melliodora Crescent GREENSBOROUGH >> extract "GREENSBOROUGH"
-						if (!StringUtils.isEmpty(StringHelper.extract(address, ".*([a-z]).*"))) {
+						if (!isEmpty(StringHelper.extract(address, ".*([a-z]).*"))) {
 							suburb = StringHelper.extract(address, SUBURB_PATTERN);
 							
-							if (!StringUtils.isEmpty(suburb))
+							if (!isEmpty(suburb))
 								address = removeText(address, suburb);
 							
 							// try to extract postcal code if available
-							if (!StringUtils.isEmpty(address) && StringUtils.isEmpty(postcode)) {
+							if (!isEmpty(address) && isEmpty(postcode)) {
 								postcode = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
-								if (!StringUtils.isEmpty(postcode))
+								if (!isEmpty(postcode))
 									address = removeText(address, postcode);
 							}
 						}
@@ -352,7 +356,7 @@
 				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
 	
-				String ownerErrorData = StringUtils.EMPTY;
+				String ownerErrorData = EMPTY;
 	
 				if (!CollectionUtils.isEmpty(csvData)) {
 	
@@ -419,33 +423,75 @@
 					csvData = csvData.stream().skip(headerLineNum - 1).collect(toList());
 					
 					List<String> finalCsvData = csvData;
-//					Multimap<Integer, List<String>> checkedDataMap = indexes.stream().map(i -> new AbstractMap.SimpleImmutableEntry<>(
-//							i, finalCsvData.stream().map(line -> {
-//						String[] r = readCsvLine(line);
-//						return getCsvCellValue(r, i);
-//					}).distinct().collect(toList()))).collect(MultimapCollector.toMultimap(Map.Entry::getKey, Map.Entry::getValue));
-					
 					String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
 					int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength)).orElse(header).length;
 					
 					Multimap<Integer, List<String>> checkedDataMap = Stream.iterate(0, n -> n + 1)
 							.limit(rowLength - 1)
-							.map(i -> new AbstractMap.SimpleImmutableEntry<>(i, finalCsvData.stream().map(line -> {
-									String[] r = readCsvLine(line);
-									return getCsvCellValue(r, i);
-								}).collect(toList())))
+							.map(i -> new AbstractMap.SimpleImmutableEntry<>(i, finalCsvData.stream().filter(StringUtils::isNotEmpty)
+									.filter(line -> (!line.matches("^(,+)$")))
+									.map(line -> {
+										String[] r = readCsvLine(line);
+										return getCsvCellValue(r, i);
+									}).collect(toList())))
 							.collect(MultimapCollector.toMultimap(Map.Entry::getKey, Map.Entry::getValue));
 					
-					Collection<Map.Entry<Integer, List<String>>> entries = checkedDataMap.entries().parallelStream()
-							.filter(i -> (i.getValue().stream().distinct().count() > 2 || StringUtils.isNotEmpty(i.getValue().get(0))))
-							.collect(toCollection(LinkedHashSet::new));
+					List<Map.Entry<Integer, List<String>>> entries = checkedDataMap.entries().stream()
+							.filter(i -> (i.getValue().stream().distinct().count() > 2 || isNotEmpty(i.getValue().get(0))))
+							.collect(toList());
 					
-					System.out.println(entries);
+					Map<Integer, List<String>> mapX = new LinkedHashMap<>();
+					for (Map.Entry<Integer, List<String>> entry : entries) {
+						Integer entryKey = entry.getKey();
+						List<String> entryValue = entry.getValue();
+						
+						if (entries.indexOf(entry) >= entries.size() - 1) {
+							mapX.put(entryKey, entryValue);
+							continue;
+						}
+						
+						Map.Entry<Integer, List<String>> nextEntry = entries.get(entries.indexOf(entry) + 1);
+						Integer nextEntryKey = nextEntry.getKey();
+						List<String> nextEntryValue = nextEntry.getValue();
+						
+						Map.Entry<Integer, List<String>> previousEntry = entries.indexOf(entry) > 0 ?
+								entries.get(entries.indexOf(entry) - 1) : null;
+						boolean isHavePreKey = nonNull(previousEntry) && (entryKey.equals(previousEntry.getKey() + 1));
+						boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
+						
+						if (isConsecutive && !isHavePreKey
+								&& entries.indexOf(entry) != 0
+								&& isNotEmpty(entryValue.get(0))
+								&& entryValue.stream().distinct().count() < 3
+								&& isEmpty(nextEntryValue.get(0))
+								&& nextEntryValue.stream().distinct().count() > 2) {
+							
+							List<String> mergedEntryValue = new ArrayList<>();
+							Stream.iterate(0, i -> i + 1).limit(entryValue.size())
+									.forEachOrdered(i -> mergedEntryValue.add(entryValue.get(i).concat(nextEntryValue.get(i)).trim()));
+							
+							mapX.put(nextEntryKey, mergedEntryValue);
+						} else {
+							mapX.putIfAbsent(entryKey, entryValue);
+						}
+					}
 					
-					System.out.println(checkedDataMap.entries());
+					System.out.println(mapX);
+					//Map<Integer, List<String>> mapX = entries.stream().collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+					List<Integer> keys = entries.stream().map(Map.Entry::getKey).collect(toList());
+					
+					//List<List<Integer>> xyz = keys.stream().collect(() -> new ArrayList<>(), )
+					int max = Collections.max(keys);
+					Map<Boolean, List<Integer>> results = keys.stream().collect(Collectors.partitioningBy( n -> {
+						if (n < max) {
+							return keys.indexOf(n + 1) != -1 || keys.indexOf(n - 1) != -1;
+						}
+						return false;
+					}));
+					System.out.println(results);
 					
 					for (String line : csvData) {
-						if (StringUtils.isEmpty(line)) continue;
+						if (isEmpty(line)) continue;
 	
 						if (line.matches("^(,+)$")) continue;;
 						
@@ -459,9 +505,9 @@
 						for (String s : r) {
 							ignoreRowBuilder.append(s);
 						}
-						if (StringUtils.isEmpty(ignoreRowBuilder.toString())) continue;
+						if (isEmpty(ignoreRowBuilder.toString())) continue;
 	
-						if (StringUtils.isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
+						if (isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
 							logger.info("\n*******************Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
 							continue;
 						}
@@ -506,7 +552,7 @@
 						);
 						
 						//ignore non-data line.
-						if (StringUtils.isEmpty(
+						if (isEmpty(
 								rowBuilder.replaceAll("[\",\\s]+", "")
 						)) continue;
 						
@@ -599,11 +645,11 @@
 						String name = getCsvCellValue(r, nameIndex);
 	
 						String rawFoaled = getCsvCellValue(r, foaledIndex);
-						String foaled = StringUtils.EMPTY;
+						String foaled = EMPTY;
 	
 						boolean isAustraliaFormat = isAustraliaFormat(csvData, foaledIndex, "horse");
 	
-						if (!isAustraliaFormat && StringUtils.isNotEmpty(rawFoaled)) {
+						if (!isAustraliaFormat && isNotEmpty(rawFoaled)) {
 							foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
 						} else {
 							foaled = rawFoaled;
@@ -654,7 +700,7 @@
 	
 					// Address case addedDate, activeStatus and current location in horse file are empty.
 					// We will face with an error if we keep this data intact.
-					if (StringUtils.isAllEmpty(addedDateBuilder, activeStatusBuilder, currentLocationBuilder)) {
+					if (isAllEmpty(addedDateBuilder, activeStatusBuilder, currentLocationBuilder)) {
 						logger.warn("All of AddedDate && ActiveStatus && CurrentLocation can't be empty. At least addedDate required.");
 	
 						List<String> formattedData = StringHelper.convertStringBuilderToList(builder);
@@ -805,7 +851,7 @@
 	
 						count++;
 	
-						if (StringUtils.isEmpty(line)) continue;
+						if (isEmpty(line)) continue;
 	
 						if (line.matches("(?m)^([,]+)$")) {
 							logger.info("***************************Empty CSV Data at line number: {}", count);
@@ -822,7 +868,7 @@
 						String externalId = getCsvCellValue(r, externalIdIndex);
 						String name = getCsvCellValue(r, nameIndex);
 	
-						if (StringUtils.isEmpty(name)) {
+						if (isEmpty(name)) {
 							logger.info("**************************Empty Horse Name: {} at line: {}", name, line);
 							continue;
 						}
@@ -830,7 +876,7 @@
 						String rawFoaled = getCsvCellValue(r, foaledIndex);
 						rawFoaled = rawFoaled.split("\\p{Z}")[0];
 						String foaled;
-						if (!isAustraliaFormat && StringUtils.isNotEmpty(rawFoaled)) {
+						if (!isAustraliaFormat && isNotEmpty(rawFoaled)) {
 							foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
 						} else {
 							foaled = rawFoaled;
@@ -839,8 +885,8 @@
 						String sire = getCsvCellValue(r, sireIndex);
 						String dam = getCsvCellValue(r, damIndex);
 	
-						if (StringUtils.isEmpty(name) && StringUtils.isEmpty(sire) && StringUtils.isEmpty(dam)
-								&& StringUtils.isEmpty(rawFoaled)) continue;
+						if (isEmpty(name) && isEmpty(sire) && isEmpty(dam)
+								&& isEmpty(rawFoaled)) continue;
 	
 						String color = getCsvCellValue(r, colorIndex);
 						String sex = getCsvCellValue(r, sexIndex);
@@ -862,7 +908,7 @@
 						// (Normally in ownership file because ownership file and horse file are exported in the same day).
 						// If not in the same day, we have to determine what's horse file exported date is.
 	
-						if (StringUtils.isEmpty(dayHere)) {
+						if (isEmpty(dayHere)) {
 							Set<String> ownershipKeyMap = horseOwnershipMap.keySet();
 							boolean isSameHorseName = ownershipKeyMap.stream().anyMatch(name::equalsIgnoreCase);
 
@@ -872,7 +918,7 @@
 							} else {
 								// Address case addedDate, activeStatus and current location in horse file are empty.
 								// We will face an error if we keep this data intact.
-								if (StringUtils.isEmpty(addedDate) && StringUtils.isEmpty(activeStatus) && StringUtils.isEmpty(currentLocation)) {
+								if (isEmpty(addedDate) && isEmpty(activeStatus) && isEmpty(currentLocation)) {
 									addedDate = csvExportedDateStr;
 								}
 							}
@@ -1086,10 +1132,10 @@
 						String horseName = departedDateMatcher.group(1).trim();
 						String horseDepartedDate = departedDateMatcher.group(3).trim();
 						
-						if (StringUtils.isEmpty(horseName))
+						if (isEmpty(horseName))
 							continue;
 						
-						if (StringUtils.isEmpty(horseDepartedDate))
+						if (isEmpty(horseDepartedDate))
 							logger.info("Horse without departed date: {}", horseName);
 						
 						if (!isDMYFormat(horseDepartedDate)) {
@@ -1105,7 +1151,7 @@
 					
 					Matcher blankLinesMatcher = Pattern.compile(REMOVE_BANK_LINES_PATTERN).matcher(allLines);
 					if (blankLinesMatcher.find()) {
-						allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, StringUtils.EMPTY);
+						allLines = allLines.replaceAll(REMOVE_BANK_LINES_PATTERN, EMPTY);
 					} else {
 						throw new CustomException(ErrorInfo.CANNOT_FORMAT_OWNERSHIP_FILE_USING_REGEX_ERROR);
 					}
@@ -1180,9 +1226,9 @@
 		
 							int startSireDamInfoIndex = Collections.max(leftIndexes);
 							int endSireDamInfoIndex = Collections.max(rightIndexes);
-							String sireDamPart = StringUtils.substring(line, startSireDamInfoIndex, endSireDamInfoIndex);
-							String namePart = StringUtils.substringBeforeLast(line, sireDamPart);
-							String additionalInfoPart = StringUtils.substringAfterLast(line, sireDamPart);
+							String sireDamPart = substring(line, startSireDamInfoIndex, endSireDamInfoIndex);
+							String namePart = substringBeforeLast(line, sireDamPart);
+							String additionalInfoPart = substringAfterLast(line, sireDamPart);
 							
 							if (!additionalInfoPart.contains("yo")) {
 								logger.warn("Wired data");
@@ -1285,7 +1331,7 @@
 					
 							setAllIndexes.add(j);
 					
-							if (data[i][j].equalsIgnoreCase(StringUtils.EMPTY)) {
+							if (data[i][j].equalsIgnoreCase(EMPTY)) {
 								isEmptyIndexes.add(j);
 							}
 					
@@ -1328,7 +1374,7 @@
 							isEmptyString.append(row[index]);
 						}
 				
-						if (!isEmptyString.toString().equals(StringUtils.EMPTY)) {
+						if (!isEmptyString.toString().equals(EMPTY)) {
 							rowHasValueIndex.add(index);
 						}
 					}
@@ -1360,10 +1406,10 @@
 					//fill empty horse name cells as same as previous cell data.
 					//ignore reading header
 					for (int i = 1; i < blankHorseNameData.length; ) {
-						if (StringUtils.isNotEmpty(blankHorseNameData[i][0])) {
+						if (isNotEmpty(blankHorseNameData[i][0])) {
 							
 							for (int j = i + 1; j < blankHorseNameData.length; j++) {
-								if (StringUtils.isNotEmpty(blankHorseNameData[j][0])) {
+								if (isNotEmpty(blankHorseNameData[j][0])) {
 									i = j;
 									continue;
 								}
@@ -1384,7 +1430,7 @@
 							String shareStr = blankHorseNameData[i - 1][1].trim();
 							double sharePercent = 0.00;
 							
-							if (StringUtils.isEmpty(shareStr)) {
+							if (isEmpty(shareStr)) {
 								sharePercent = 0.00;
 							} else {
 								shareStr = shareStr.replace("%", "");
@@ -1484,7 +1530,7 @@
 								String tryingFinanceEmail = mixingEmailTypeMatcher.group(2).trim();
 								commsEmail = this.getValidEmailStr(tryingCommsEmail, line);
 						
-								if (StringUtils.isEmpty(financeEmail)) {
+								if (isEmpty(financeEmail)) {
 									financeEmail = this.getValidEmailStr(tryingFinanceEmail, line);
 								}
 							} else {
@@ -1524,7 +1570,7 @@
 							rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
 							
 							//convert addedDate read from CSV to Australia date time format.
-							String addedDate = (!isAustraliaFormat && StringUtils.isNotEmpty(rawAddedDate))
+							String addedDate = (!isAustraliaFormat && isNotEmpty(rawAddedDate))
 									? LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT)
 									: rawAddedDate;
 							
@@ -1554,7 +1600,7 @@
 									StringHelper.csvValue(exportedDate)
 							);
 							
-							if (StringUtils.isEmpty(
+							if (isEmpty(
 									rowBuilder.replaceAll("[\",\\s]+", "")
 							)) continue;
 							
@@ -1661,7 +1707,7 @@
 			//We wanna extract this name to firstName, lastName, displayName:
 			//Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
 			if (ctMatcher.find()) {
-				if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
+				if (isEmpty(firstName) && isEmpty(lastName)) {
 					int ctStartedIndex = ctMatcher.start();
 					int ctEndIndex = ctMatcher.end();
 				
@@ -1688,7 +1734,7 @@
 						String finalLastName = lastName;
 						firstName = Arrays.stream(firstAndLastNameArr)
 								.filter(i -> !i.equalsIgnoreCase(finalLastName))
-								.collect(joining(StringUtils.SPACE)).trim();
+								.collect(joining(SPACE)).trim();
 					}
 				
 					String extractedName = String.format("%s,%s,%s,%s\n",
@@ -1705,8 +1751,8 @@
 			} else if (!ctMatcher.find() && isOrganizationName) {
 				//if displayName is organization name >> keep it intact.
 				formattedDisplayName = displayName;
-				firstName = StringUtils.EMPTY;
-				lastName = StringUtils.EMPTY;
+				firstName = EMPTY;
+				lastName = EMPTY;
 			
 				String extractedName = String.format("%s,%s,%s,%s\n",
 						StringHelper.csvValue(displayName),
@@ -1757,7 +1803,7 @@
 	
 			for (String line : csvData) {
 	
-				if (StringUtils.isEmpty(line)) continue;
+				if (isEmpty(line)) continue;
 	
 				//ignore ,,,,,,,,,,,,,, line.
 				if (line.matches("(?m)^([,]+)$")) continue;
@@ -1768,7 +1814,7 @@
 				String[] r = readCsvLine(line);
 				String rawDateTime = getCsvCellValue(r, dateIndex);
 	
-				if (StringUtils.isNotEmpty(rawDateTime)) {
+				if (isNotEmpty(rawDateTime)) {
 	
 					//Process for case: 15/08/2013 15:30
 					String date = rawDateTime.split("\\p{Z}")[0];
@@ -1778,7 +1824,7 @@
 					} else if (isMDYFormat(date)) {
 						mdyFormatList.add(date);
 					} else {
-						logger.info("UNKNOWN TYPE OF DATE IN {} FILE: {} at line : {}", StringUtils.upperCase(fileType), rawDateTime, line);
+						logger.info("UNKNOWN TYPE OF DATE IN {} FILE: {} at line : {}", upperCase(fileType), rawDateTime, line);
 					}
 				}
 			}
@@ -1787,20 +1833,20 @@
 			// if all date value in the file have format like: D/M/YYYY format (E.g: 5/6/2020) >> recheck in racingAustralia.horse
 			if (CollectionUtils.isEmpty(mdyFormatList) && !CollectionUtils.isEmpty(ausFormatList)) {
 				isAustraliaFormat = true;
-				logger.info("Type of DATE in {} file is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.", StringUtils.upperCase(fileType));
+				logger.info("Type of DATE in {} file is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.", upperCase(fileType));
 	
 			} else if (!CollectionUtils.isEmpty(mdyFormatList)) {
-				logger.info("Type of DATE in {} file is MM/DD/YYY format", StringUtils.upperCase(fileType));
+				logger.info("Type of DATE in {} file is MM/DD/YYY format", upperCase(fileType));
 	
 			} else {
-				logger.info("Type of DATE in {} file is UNDEFINED", StringUtils.upperCase(fileType));
+				logger.info("Type of DATE in {} file is UNDEFINED", upperCase(fileType));
 			}
 	
 			return isAustraliaFormat;
 		}
 		
 		private String getValidEmailStr(String emailsStr, String line) throws CustomException {
-			if (StringUtils.isEmpty(emailsStr)) return StringUtils.EMPTY;
+			if (isEmpty(emailsStr)) return EMPTY;
 			String[] emailList = emailsStr.split(";");
 			
 			for (String email : emailList) {
