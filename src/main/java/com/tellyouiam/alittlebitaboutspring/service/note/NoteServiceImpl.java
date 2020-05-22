@@ -445,7 +445,7 @@
 						Integer entryKey = entry.getKey();
 						List<String> entryValue = entry.getValue();
 						
-						if (entries.indexOf(entry) >= entries.size() - 1) {
+						if ((entries.indexOf(entry) >= entries.size() - 1) || (entries.indexOf(entry) == 0)) {
 							mapX.put(entryKey, entryValue);
 							continue;
 						}
@@ -454,11 +454,11 @@
 						Integer nextEntryKey = nextEntry.getKey();
 						List<String> nextEntryValue = nextEntry.getValue();
 						
-						Map.Entry<Integer, List<String>> previousEntry = entries.indexOf(entry) > 0 ?
-								entries.get(entries.indexOf(entry) - 1) : null;
-						boolean isHavePreKey = nonNull(previousEntry) && (entryKey.equals(previousEntry.getKey() + 1));
+						Optional<Map.Entry<Integer, List<String>>> previousEntry = Optional.ofNullable(entries.get(entries.indexOf(entry) - 1));
+						boolean isHavePreKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
 						boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
 						
+						//join two consecutive column in csv, one has header missing body, one has body missing header.
 						if (isConsecutive && !isHavePreKey
 								&& entries.indexOf(entry) != 0
 								&& isNotEmpty(entryValue.get(0))
@@ -466,9 +466,8 @@
 								&& isEmpty(nextEntryValue.get(0))
 								&& nextEntryValue.stream().distinct().count() > 2) {
 							
-							List<String> mergedEntryValue = new ArrayList<>();
-							Stream.iterate(0, i -> i + 1).limit(entryValue.size())
-									.forEachOrdered(i -> mergedEntryValue.add(entryValue.get(i).concat(nextEntryValue.get(i)).trim()));
+							List<String> mergedEntryValue = Stream.iterate(0, i -> i + 1).limit(entryValue.size())
+									.map(i -> entryValue.get(i).concat(nextEntryValue.get(i)).trim()).collect(toList());
 							
 							mapX.put(nextEntryKey, mergedEntryValue);
 						} else {
@@ -476,20 +475,54 @@
 						}
 					}
 					
-					System.out.println(mapX);
-					//Map<Integer, List<String>> mapX = entries.stream().collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
-					List<Integer> keys = entries.stream().map(Map.Entry::getKey).collect(toList());
+					Map<String, List<String>> mapY = mapX.entrySet().stream()
+							.filter(e-> isNotEmpty(e.getValue().get(0)))
+							.collect(toMap(e-> e.getValue().get(0), Map.Entry::getValue));
 					
-					//List<List<Integer>> xyz = keys.stream().collect(() -> new ArrayList<>(), )
-					int max = Collections.max(keys);
-					Map<Boolean, List<Integer>> results = keys.stream().collect(Collectors.partitioningBy( n -> {
-						if (n < max) {
-							return keys.indexOf(n + 1) != -1 || keys.indexOf(n - 1) != -1;
+					String HORSE_FILE_HEADER = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+							"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName", "Type",
+							"Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode", "Country", "GST");
+					
+					Map<String, List<String>> ownerMap = new HashMap<>();
+					
+					ownerMap.put("OwnerID", Arrays.asList("OwnerID", ""));
+					ownerMap.put("Email", Arrays.asList("Email", ""));
+					ownerMap.put("FinanceEmail", Arrays.asList("FinanceEmail", ""));
+					ownerMap.put("FirstName, First Name", Arrays.asList("FirstName", ""));
+					ownerMap.put("LastName, Last Name", Arrays.asList("LastName", ""));
+					ownerMap.put("DisplayName, Name, Display Name", Arrays.asList("DisplayName", ""));
+					ownerMap.put("Type", Arrays.asList("Type", ""));
+					ownerMap.put("Mobile", Arrays.asList("Mobile", ""));
+					ownerMap.put("Phone", Arrays.asList("Phone", ""));
+					ownerMap.put("Fax", Arrays.asList("Fax", ""));
+					ownerMap.put("Address", Arrays.asList("Address", ""));
+					ownerMap.put("City", Arrays.asList("City", ""));
+					ownerMap.put("State", Arrays.asList("State", ""));
+					ownerMap.put("PostCode", Arrays.asList("PostCode", ""));
+					ownerMap.put("Country", Arrays.asList("Country", ""));
+					ownerMap.put("GST", Arrays.asList("GST", ""));
+					
+					Set<String> sY = mapY.keySet();
+					Set<String> sO = ownerMap.keySet();
+					Map<String, List<String>> result = new HashMap<>();
+					for (String str : sO) {
+						boolean t = true;
+						for (String st : sY) {
+							if (str.contains(st)) {
+								result.put(ownerMap.get(str).get(0), mapY.get(st));
+								t = false;
+								break;
+							}
 						}
-						return false;
-					}));
-					System.out.println(results);
+						if (t) {
+							result.put(ownerMap.get(str).get(0), ownerMap.get(str));
+						}
+					}
+					System.out.println(result);
+					System.out.println(mapY);
+					System.out.println(ownerMap);
 					
+					//for (List<String> strs : )
 					for (String line : csvData) {
 						if (isEmpty(line)) continue;
 	
@@ -576,6 +609,10 @@
 			return null;
 		}
 	
+		public void insertColumn(List<String> column) {
+		
+		}
+		
 		private Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {
 	
 			try {
