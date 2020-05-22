@@ -31,6 +31,7 @@
 	import java.time.format.ResolverStyle;
 	import java.time.format.SignStyle;
 	import java.util.*;
+	import java.util.AbstractMap.SimpleImmutableEntry;
 	import java.util.concurrent.atomic.AtomicInteger;
 	import java.util.function.BiFunction;
 	import java.util.function.Function;
@@ -44,6 +45,7 @@
 	
 	import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.*;
 	import static java.time.temporal.ChronoField.*;
+	import static java.util.Collections.*;
 	import static java.util.Objects.*;
 	import static java.util.stream.Collectors.*;
 	import static org.apache.commons.lang3.StringUtils.*;
@@ -130,7 +132,7 @@
 		}
 	
 		//https://stackoverflow.com/questions/86780/how-to-check-if-a-string-contains-another-string-in-a-case-insensitive-manner-in
-		private boolean containsIgnoreCase(String src, String what) {
+		private boolean containsIgnoreCase(String container, String what) {
 			final int length = what.length();
 			
 			if (length == 0)
@@ -139,13 +141,14 @@
 			final char firstLo = Character.toLowerCase(what.charAt(0));
 			final char firstUp = Character.toUpperCase(what.charAt(0));
 			
-			for (int i = src.length() - length; i >= 0; i--) {
+			for (int i = container.length() - length; i >= 0; i--) {
 				// Quick check before calling the more expensive regionMatches() method:
-				final char ch = src.charAt(i);
+				final char ch = container.charAt(i);
 				if (ch != firstLo && ch != firstUp)
 					continue;
 				
-				if (src.regionMatches(true, i, what, 0, length))
+				//https://www.w3resource.com/java-tutorial/string/string_regionmatches.php
+				if (container.regionMatches(true, i, what, 0, length))
 					return true;
 			}
 			
@@ -424,11 +427,13 @@
 					
 					List<String> finalCsvData = csvData;
 					String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
-					int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength)).orElse(header).length;
+					int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
+							.orElse(header).length;
 					
 					Multimap<Integer, List<String>> checkedDataMap = Stream.iterate(0, n -> n + 1)
 							.limit(rowLength - 1)
-							.map(i -> new AbstractMap.SimpleImmutableEntry<>(i, finalCsvData.stream().filter(StringUtils::isNotEmpty)
+							.map(i -> new SimpleImmutableEntry<>(i, finalCsvData.stream()
+									.filter(StringUtils::isNotEmpty)
 									.filter(line -> (!line.matches("^(,+)$")))
 									.map(line -> {
 										String[] r = readCsvLine(line);
@@ -440,13 +445,14 @@
 							.filter(i -> (i.getValue().stream().distinct().count() > 2 || isNotEmpty(i.getValue().get(0))))
 							.collect(toList());
 					
-					Map<Integer, List<String>> mapX = new LinkedHashMap<>();
+					//process for case header and data in separate col in csv.
+					Map<Integer, List<String>> formattedDataMap = new LinkedHashMap<>();
 					for (Map.Entry<Integer, List<String>> entry : entries) {
 						Integer entryKey = entry.getKey();
 						List<String> entryValue = entry.getValue();
 						
 						if ((entries.indexOf(entry) >= entries.size() - 1) || (entries.indexOf(entry) == 0)) {
-							mapX.put(entryKey, entryValue);
+							formattedDataMap.put(entryKey, entryValue);
 							continue;
 						}
 						
@@ -454,7 +460,8 @@
 						Integer nextEntryKey = nextEntry.getKey();
 						List<String> nextEntryValue = nextEntry.getValue();
 						
-						Optional<Map.Entry<Integer, List<String>>> previousEntry = Optional.ofNullable(entries.get(entries.indexOf(entry) - 1));
+						Optional<Map.Entry<Integer, List<String>>> previousEntry =
+								Optional.ofNullable(entries.get(entries.indexOf(entry) - 1));
 						boolean isHavePreKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
 						boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
 						
@@ -467,15 +474,16 @@
 								&& nextEntryValue.stream().distinct().count() > 2) {
 							
 							List<String> mergedEntryValue = Stream.iterate(0, i -> i + 1).limit(entryValue.size())
-									.map(i -> entryValue.get(i).concat(nextEntryValue.get(i)).trim()).collect(toList());
+									.map(i -> entryValue.get(i).concat(nextEntryValue.get(i)).trim())
+									.collect(toList());
 							
-							mapX.put(nextEntryKey, mergedEntryValue);
+							formattedDataMap.put(nextEntryKey, mergedEntryValue);
 						} else {
-							mapX.putIfAbsent(entryKey, entryValue);
+							formattedDataMap.putIfAbsent(entryKey, entryValue);
 						}
 					}
 					
-					Map<String, List<String>> mapY = mapX.entrySet().stream()
+					Map<String, List<String>> csvDataHeaderAsKey = formattedDataMap.entrySet().stream()
 							.filter(e-> isNotEmpty(e.getValue().get(0)))
 							.collect(toMap(e-> e.getValue().get(0), Map.Entry::getValue));
 					
@@ -483,45 +491,42 @@
 							"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName", "Type",
 							"Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode", "Country", "GST");
 					
-					Map<String, List<String>> ownerMap = new HashMap<>();
+					Map<String, List<String>> headerMap = new HashMap<>();
 					
-					ownerMap.put("OwnerID", Arrays.asList("OwnerID", ""));
-					ownerMap.put("Email", Arrays.asList("Email", ""));
-					ownerMap.put("FinanceEmail", Arrays.asList("FinanceEmail", ""));
-					ownerMap.put("FirstName, First Name", Arrays.asList("FirstName", ""));
-					ownerMap.put("LastName, Last Name", Arrays.asList("LastName", ""));
-					ownerMap.put("DisplayName, Name, Display Name", Arrays.asList("DisplayName", ""));
-					ownerMap.put("Type", Arrays.asList("Type", ""));
-					ownerMap.put("Mobile", Arrays.asList("Mobile", ""));
-					ownerMap.put("Phone", Arrays.asList("Phone", ""));
-					ownerMap.put("Fax", Arrays.asList("Fax", ""));
-					ownerMap.put("Address", Arrays.asList("Address", ""));
-					ownerMap.put("City", Arrays.asList("City", ""));
-					ownerMap.put("State", Arrays.asList("State", ""));
-					ownerMap.put("PostCode", Arrays.asList("PostCode", ""));
-					ownerMap.put("Country", Arrays.asList("Country", ""));
-					ownerMap.put("GST", Arrays.asList("GST", ""));
+					headerMap.put("OwnerID", singletonList("OwnerID"));
+					headerMap.put("Email", singletonList("Email"));
+					headerMap.put("FinanceEmail", singletonList("FinanceEmail"));
+					headerMap.put("FirstName, First Name", singletonList("FirstName"));
+					headerMap.put("LastName, Last Name", singletonList("LastName"));
+					headerMap.put("DisplayName, Name, Display Name", singletonList("DisplayName"));
+					headerMap.put("Type", singletonList("Type"));
+					headerMap.put("Mobile", singletonList("Mobile"));
+					headerMap.put("Phone", singletonList("Phone"));
+					headerMap.put("Fax", singletonList("Fax"));
+					headerMap.put("Address", singletonList("Address"));
+					headerMap.put("City", singletonList("City"));
+					headerMap.put("State", singletonList("State"));
+					headerMap.put("PostCode", singletonList("PostCode"));
+					headerMap.put("Country", singletonList("Country"));
+					headerMap.put("GST", singletonList("GST"));
 					
-					Set<String> sY = mapY.keySet();
-					Set<String> sO = ownerMap.keySet();
-					Map<String, List<String>> result = new HashMap<>();
-					for (String str : sO) {
-						boolean t = true;
-						for (String st : sY) {
-							if (str.contains(st)) {
-								result.put(ownerMap.get(str).get(0), mapY.get(st));
-								t = false;
-								break;
-							}
-						}
-						if (t) {
-							result.put(ownerMap.get(str).get(0), ownerMap.get(str));
-						}
-					}
-					System.out.println(result);
-					System.out.println(mapY);
-					System.out.println(ownerMap);
+					int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
+							.max(Comparator.comparingInt(i -> i)).orElse(0);
 					
+					Map<String, List<String>> ownerDataMap = headerMap.keySet().stream().map(standardHeader -> {
+						Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
+								.filter(csvHeader -> containsIgnoreCase(standardHeader, csvHeader))
+								.findFirst();
+						return matchHeaderKey.map(key ->
+								new SimpleImmutableEntry<>(standardHeader, csvDataHeaderAsKey.get(key))
+							).orElseGet(
+							() -> new SimpleImmutableEntry<>(standardHeader,
+									Stream.of(headerMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
+											.flatMap(Collection::stream).collect(toList()))
+							);
+					}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+					
+					System.out.println(ownerDataMap);
 					//for (List<String> strs : )
 					for (String line : csvData) {
 						if (isEmpty(line)) continue;
@@ -1261,8 +1266,8 @@
 								rightIndexes.add(end);
 							}
 		
-							int startSireDamInfoIndex = Collections.max(leftIndexes);
-							int endSireDamInfoIndex = Collections.max(rightIndexes);
+							int startSireDamInfoIndex = max(leftIndexes);
+							int endSireDamInfoIndex = max(rightIndexes);
 							String sireDamPart = substring(line, startSireDamInfoIndex, endSireDamInfoIndex);
 							String namePart = substringBeforeLast(line, sireDamPart);
 							String additionalInfoPart = substringAfterLast(line, sireDamPart);
