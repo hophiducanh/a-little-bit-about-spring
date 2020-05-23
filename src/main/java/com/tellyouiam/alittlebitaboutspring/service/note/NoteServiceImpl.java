@@ -358,6 +358,7 @@
 				List<String> csvData = this.getCsvData(ownerFile);
 				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
+				String sb = null;
 	
 				String ownerErrorData = EMPTY;
 	
@@ -491,7 +492,7 @@
 							"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName", "Type",
 							"Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode", "Country", "GST");
 					
-					Map<String, List<String>> headerMap = new HashMap<>();
+					Map<String, List<String>> headerMap = new LinkedHashMap<>();
 					
 					headerMap.put("OwnerID", singletonList("OwnerID"));
 					headerMap.put("Email", singletonList("Email"));
@@ -513,21 +514,47 @@
 					int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
 							.max(Comparator.comparingInt(i -> i)).orElse(0);
 					
+					//Returns an infinite sequential ordered
+					List<String> orderStream = Stream.iterate(0, i -> i + 1).limit(headerMap.entrySet().size())
+							.map(u -> new ArrayList<>(headerMap.keySet()).get(u)).collect(toList());
+					
 					Map<String, List<String>> ownerDataMap = headerMap.keySet().stream().map(standardHeader -> {
 						Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
 								.filter(csvHeader -> containsIgnoreCase(standardHeader, csvHeader))
 								.findFirst();
 						return matchHeaderKey.map(key ->
-								new SimpleImmutableEntry<>(standardHeader, csvDataHeaderAsKey.get(key))
+								new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0), csvDataHeaderAsKey.get(key))
 							).orElseGet(
-							() -> new SimpleImmutableEntry<>(standardHeader,
+							() -> new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0),
 									Stream.of(headerMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
 											.flatMap(Collection::stream).collect(toList()))
 							);
-					}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+					}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (m, n) -> m, LinkedHashMap::new));
 					
-					System.out.println(ownerDataMap);
-					//for (List<String> strs : )
+					//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
+					List<Iterator<String>> iterList = new ArrayList<>(ownerDataMap.values()).stream()
+							.map(List::iterator).collect(Collectors.toList());
+					
+					List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
+							.mapToObj(n -> iterList.stream()
+									.filter(Iterator::hasNext)
+									.map(Iterator::next)
+									.collect(Collectors.toList()))
+							.collect(Collectors.toList());
+					
+					System.out.println(transposeList);
+					
+					//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
+					sb = transposeList.stream()
+							.map(l -> l.stream().collect(() -> new StringJoiner(","),
+											StringJoiner::add,
+											StringJoiner::merge))
+							.collect(() -> new StringJoiner("\n"),
+									StringJoiner::merge,
+									StringJoiner::merge).toString();
+					
+					System.out.println(sb);
+					
 					for (String line : csvData) {
 						if (isEmpty(line)) continue;
 	
@@ -605,7 +632,8 @@
 				FileHelper.writeDataToFile(errorDataPath, ownerErrorData.getBytes());
 	
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
-				FileHelper.writeDataToFile(path, builder.toString().getBytes());
+				//FileHelper.writeDataToFile(path, builder.toString().getBytes());
+				FileHelper.writeDataToFile(path, sb.getBytes());
 	
 				return builder;
 			} catch (IOException e) {
