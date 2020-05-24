@@ -159,12 +159,11 @@
 				List<String> csvData = this.getCsvData(ownerFile);
 				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
-				StringBuilder streamBuilder = new StringBuilder();
-	
-				String ownerErrorData = EMPTY;
-	
+				
+				String ownerErrorData = StringUtils.EMPTY;
+				
 				if (!CollectionUtils.isEmpty(csvData)) {
-	
+					
 					// ---------- common cols --------------------------------------
 					// OWNER_KEY (ID or EMAIL), can leave blank if ID is EMAIL
 					// EMAIL
@@ -184,13 +183,8 @@
 					// GST = "true/false" or ot "T/F" or "Y/N"
 					// -------------------------------------------------------------
 					
-					String headerLine = csvData.stream().filter(
-							i -> Stream.of("Name", "Address", "Phone", "Mobile")
-									.anyMatch(u -> containsIgnoreCase(i, u))
-					).findFirst().orElse("");
-							
-					String[] header = readCsvLine(headerLine);
-	
+					String[] header = readCsvLine(csvData.get(0));
+					
 					int ownerIdIndex = checkColumnIndex(header, "OwnerID");
 					int emailIndex = checkColumnIndex(header, "Email");
 					int financeEmailIndex = checkColumnIndex(header, "FinanceEmail");
@@ -208,248 +202,83 @@
 					int countryIndex = checkColumnIndex(header, "Country");
 					int gstIndex = checkColumnIndex(header, "GST");
 					
- 					builder.append(HORSE_FILE_HEADER);
+					builder.append(HORSE_FILE_HEADER);
 					
-					AtomicInteger atomicInteger = new AtomicInteger(0);
-					final Integer[] headerLineNumber = {null};
-					csvData.forEach(s -> {
-						atomicInteger.getAndIncrement();
-						if (s.equals(headerLine)) {
-							headerLineNumber[0] = atomicInteger.intValue();
-						}
-					});
+					csvData = csvData.stream().skip(1).collect(Collectors.toList());
 					
-					Integer headerLineNum = headerLineNumber[0];
-					csvData = csvData.stream().skip(headerLineNum - 1).collect(toList());
-					
-					List<String> finalCsvData = csvData;
-					String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
-					int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
-							.orElse(header).length;
-					
-					Multimap<Integer, List<String>> checkedDataMap = Stream.iterate(0, n -> n + 1)
-							.limit(rowLength)
-							.map(i -> new SimpleImmutableEntry<>(i, finalCsvData.stream()
-									.filter(StringUtils::isNotEmpty)
-									.filter(line -> (!line.matches("^(,+)$")))
-									.filter(line -> (!line.matches("(.+)([\\d]+)\\sRecords(.+)")))
-									.map(line -> {
-										String[] r = readCsvLine(line);
-										return getCsvCellValue(r, i);
-									}).collect(toList())))
-							.collect(MultimapCollector.toMultimap(Map.Entry::getKey, Map.Entry::getValue));
-					
-					List<Map.Entry<Integer, List<String>>> entries = checkedDataMap.entries().stream()
-							.filter(i -> (i.getValue().stream().distinct().count() > 2 || isNotEmpty(i.getValue().get(0))))
-							.collect(toList());
-					
-					//process for case header and data in separate col in csv.
-					Map<Integer, List<String>> formattedDataMap = new LinkedHashMap<>();
-					for (Map.Entry<Integer, List<String>> entry : entries) {
-						Integer entryKey = entry.getKey();
-						List<String> entryValue = entry.getValue();
+					for (String line : csvData) {
+						if (StringUtils.isEmpty(line)) continue;
 						
-						if ((entries.indexOf(entry) >= entries.size() - 1) || (entries.indexOf(entry) == 0)) {
-							formattedDataMap.put(entryKey, entryValue);
+						String[] r = readCsvLine(line);
+						
+						//rows will be ignored like:
+						//,,,,
+						//162 Records,,,,
+						
+						StringBuilder ignoreRowBuilder = new StringBuilder();
+						for (String s : r) {
+							ignoreRowBuilder.append(s);
+						}
+						if (StringUtils.isEmpty(ignoreRowBuilder.toString())) continue;
+						
+						if (StringUtils.isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
+							logger.info("\n*******************Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
 							continue;
 						}
 						
-						Map.Entry<Integer, List<String>> nextEntry = entries.get(entries.indexOf(entry) + 1);
-						Integer nextEntryKey = nextEntry.getKey();
-						List<String> nextEntryValue = nextEntry.getValue();
+						String ownerId = getCsvCellValue(r, ownerIdIndex);
+						String email = getCsvCellValue(r, emailIndex);
+						String financeEmail = getCsvCellValue(r, financeEmailIndex);
+						String firstName = getCsvCellValue(r, firstNameIndex);
+						String lastName = getCsvCellValue(r, lastNameIndex);
+						String displayName = getCsvCellValue(r, displayNameIndex);
+						String type = getCsvCellValue(r, typeIndex);
 						
-						Optional<Map.Entry<Integer, List<String>>> previousEntry =
-								Optional.ofNullable(entries.get(entries.indexOf(entry) - 1));
-						boolean isHavePreKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
-						boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
+						String mobile = getCsvCellValue(r, mobileIndex);
 						
-						//join two consecutive column in csv, one has header missing body, one has body missing header.
-						if (isConsecutive && !isHavePreKey
-								&& entries.indexOf(entry) != 0
-								&& isNotEmpty(entryValue.get(0))
-								&& entryValue.stream().distinct().count() < 3
-								&& isEmpty(nextEntryValue.get(0))
-								&& nextEntryValue.stream().distinct().count() > 2) {
-							
-							List<String> mergedEntryValue = Stream.iterate(0, i -> i + 1).limit(entryValue.size())
-									.map(i -> entryValue.get(i).concat(nextEntryValue.get(i)).trim())
-									.collect(toList());
-							
-							formattedDataMap.put(nextEntryKey, mergedEntryValue);
-						} else {
-							formattedDataMap.putIfAbsent(entryKey, entryValue);
-						}
+						String phone = getCsvCellValue(r, phoneIndex);
+						
+						String fax = getCsvCellValue(r, faxIndex);
+						String address = getCsvCellValue(r, addressIndex);
+						
+						String city = getCsvCellValue(r, cityIndex);
+						String state = getCsvCellValue(r, stateIndex);
+						String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
+						String country = getCsvCellValue(r, countryIndex);
+						String gst = getCsvCellValue(r, gstIndex);
+						
+						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+								StringHelper.csvValue(ownerId),
+								StringHelper.csvValue(email),
+								StringHelper.csvValue(financeEmail),
+								StringHelper.csvValue(firstName),
+								StringHelper.csvValue(lastName),
+								StringHelper.csvValue(displayName),
+								StringHelper.csvValue(type),
+								StringHelper.csvValue(mobile),
+								StringHelper.csvValue(phone),
+								StringHelper.csvValue(fax),
+								StringHelper.csvValue(address),
+								StringHelper.csvValue(city),
+								StringHelper.csvValue(state),
+								StringHelper.csvValue(postCode),
+								StringHelper.csvValue(country),
+								StringHelper.csvValue(gst)
+						);
+						preparedData.add(rowBuilder);
+						
+						builder.append(rowBuilder);
 					}
 					
-					//first cell in column as header
-					Map<String, List<String>> csvDataHeaderAsKey = formattedDataMap.entrySet().stream()
-							.filter(e-> isNotEmpty(e.getValue().get(0)))
-							.collect(toMap(e-> e.getValue().get(0), Map.Entry::getValue));
-					
-					List<String> headerList = Arrays.asList("Address", "Suburb", "State", "PostCode", "Country");
-					List<List<String>> splitAddressList = csvDataHeaderAsKey.get("Address").stream().skip(1).map(i -> {
-						Map<String, String> splitAddress = OwnerSplitAddress.splitAddress(i);
-						String address = Optional.ofNullable(splitAddress.get("address")).orElse("");
-						String suburb = Optional.ofNullable(splitAddress.get("suburb")).orElse("");
-						String state = Optional.ofNullable(splitAddress.get("state")).orElse("");
-						String postcode = Optional.ofNullable(splitAddress.get("postcode")).orElse("");
-						String country = Optional.ofNullable(splitAddress.get("country")).orElse("");
-						return Arrays.asList(address, suburb, state, postcode, country);
-					}).collect(Collectors.toList());
-					
-					//Add header
-					splitAddressList.add(0, headerList);
-					
-					List<List<String>> transposeAddress = IntStream.range(0, splitAddressList.get(0).size())
-							.mapToObj(i -> splitAddressList.stream().map(l -> l.get(i))
-									.collect(Collectors.toList())
-							).collect(Collectors.toList());
-					
-					System.out.println(transposeAddress);
-					
-					Map<String, List<String>> headerMap = new LinkedHashMap<>();
-					
-					headerMap.put("OwnerID", singletonList("OwnerID"));
-					headerMap.put("Email", singletonList("Email"));
-					headerMap.put("FinanceEmail", singletonList("FinanceEmail"));
-					headerMap.put("FirstName, First Name", singletonList("FirstName"));
-					headerMap.put("LastName, Last Name", singletonList("LastName"));
-					headerMap.put("DisplayName, Name, Display Name", singletonList("DisplayName"));
-					headerMap.put("Type", singletonList("Type"));
-					headerMap.put("Mobile", singletonList("Mobile"));
-					headerMap.put("Phone", singletonList("Phone"));
-					headerMap.put("Fax", singletonList("Fax"));
-					headerMap.put("Address", singletonList("Address"));
-					headerMap.put("City", singletonList("City"));
-					headerMap.put("State", singletonList("State"));
-					headerMap.put("PostCode", singletonList("PostCode"));
-					headerMap.put("Country", singletonList("Country"));
-					headerMap.put("GST", singletonList("GST"));
-					
-					int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
-							.max(Comparator.comparingInt(i -> i)).orElse(0);
-					
-					//Returns an infinite sequential ordered
-					List<String> orderStream = Stream.iterate(0, i -> i + 1).limit(headerMap.entrySet().size())
-							.map(u -> new ArrayList<>(headerMap.keySet()).get(u)).collect(toList());
-					
-					Map<String, List<String>> ownerDataMap = headerMap.keySet().stream().map(standardHeader -> {
-						Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
-								.filter(csvHeader ->
-										this.stringContainsIgnoreCase(standardHeader, csvHeader, ","))
-								.findFirst();
-						
-						return matchHeaderKey.map(key ->
-								new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0), csvDataHeaderAsKey.get(key))
-							).orElseGet(
-							() -> new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0),
-									Stream.of(headerMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
-											.flatMap(Collection::stream).collect(toList()))
-							);
-					}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue,
-							(m, n) -> m, LinkedHashMap::new));
-					
-					//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
-					List<Iterator<String>> iterList = new ArrayList<>(ownerDataMap.values()).stream()
-							.map(List::iterator).collect(Collectors.toList());
-					
-					List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
-							.mapToObj(n -> iterList.stream()
-									.filter(Iterator::hasNext)
-									.map(Iterator::next)
-									.collect(Collectors.toList()))
-							.collect(Collectors.toList());
-					
-					//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
-					String allLiner = transposeList.stream()
-							.map(l -> l.stream().collect(() -> new StringJoiner(","),
-											StringJoiner::add,
-											StringJoiner::merge))
-							.collect(() -> new StringJoiner("\n"),
-									StringJoiner::merge,
-									StringJoiner::merge).toString();
-					
-					streamBuilder = new StringBuilder(allLiner);
-					
-//					for (String line : csvData) {
-//						if (isEmpty(line)) continue;
-//
-//						if (line.matches("^(,+)$")) continue;;
-//
-//						String[] r = readCsvLine(line);
-//
-//						//rows will be ignored like:
-//						//,,,,
-//						//162 Records,,,,
-//
-//						StringBuilder ignoreRowBuilder = new StringBuilder();
-//						for (String s : r) {
-//							ignoreRowBuilder.append(s);
-//						}
-//						if (isEmpty(ignoreRowBuilder.toString())) continue;
-//
-//						if (isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
-//							logger.info("\n*******************Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
-//							continue;
-//						}
-//
-//						String ownerId = getCsvCellValue(r, ownerIdIndex);
-//						String email = getCsvCellValue(r, emailIndex);
-//						String financeEmail = getCsvCellValue(r, financeEmailIndex);
-//						String firstName = getCsvCellValue(r, firstNameIndex);
-//						String lastName = getCsvCellValue(r, lastNameIndex);
-//						String displayName = getCsvCellValue(r, displayNameIndex);
-//						String type = getCsvCellValue(r, typeIndex);
-//
-//						String mobile = getCsvCellValue(r, mobileIndex);
-//
-//						String phone = getCsvCellValue(r, phoneIndex);
-//
-//						String fax = getCsvCellValue(r, faxIndex);
-//						String address = getCsvCellValue(r, addressIndex);
-//						String city = getCsvCellValue(r, cityIndex);
-//						String state = getCsvCellValue(r, stateIndex);
-//						String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
-//						String country = getCsvCellValue(r, countryIndex);
-//						String gst = getCsvCellValue(r, gstIndex);
-//
-//						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-//								StringHelper.csvValue(ownerId),
-//								StringHelper.csvValue(email),
-//								StringHelper.csvValue(financeEmail),
-//								StringHelper.csvValue(firstName),
-//								StringHelper.csvValue(lastName),
-//								StringHelper.csvValue(displayName),
-//								StringHelper.csvValue(type),
-//								StringHelper.csvValue(mobile),
-//								StringHelper.csvValue(phone),
-//								StringHelper.csvValue(fax),
-//								StringHelper.csvValue(address),
-//								StringHelper.csvValue(city),
-//								StringHelper.csvValue(state),
-//								StringHelper.csvValue(postCode),
-//								StringHelper.csvValue(country),
-//								StringHelper.csvValue(gst)
-//						);
-//
-//						//ignore non-data line.
-//						if (isEmpty(
-//								rowBuilder.replaceAll("[\",\\s]+", "")
-//						)) continue;
-//
-//						preparedData.add(rowBuilder);
-//						builder.append(rowBuilder);
-//					}
-	
 					ownerErrorData = CsvHelper.validateInputFile(preparedData);
 				}
-	
+				
 				String errorDataPath = getOutputFolder(dirName) + File.separator + "owner-input-error.csv";
 				FileHelper.writeDataToFile(errorDataPath, ownerErrorData.getBytes());
-	
+				
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
-				FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
-	
+				FileHelper.writeDataToFile(path, builder.toString().getBytes());
+				
 				return builder;
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -1604,16 +1433,17 @@
 							String lastName = getCsvCellValue(r, lastNameIndex);
 							String displayName = getCsvCellValue(r, displayNameIndex);
 					
+							//TODO : temporarily not required.
 							//We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
 							//We wanna extract this name to firstName, lastName, displayName:
 							//Any thing before CT is displayName, after is firstName, if after CT contains comma
 							// delimiter (,) >> lastName
-							Map<String, String> ownershipNameMap = this.correctOwnershipName(firstName, lastName, displayName,
-									normalNameBuilder, organizationNameBuilder);
-					
-							firstName = ownershipNameMap.get("firstName");
-							lastName = ownershipNameMap.get("lastName");
-							displayName = ownershipNameMap.get("displayName");
+//							Map<String, String> ownershipNameMap = this.correctOwnershipName(firstName, lastName, displayName,
+//									normalNameBuilder, organizationNameBuilder);
+//
+//							firstName = ownershipNameMap.get("firstName");
+//							lastName = ownershipNameMap.get("lastName");
+//							displayName = ownershipNameMap.get("displayName");
 					
 							String type = getCsvCellValue(r, typeIndex);
 							String mobile = getCsvCellValue(r, mobileIndex);
