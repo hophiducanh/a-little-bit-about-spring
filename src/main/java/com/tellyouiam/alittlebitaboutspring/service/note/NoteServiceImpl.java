@@ -6,19 +6,14 @@
 	import org.apache.commons.lang3.ArrayUtils;
 	import org.apache.commons.lang3.StringUtils;
 	import org.apache.commons.lang3.math.NumberUtils;
-	import org.apache.commons.text.WordUtils;
 	import org.apache.http.NameValuePair;
 	import org.apache.http.client.utils.URIBuilder;
-	import org.apache.poi.ss.formula.functions.T;
 	import org.slf4j.Logger;
 	import org.slf4j.LoggerFactory;
 	import org.springframework.stereotype.Service;
 	import org.springframework.util.CollectionUtils;
-	import org.springframework.util.LinkedMultiValueMap;
-	import org.springframework.util.MultiValueMap;
 	import org.springframework.web.multipart.MultipartFile;
 	
-	import javax.persistence.criteria.CriteriaBuilder;
 	import java.io.*;
 	import java.net.URISyntaxException;
 	import java.nio.file.Files;
@@ -33,12 +28,9 @@
 	import java.util.*;
 	import java.util.AbstractMap.SimpleImmutableEntry;
 	import java.util.concurrent.atomic.AtomicInteger;
-	import java.util.function.BiFunction;
-	import java.util.function.Function;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
 	import java.util.regex.Pattern;
-	import java.util.stream.Collector;
 	import java.util.stream.Collectors;
 	import java.util.stream.IntStream;
 	import java.util.stream.Stream;
@@ -155,202 +147,11 @@
 			return false;
 		}
 		
+		private boolean stringContainsIgnoreCase(String container, String what, String delimiter) {
+			return Stream.of(container.split(delimiter)).anyMatch(i -> i.trim().equalsIgnoreCase(what));
+		}
+		
 		private static final String HORSE_RECORDS_PATTERN = "([\\d]+)\\sRecords"; //like: 162 records
-		
-		//Process Address
-		private static final String ARDEX_ADDRESS_PATTERN = "(.*)\\s+(NSW|QLD|SA|S.A|TAS|VIC|Vic|WA|ACT|TASMANIA|VICTORIA|NT|N.T|NEW SOUTH WALES)$";
-		private static final String SUBURB_PATTERN = ".*[a-z0-9]\\s+([A-Z]+[A-Z\\s]+)$";
-		private static final String POSTAL_CODE_PATTERN_1 = ".*\\s+([0-9-]+)$";
-		public static final String POSTAL_CODE_PATTERN_2 = "^([0-9-]+)\\s*";
-		
-		// all other countries we found after process by sublime REGEX for current
-		// trainer
-		private static List<String> TRAINER_COUNTRIES = new ArrayList<>(Arrays.asList(
-				
-				"AUS",
-				
-				"AUSTRALIA",
-				
-				"CHINA",
-				
-				"ENGLAND",
-				
-				"FRANCE",
-				
-				"HONG KONG",
-				
-				"HONG KONG NEW TERRITORIES",
-				
-				"INDONESIA",
-				
-				"IRELAND",
-				
-				"JAPAN",
-				
-				"MALAYSIA",
-				
-				"NEW ZEALAND",
-				
-				"PHILLIPINES",
-				
-				"SIGNAPORE",
-				
-				"SCOTLAND",
-				
-				"SINGAPORE",
-				
-				"SRI LANKA",
-				
-				"STH AFRICA",
-				
-				"SWITZERLAND",
-				
-				"THAILAND",
-				
-				"U K",
-				
-				"UK",
-				
-				"UNITED KINGDOM",
-				
-				"UNITED STATES OF AMERICA",
-				
-				"USA",
-				
-				"VIETNAM"));
-		
-		//remove case-insensitive
-		private static String removeText(String input, String remove) {
-			return input.replaceAll(String.format("(?i)%s", remove), "").trim();
-		}
-		
-		private static Map<String, String> splitAddress(String input) {
-			Map<String, String> result = new HashMap<>();
-			
-			String address = input.trim();
-			String suburb = "";
-			String state = "";
-			String postcode = "";
-			String country = "";
-			
-			// if address end with postal code
-			// sample: "Racecourse 1 Turf Club Avenue SINGAPORE 738078" "26 Melliodora Crescent GREENSBOROUGH 3088 VIC"
-			String number = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
-			if (!isEmpty(number)) {
-				postcode = number;
-				address = removeText(address, postcode);
-			}
-			
-			// if this address belong to other countries (not Australia)
-			for (String c : TRAINER_COUNTRIES) {
-				if (address.toUpperCase().endsWith(c)) {
-					country = c;
-					break;
-				}
-			}
-			
-			if (!isEmpty(country)) {
-				try {
-					address = removeText(address, country);
-				} catch (Exception e) {
-					logger.error("Error here {} >> {}", address, country);
-				}
-			}
-			
-			if (isEmpty(postcode)) {
-				number = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
-				if (!isEmpty(number)) {
-					postcode = number;
-					address = removeText(address, postcode);
-				}
-			}
-			
-			// try to detect Australia address (contain provided states)
-			Pattern ardexAddressPattern = Pattern.compile(ARDEX_ADDRESS_PATTERN);
-			Matcher matcher = ardexAddressPattern.matcher(address);
-			
-			// pattern matched (contain Australia states)
-			if (matcher.matches()) {
-				country = "Australia";
-				
-				// group 2 is state info
-				state = matcher.group(2).trim();
-				address = removeText(address, state);
-				
-				// sample 1: "26 Melliodora Crescent GREENSBOROUGH 3088"
-				// sample 2: "Ngaroma 736 Windellama Road SUNDARY"
-				String beforeStateText = matcher.group(1).trim();
-				
-				if (isEmpty(postcode)) {
-					// extract postal code >> 4 digits at end of text (postal code is before state)
-					postcode = StringHelper.extract(beforeStateText, POSTAL_CODE_PATTERN_1);
-					
-					// reduce address if found postal code
-					if (!isEmpty(postcode)) {
-						address = removeText(beforeStateText, postcode);
-					} else {
-						// this case postal code is after state)
-						address = beforeStateText;
-					}
-				}
-				
-				// in group 1 we can extract suburb info >> all-upper-case text
-				// sample: "GREENSBOROUGH"
-				if (!isEmpty(address)) {
-					
-					// only can extract suburb if text mix beetween lower case and upper case
-					// sample: 26 Melliodora Crescent GREENSBOROUGH >> extract "GREENSBOROUGH"
-					if (!isEmpty(StringHelper.extract(address, ".*([a-z]).*"))) {
-						suburb = StringHelper.extract(address, SUBURB_PATTERN);
-						
-						// continue reduce address if found suburd
-						if (!isEmpty(suburb))
-							address = removeText(address, suburb);
-					}
-				}
-			} else {
-				// process for other countries
-				
-				// try to extract postal code & suburb info
-				if (!isEmpty(address)) {
-					if (isEmpty(postcode)) {
-						// extract post code number if available
-						postcode = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
-						
-						// remain text: "11-1, Roppongi 6-Chroe Minato-ku TOKYO"
-						if (!isEmpty(postcode))
-							address = removeText(address, postcode);
-					}
-					
-					// extract suburb if available (consecutive upper case text)
-					if (!isEmpty(address)) {
-						// only can extract suburb if text mix beetween lower case and upper case
-						// sample: 26 Melliodora Crescent GREENSBOROUGH >> extract "GREENSBOROUGH"
-						if (!isEmpty(StringHelper.extract(address, ".*([a-z]).*"))) {
-							suburb = StringHelper.extract(address, SUBURB_PATTERN);
-							
-							if (!isEmpty(suburb))
-								address = removeText(address, suburb);
-							
-							// try to extract postcal code if available
-							if (!isEmpty(address) && isEmpty(postcode)) {
-								postcode = StringHelper.extract(address, POSTAL_CODE_PATTERN_1);
-								if (!isEmpty(postcode))
-									address = removeText(address, postcode);
-							}
-						}
-					}
-				}
-			}
-			
-			result.put("address", address);
-			result.put("suburb", suburb);
-			result.put("state", state);
-			result.put("postcode", postcode);
-			result.put("country", country);
-			
-			return result;
-		}
 		
 		@Override
 		public Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException {
@@ -358,7 +159,7 @@
 				List<String> csvData = this.getCsvData(ownerFile);
 				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
-				String sb = null;
+				StringBuilder streamBuilder = new StringBuilder();
 	
 				String ownerErrorData = EMPTY;
 	
@@ -382,10 +183,11 @@
 					// COUNRTY
 					// GST = "true/false" or ot "T/F" or "Y/N"
 					// -------------------------------------------------------------
-	
-					String headerLine = csvData.stream().filter(i -> Stream.of("Name", "Address", "Phone", "Mobile")
-							.anyMatch(u -> containsIgnoreCase(i, u)))
-							.findFirst().orElse("");
+					
+					String headerLine = csvData.stream().filter(
+							i -> Stream.of("Name", "Address", "Phone", "Mobile")
+									.anyMatch(u -> containsIgnoreCase(i, u))
+					).findFirst().orElse("");
 							
 					String[] header = readCsvLine(headerLine);
 	
@@ -405,12 +207,6 @@
 					int postCodeIndex = checkColumnIndex(header, "PostCode");
 					int countryIndex = checkColumnIndex(header, "Country");
 					int gstIndex = checkColumnIndex(header, "GST");
-					
-					List<Integer> indexes = Arrays.asList(ownerIdIndex, emailIndex, financeEmailIndex, firstNameIndex,
-							lastNameIndex,
-							displayNameIndex, typeIndex, mobileIndex, phoneIndex, faxIndex, addressIndex, cityIndex,
-							stateIndex,
-							postCodeIndex, countryIndex, gstIndex);
 					
  					builder.append(HORSE_FILE_HEADER);
 					
@@ -432,10 +228,11 @@
 							.orElse(header).length;
 					
 					Multimap<Integer, List<String>> checkedDataMap = Stream.iterate(0, n -> n + 1)
-							.limit(rowLength - 1)
+							.limit(rowLength)
 							.map(i -> new SimpleImmutableEntry<>(i, finalCsvData.stream()
 									.filter(StringUtils::isNotEmpty)
 									.filter(line -> (!line.matches("^(,+)$")))
+									.filter(line -> (!line.matches("(.+)([\\d]+)\\sRecords(.+)")))
 									.map(line -> {
 										String[] r = readCsvLine(line);
 										return getCsvCellValue(r, i);
@@ -484,13 +281,31 @@
 						}
 					}
 					
+					//first cell in column as header
 					Map<String, List<String>> csvDataHeaderAsKey = formattedDataMap.entrySet().stream()
 							.filter(e-> isNotEmpty(e.getValue().get(0)))
 							.collect(toMap(e-> e.getValue().get(0), Map.Entry::getValue));
 					
-					String HORSE_FILE_HEADER = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-							"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName", "Type",
-							"Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode", "Country", "GST");
+					List<String> headerList = Arrays.asList("Address", "Suburb", "State", "PostCode", "Country");
+					List<List<String>> splitAddressList = csvDataHeaderAsKey.get("Address").stream().skip(1).map(i -> {
+						Map<String, String> splitAddress = OwnerSplitAddress.splitAddress(i);
+						String address = Optional.ofNullable(splitAddress.get("address")).orElse("");
+						String suburb = Optional.ofNullable(splitAddress.get("suburb")).orElse("");
+						String state = Optional.ofNullable(splitAddress.get("state")).orElse("");
+						String postcode = Optional.ofNullable(splitAddress.get("postcode")).orElse("");
+						String country = Optional.ofNullable(splitAddress.get("country")).orElse("");
+						return Arrays.asList(address, suburb, state, postcode, country);
+					}).collect(Collectors.toList());
+					
+					//Add header
+					splitAddressList.add(0, headerList);
+					
+					List<List<String>> transposeAddress = IntStream.range(0, splitAddressList.get(0).size())
+							.mapToObj(i -> splitAddressList.stream().map(l -> l.get(i))
+									.collect(Collectors.toList())
+							).collect(Collectors.toList());
+					
+					System.out.println(transposeAddress);
 					
 					Map<String, List<String>> headerMap = new LinkedHashMap<>();
 					
@@ -520,8 +335,10 @@
 					
 					Map<String, List<String>> ownerDataMap = headerMap.keySet().stream().map(standardHeader -> {
 						Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
-								.filter(csvHeader -> containsIgnoreCase(standardHeader, csvHeader))
+								.filter(csvHeader ->
+										this.stringContainsIgnoreCase(standardHeader, csvHeader, ","))
 								.findFirst();
+						
 						return matchHeaderKey.map(key ->
 								new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0), csvDataHeaderAsKey.get(key))
 							).orElseGet(
@@ -529,7 +346,8 @@
 									Stream.of(headerMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
 											.flatMap(Collection::stream).collect(toList()))
 							);
-					}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (m, n) -> m, LinkedHashMap::new));
+					}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue,
+							(m, n) -> m, LinkedHashMap::new));
 					
 					//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
 					List<Iterator<String>> iterList = new ArrayList<>(ownerDataMap.values()).stream()
@@ -542,10 +360,8 @@
 									.collect(Collectors.toList()))
 							.collect(Collectors.toList());
 					
-					System.out.println(transposeList);
-					
 					//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
-					sb = transposeList.stream()
+					String allLiner = transposeList.stream()
 							.map(l -> l.stream().collect(() -> new StringJoiner(","),
 											StringJoiner::add,
 											StringJoiner::merge))
@@ -553,77 +369,77 @@
 									StringJoiner::merge,
 									StringJoiner::merge).toString();
 					
-					System.out.println(sb);
+					streamBuilder = new StringBuilder(allLiner);
 					
-					for (String line : csvData) {
-						if (isEmpty(line)) continue;
-	
-						if (line.matches("^(,+)$")) continue;;
-						
-						String[] r = readCsvLine(line);
-	
-						//rows will be ignored like:
-						//,,,,
-						//162 Records,,,,
-	
-						StringBuilder ignoreRowBuilder = new StringBuilder();
-						for (String s : r) {
-							ignoreRowBuilder.append(s);
-						}
-						if (isEmpty(ignoreRowBuilder.toString())) continue;
-	
-						if (isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
-							logger.info("\n*******************Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
-							continue;
-						}
-	
-						String ownerId = getCsvCellValue(r, ownerIdIndex);
-						String email = getCsvCellValue(r, emailIndex);
-						String financeEmail = getCsvCellValue(r, financeEmailIndex);
-						String firstName = getCsvCellValue(r, firstNameIndex);
-						String lastName = getCsvCellValue(r, lastNameIndex);
-						String displayName = getCsvCellValue(r, displayNameIndex);
-						String type = getCsvCellValue(r, typeIndex);
-	
-						String mobile = getCsvCellValue(r, mobileIndex);
-	
-						String phone = getCsvCellValue(r, phoneIndex);
-	
-						String fax = getCsvCellValue(r, faxIndex);
-						String address = getCsvCellValue(r, addressIndex);
-						String city = getCsvCellValue(r, cityIndex);
-						String state = getCsvCellValue(r, stateIndex);
-						String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
-						String country = getCsvCellValue(r, countryIndex);
-						String gst = getCsvCellValue(r, gstIndex);
-	
-						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-								StringHelper.csvValue(ownerId),
-								StringHelper.csvValue(email),
-								StringHelper.csvValue(financeEmail),
-								StringHelper.csvValue(firstName),
-								StringHelper.csvValue(lastName),
-								StringHelper.csvValue(displayName),
-								StringHelper.csvValue(type),
-								StringHelper.csvValue(mobile),
-								StringHelper.csvValue(phone),
-								StringHelper.csvValue(fax),
-								StringHelper.csvValue(address),
-								StringHelper.csvValue(city),
-								StringHelper.csvValue(state),
-								StringHelper.csvValue(postCode),
-								StringHelper.csvValue(country),
-								StringHelper.csvValue(gst)
-						);
-						
-						//ignore non-data line.
-						if (isEmpty(
-								rowBuilder.replaceAll("[\",\\s]+", "")
-						)) continue;
-						
-						preparedData.add(rowBuilder);
-						builder.append(rowBuilder);
-					}
+//					for (String line : csvData) {
+//						if (isEmpty(line)) continue;
+//
+//						if (line.matches("^(,+)$")) continue;;
+//
+//						String[] r = readCsvLine(line);
+//
+//						//rows will be ignored like:
+//						//,,,,
+//						//162 Records,,,,
+//
+//						StringBuilder ignoreRowBuilder = new StringBuilder();
+//						for (String s : r) {
+//							ignoreRowBuilder.append(s);
+//						}
+//						if (isEmpty(ignoreRowBuilder.toString())) continue;
+//
+//						if (isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
+//							logger.info("\n*******************Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
+//							continue;
+//						}
+//
+//						String ownerId = getCsvCellValue(r, ownerIdIndex);
+//						String email = getCsvCellValue(r, emailIndex);
+//						String financeEmail = getCsvCellValue(r, financeEmailIndex);
+//						String firstName = getCsvCellValue(r, firstNameIndex);
+//						String lastName = getCsvCellValue(r, lastNameIndex);
+//						String displayName = getCsvCellValue(r, displayNameIndex);
+//						String type = getCsvCellValue(r, typeIndex);
+//
+//						String mobile = getCsvCellValue(r, mobileIndex);
+//
+//						String phone = getCsvCellValue(r, phoneIndex);
+//
+//						String fax = getCsvCellValue(r, faxIndex);
+//						String address = getCsvCellValue(r, addressIndex);
+//						String city = getCsvCellValue(r, cityIndex);
+//						String state = getCsvCellValue(r, stateIndex);
+//						String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
+//						String country = getCsvCellValue(r, countryIndex);
+//						String gst = getCsvCellValue(r, gstIndex);
+//
+//						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+//								StringHelper.csvValue(ownerId),
+//								StringHelper.csvValue(email),
+//								StringHelper.csvValue(financeEmail),
+//								StringHelper.csvValue(firstName),
+//								StringHelper.csvValue(lastName),
+//								StringHelper.csvValue(displayName),
+//								StringHelper.csvValue(type),
+//								StringHelper.csvValue(mobile),
+//								StringHelper.csvValue(phone),
+//								StringHelper.csvValue(fax),
+//								StringHelper.csvValue(address),
+//								StringHelper.csvValue(city),
+//								StringHelper.csvValue(state),
+//								StringHelper.csvValue(postCode),
+//								StringHelper.csvValue(country),
+//								StringHelper.csvValue(gst)
+//						);
+//
+//						//ignore non-data line.
+//						if (isEmpty(
+//								rowBuilder.replaceAll("[\",\\s]+", "")
+//						)) continue;
+//
+//						preparedData.add(rowBuilder);
+//						builder.append(rowBuilder);
+//					}
 	
 					ownerErrorData = CsvHelper.validateInputFile(preparedData);
 				}
@@ -632,8 +448,7 @@
 				FileHelper.writeDataToFile(errorDataPath, ownerErrorData.getBytes());
 	
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
-				//FileHelper.writeDataToFile(path, builder.toString().getBytes());
-				FileHelper.writeDataToFile(path, sb.getBytes());
+				FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
 	
 				return builder;
 			} catch (IOException e) {
@@ -641,9 +456,186 @@
 			}
 			return null;
 		}
-	
-		public void insertColumn(List<String> column) {
 		
+		@Override
+		public Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException {
+			List<String> csvData = this.getCsvData(ownerFile);
+			StringBuilder streamBuilder = new StringBuilder();
+			
+			if (!CollectionUtils.isEmpty(csvData)) {
+				
+				String headerLine = csvData.stream().filter(
+						i -> Stream.of("Name", "Address", "Phone", "Mobile")
+								.anyMatch(u -> containsIgnoreCase(i, u))
+				).findFirst().orElse("");
+				
+				String[] header = readCsvLine(headerLine);
+				
+				AtomicInteger atomicInteger = new AtomicInteger(0);
+				final Integer[] headerLineNumber = {null};
+				csvData.forEach(s -> {
+					atomicInteger.getAndIncrement();
+					if (s.equals(headerLine)) {
+						headerLineNumber[0] = atomicInteger.intValue();
+					}
+				});
+				
+				Integer headerLineNum = headerLineNumber[0];
+				csvData = csvData.stream().skip(headerLineNum - 1).collect(toList());
+				
+				List<String> finalCsvData = csvData;
+				String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
+				int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
+						.orElseThrow(IllegalAccessError::new).length;
+				
+				Multimap<Integer, List<String>> filterDataMap = Stream.iterate(0, n -> n + 1)
+						.limit(rowLength)
+						.map(i -> new SimpleImmutableEntry<>(i, finalCsvData.stream()
+								.filter(StringUtils::isNotEmpty)
+								.filter(line -> (!line.matches("^(,+)$")))
+								.filter(line -> (!line.matches("(.+)([\\d]+)\\sRecords(.+)")))
+								.map(line -> {
+									String[] r = readCsvLine(line);
+									return getCsvCellValue(r, i);
+								}).collect(toList())))
+						.collect(MultimapCollector.toMultimap(Map.Entry::getKey, Map.Entry::getValue));
+				
+				List<Map.Entry<Integer, List<String>>> entries = filterDataMap.entries().stream()
+						.filter(i -> (i.getValue().stream().distinct().count() > 2 || isNotEmpty(i.getValue().get(0))))
+						.collect(toList());
+				
+				//process for case header and data in separate col in csv.
+				Map<Integer, List<String>> formattedDataMap = new LinkedHashMap<>();
+				for (Map.Entry<Integer, List<String>> entry : entries) {
+					Integer entryKey = entry.getKey();
+					List<String> entryValue = entry.getValue();
+					
+					if ((entries.indexOf(entry) >= entries.size() - 1) || (entries.indexOf(entry) == 0)) {
+						formattedDataMap.put(entryKey, entryValue);
+						continue;
+					}
+					
+					Map.Entry<Integer, List<String>> nextEntry = entries.get(entries.indexOf(entry) + 1);
+					Integer nextEntryKey = nextEntry.getKey();
+					List<String> nextEntryValue = nextEntry.getValue();
+					
+					Optional<Map.Entry<Integer, List<String>>> previousEntry =
+							Optional.ofNullable(entries.get(entries.indexOf(entry) - 1));
+					boolean isHavePreKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
+					boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
+					
+					//join two consecutive column in csv, one has header missing body, one has body missing header.
+					if (isConsecutive && !isHavePreKey
+							&& entries.indexOf(entry) != 0
+							&& isNotEmpty(entryValue.get(0))
+							&& entryValue.stream().distinct().count() < 3
+							&& isEmpty(nextEntryValue.get(0))
+							&& nextEntryValue.stream().distinct().count() > 2) {
+						
+						List<String> mergedEntryValue = Stream.iterate(0, i -> i + 1).limit(entryValue.size())
+								.map(i -> entryValue.get(i).concat(nextEntryValue.get(i)).trim())
+								.collect(toList());
+						
+						formattedDataMap.put(nextEntryKey, mergedEntryValue);
+					} else {
+						formattedDataMap.putIfAbsent(entryKey, entryValue);
+					}
+				}
+				
+				//first cell in column as header
+				Map<String, List<String>> csvDataHeaderAsKey = formattedDataMap.entrySet().stream()
+						.filter(e-> isNotEmpty(e.getValue().get(0)))
+						.collect(toMap(e-> e.getValue().get(0), Map.Entry::getValue));
+				
+				List<String> headerList = Arrays.asList("Address", "Suburb", "State", "PostCode", "Country");
+				List<List<String>> splitAddressList = csvDataHeaderAsKey.get("Address").stream().skip(1).map(i -> {
+					Map<String, String> splitAddress = OwnerSplitAddress.splitAddress(i);
+					String address = Optional.ofNullable(splitAddress.get("address")).orElse("");
+					String suburb = Optional.ofNullable(splitAddress.get("suburb")).orElse("");
+					String state = Optional.ofNullable(splitAddress.get("state")).orElse("");
+					String postcode = Optional.ofNullable(splitAddress.get("postcode")).orElse("");
+					String country = Optional.ofNullable(splitAddress.get("country")).orElse("");
+					return Arrays.asList(address, suburb, state, postcode, country);
+				}).collect(Collectors.toList());
+				
+				//Add header
+				splitAddressList.add(0, headerList);
+				
+				List<List<String>> transposeAddress = IntStream.range(0, splitAddressList.get(0).size())
+						.mapToObj(i -> splitAddressList.stream().map(l -> l.get(i))
+								.collect(Collectors.toList())
+						).collect(Collectors.toList());
+				
+				System.out.println(transposeAddress);
+				
+				Map<String, List<String>> headerMap = new LinkedHashMap<>();
+				
+				headerMap.put("OwnerID", singletonList("OwnerID"));
+				headerMap.put("Email", singletonList("Email"));
+				headerMap.put("FinanceEmail", singletonList("FinanceEmail"));
+				headerMap.put("FirstName, First Name", singletonList("FirstName"));
+				headerMap.put("LastName, Last Name", singletonList("LastName"));
+				headerMap.put("DisplayName, Name, Display Name", singletonList("DisplayName"));
+				headerMap.put("Type", singletonList("Type"));
+				headerMap.put("Mobile", singletonList("Mobile"));
+				headerMap.put("Phone", singletonList("Phone"));
+				headerMap.put("Fax", singletonList("Fax"));
+				headerMap.put("Address", singletonList("Address"));
+				headerMap.put("City", singletonList("City"));
+				headerMap.put("State", singletonList("State"));
+				headerMap.put("PostCode", singletonList("PostCode"));
+				headerMap.put("Country", singletonList("Country"));
+				headerMap.put("GST", singletonList("GST"));
+				
+				int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
+						.max(Comparator.comparingInt(i -> i)).orElse(0);
+				
+				//Returns an infinite sequential ordered
+				List<String> orderStream = Stream.iterate(0, i -> i + 1).limit(headerMap.entrySet().size())
+						.map(u -> new ArrayList<>(headerMap.keySet()).get(u)).collect(toList());
+				
+				Map<String, List<String>> ownerDataMap = headerMap.keySet().stream().map(standardHeader -> {
+					Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
+							.filter(csvHeader ->
+									this.stringContainsIgnoreCase(standardHeader, csvHeader, ","))
+							.findFirst();
+					
+					return matchHeaderKey.map(key ->
+							new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0), csvDataHeaderAsKey.get(key))
+					).orElseGet(
+							() -> new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0),
+									Stream.of(headerMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
+											.flatMap(Collection::stream).collect(toList()))
+					);
+				}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue,
+						(m, n) -> m, LinkedHashMap::new));
+				
+				//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
+				List<Iterator<String>> iterList = new ArrayList<>(ownerDataMap.values()).stream()
+						.map(List::iterator).collect(Collectors.toList());
+				
+				List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
+						.mapToObj(n -> iterList.stream()
+								.filter(Iterator::hasNext)
+								.map(Iterator::next)
+								.collect(Collectors.toList()))
+						.collect(Collectors.toList());
+				
+				//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
+				String allLiner = transposeList.stream()
+						.map(l -> l.stream().collect(() -> new StringJoiner(","),
+								StringJoiner::add,
+								StringJoiner::merge))
+						.collect(() -> new StringJoiner("\n"),
+								StringJoiner::merge,
+								StringJoiner::merge).toString();
+				
+				streamBuilder = new StringBuilder(allLiner);
+				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
+				FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
+				return streamBuilder;
+			}
+			return null;
 		}
 		
 		private Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {

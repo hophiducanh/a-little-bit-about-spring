@@ -87,6 +87,19 @@ public class NoteController {
 		return new ResponseEntity<>(result, new HttpHeaders(), HttpStatus.OK);
 	}
 	
+	@PostMapping(value = "/owner/v2")
+	public final ResponseEntity<Object> formatOwnerV2(@RequestPart MultipartFile ownerFile,
+	                                                        @RequestParam String dirName) {
+		Object result = null;
+		try {
+			result = noteService.formatOwnerV2(ownerFile, dirName);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return new ResponseEntity<>(result, new HttpHeaders(), HttpStatus.OK);
+	}
+	
 	@RequestMapping(value = "/owner/automate-import-horse", method = RequestMethod.POST)
 	@ResponseBody
 	public final ResponseEntity<Object> automateImportHorse(@RequestPart MultipartFile horseFile,
