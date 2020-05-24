@@ -49,7 +49,7 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 		return null;
 	}
 	
-	public static void main(String[] args) throws IOException {
+	public void main(String[] args) throws IOException {
 		//https://mkyong.com/java/itext-read-and-write-pdf-in-java/
 		
 		String filePath = "src/main/resources/pdf-files/onboarding.pdf";
@@ -94,13 +94,13 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 			for (String location : locationList) {
 				locationBuilder.append(location).append("\n");
 			}
-//			Files.write(Paths.get("src/main/resources/masterdata/location.csv"),
-//					Collections.singleton(locationBuilder));
+			Files.write(Paths.get("src/main/resources/masterdata/location.csv"),
+					Collections.singleton(locationBuilder));
 			
 			//-------------------------------------------------------------
 			
-			String statusSegment = StringUtils
-					.substringBetween(data, "eg., Full Training, Pre-Training, Spelling", "BARN AND BOX LIST");
+			String statusSegment = StringUtils.substringBetween(data, "eg., Full Training, Pre-Training, Spelling",
+					"BARN AND BOX LIST");
 			
 			List<String> statusList = Arrays.stream(statusSegment.split("\n"))
 					.filter(StringUtils::isNotEmpty)
@@ -110,13 +110,58 @@ public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {
 			for (String status : statusList) {
 				statusBuilder.append(status).append("\n");
 			}
-//			Files.write(Paths.get("src/main/resources/masterdata/status.csv"),
-//					Collections.singleton(statusBuilder));
+			Files.write(Paths.get("src/main/resources/masterdata/status.csv"),
+					Collections.singleton(statusBuilder));
 		
+			//--------------------------------------------------------------
+			
+			String barnboxSegment = StringUtils.substringBetween(data, "ie., Barn\nA, 1-20", "+\nTRACKWORK SET UP");
+			
+			List<String> barnboxList = Arrays.stream(barnboxSegment.split("\n"))
+					.filter(StringUtils::isNotEmpty)
+					.collect(Collectors.toList());
+			
+			StringBuilder barnboxBuilder = new StringBuilder("Location Name, Barn Name, Box Min Number, Box Max Number\n");
+			
+			barnboxList.forEach(banbox -> {
+				Matcher matcher = Pattern.compile("^(.+)(\\d+)\\s(\\w+)\\s(\\d+)(.+)$").matcher(banbox);
+				String locationName = "";
+				String barnName = "";
+				String boxMinNumber = "";
+				String boxMaxNumber = "";
+				if (matcher.find()) {
+					barnName = matcher.group(1).trim();
+					boxMinNumber = matcher.group(2).trim();
+					boxMaxNumber = matcher.group(4).trim();
+				}
+				barnboxBuilder.append(locationName).append(",").append(barnName).append(",").append(boxMinNumber).append(",")
+						.append(boxMaxNumber).append("\n");
+			});
+			
+			Files.write(Paths.get("src/main/resources/masterdata/barnbox.csv"),
+					Collections.singleton(barnboxBuilder));
+			
+			//---------------------------------------------------------------
+			
+			//pre-work: 1
+			//work: 2
+			//post-work: 3
+			StringBuilder trackworkBuilder = new StringBuilder("Type, Name\n");
+			this.getMasterDataElements(data, "Pre-Work you have for your Horses, eg., Treadmill",
+					"Please provide a list of all the various Work", "\n").forEach(prework -> {
+				trackworkBuilder.append("1").append(prework.trim()).append("\n");
+			});
+			
+			
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		
-		
+	}
+	
+	private List<String> getMasterDataElements(String src, String prefix, String suffix, String delimiter) {
+		return Arrays.stream(StringUtils.substringBetween(src,prefix, suffix).split(delimiter))
+				.filter(StringUtils::isNotEmpty)
+				.collect(Collectors.toList());
 	}
 }
