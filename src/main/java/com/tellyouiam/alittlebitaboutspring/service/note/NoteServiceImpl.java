@@ -28,6 +28,8 @@
 	import java.util.*;
 	import java.util.AbstractMap.SimpleImmutableEntry;
 	import java.util.concurrent.atomic.AtomicInteger;
+	import java.util.function.BinaryOperator;
+	import java.util.function.Predicate;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
 	import java.util.regex.Pattern;
@@ -293,43 +295,34 @@
 			
 			if (!CollectionUtils.isEmpty(csvData)) {
 				
-				String headerLine = csvData.stream().filter(
-						i -> Stream.of("Name", "Address", "Phone", "Mobile")
-								.anyMatch(u -> containsIgnoreCase(i, u))
-				).findFirst().orElse("");
+				//filter non-data row.
+				csvData = csvData.stream().filter(StringUtils::isNotEmpty)
+						.filter(row -> (!row.matches("^(,+)$")))
+						.filter(row -> (!row.matches("(.+)([\\d]+)\\sRecords(.+)")))
+						.collect(toList());
 				
-				String[] header = readCsvLine(headerLine);
+				//find line is header
+				Predicate<String> isLineContainHeader = line -> Stream.of("Name", "Address", "Phone", "Mobile")
+						.anyMatch(headerElement -> containsIgnoreCase(line, headerElement));
 				
-				AtomicInteger atomicInteger = new AtomicInteger(0);
-				final Integer[] headerLineNumber = {null};
-				csvData.forEach(s -> {
-					atomicInteger.getAndIncrement();
-					if (s.equals(headerLine)) {
-						headerLineNumber[0] = atomicInteger.intValue();
-					}
-				});
-				
-				Integer headerLineNum = headerLineNumber[0];
-				csvData = csvData.stream().skip(headerLineNum - 1).collect(toList());
+				String headerLine = csvData.stream().filter(isLineContainHeader).findFirst().orElse("");
+				int headerLineNum = csvData.indexOf(headerLine);
+				csvData = csvData.stream().skip(headerLineNum).collect(toList());
 				
 				List<String> finalCsvData = csvData;
 				String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
 				int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
 						.orElseThrow(IllegalAccessError::new).length;
 				
-				Multimap<Integer, List<String>> filterDataMap = Stream.iterate(0, n -> n + 1)
-						.limit(rowLength)
+				Multimap<Integer, List<String>> filteredDataMap = Stream.iterate(0, n -> n + 1).limit(rowLength)
 						.map(i -> new SimpleImmutableEntry<>(i, finalCsvData.stream()
-								.filter(StringUtils::isNotEmpty)
-								.filter(line -> (!line.matches("^(,+)$")))
-								.filter(line -> (!line.matches("(.+)([\\d]+)\\sRecords(.+)")))
 								.map(line -> {
 									String[] r = readCsvLine(line);
 									return getCsvCellValue(r, i);
 								}).collect(toList())))
 						.collect(MultimapCollector.toMultimap(Map.Entry::getKey, Map.Entry::getValue));
 				
-				List<Map.Entry<Integer, List<String>>> entries = filterDataMap.entries().stream()
+				List<Map.Entry<Integer, List<String>>> entries = filteredDataMap.entries().stream()
 						.filter(i -> (i.getValue().stream().distinct().count() > 2 || isNotEmpty(i.getValue().get(0))))
 						.collect(toList());
 				
@@ -350,11 +343,11 @@
 					
 					Optional<Map.Entry<Integer, List<String>>> previousEntry =
 							Optional.ofNullable(entries.get(entries.indexOf(entry) - 1));
-					boolean isHavePreKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
+					boolean isHavePreviousKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
 					boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
 					
 					//join two consecutive column in csv, one has header missing body, one has body missing header.
-					if (isConsecutive && !isHavePreKey
+					if (isConsecutive && !isHavePreviousKey
 							&& entries.indexOf(entry) != 0
 							&& isNotEmpty(entryValue.get(0))
 							&& entryValue.stream().distinct().count() < 3
@@ -374,11 +367,11 @@
 				//first cell in column as header
 				Map<String, List<String>> csvDataHeaderAsKey = formattedDataMap.entrySet().stream()
 						.filter(e-> isNotEmpty(e.getValue().get(0)))
-						.collect(toMap(e-> e.getValue().get(0), Map.Entry::getValue));
+						.collect(toMap(e -> e.getValue().get(0), Map.Entry::getValue));
 				
 				List<String> headerList = Arrays.asList("Address", "Suburb", "State", "PostCode", "Country");
-				List<List<String>> splitAddressList = csvDataHeaderAsKey.get("Address").stream().skip(1).map(i -> {
-					Map<String, String> splitAddress = OwnerSplitAddress.splitAddress(i);
+				List<List<String>> splitAddressList = csvDataHeaderAsKey.get("Address").stream().skip(1).map(rawAddress -> {
+					Map<String, String> splitAddress = OwnerSplitAddress.splitAddress(rawAddress);
 					String address = Optional.ofNullable(splitAddress.get("address")).orElse("");
 					String suburb = Optional.ofNullable(splitAddress.get("suburb")).orElse("");
 					String state = Optional.ofNullable(splitAddress.get("state")).orElse("");
@@ -390,12 +383,18 @@
 				//Add header
 				splitAddressList.add(0, headerList);
 				
-				List<List<String>> transposeAddress = IntStream.range(0, splitAddressList.get(0).size())
+				List<List<String>> transposedAddressList = IntStream.range(0, splitAddressList.get(0).size())
 						.mapToObj(i -> splitAddressList.stream().map(l -> l.get(i))
 								.collect(Collectors.toList())
 						).collect(Collectors.toList());
 				
-				System.out.println(transposeAddress);
+				Map<String, List<String>> addressMap = transposedAddressList.stream()
+						.collect(toMap(i -> i.get(0), u -> u));
+				
+				long distinctPostCode = csvDataHeaderAsKey.getOrDefault("PostCode", singletonList("")).stream().distinct().count();
+				BinaryOperator<List<String>> mergeFunction = (newValue, oldValue) -> distinctPostCode == 1 ? oldValue : newValue;
+				csvDataHeaderAsKey = Stream.of(csvDataHeaderAsKey, addressMap).flatMap(map -> map.entrySet().stream())
+						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, mergeFunction));
 				
 				Map<String, List<String>> headerMap = new LinkedHashMap<>();
 				
@@ -406,7 +405,7 @@
 				headerMap.put("LastName, Last Name", singletonList("LastName"));
 				headerMap.put("DisplayName, Name, Display Name", singletonList("DisplayName"));
 				headerMap.put("Type", singletonList("Type"));
-				headerMap.put("Mobile", singletonList("Mobile"));
+				headerMap.put("Mobile, Mobile Phone", singletonList("Mobile"));
 				headerMap.put("Phone", singletonList("Phone"));
 				headerMap.put("Fax", singletonList("Fax"));
 				headerMap.put("Address", singletonList("Address"));
@@ -417,34 +416,30 @@
 				headerMap.put("GST", singletonList("GST"));
 				
 				int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
-						.max(Comparator.comparingInt(i -> i)).orElse(0);
+						.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
 				
-				//Returns an infinite sequential ordered
-				List<String> orderStream = Stream.iterate(0, i -> i + 1).limit(headerMap.entrySet().size())
-						.map(u -> new ArrayList<>(headerMap.keySet()).get(u)).collect(toList());
-				
+				Map<String, List<String>> finalCsvDataHeaderAsKey = csvDataHeaderAsKey;
 				Map<String, List<String>> ownerDataMap = headerMap.keySet().stream().map(standardHeader -> {
-					Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
+					Optional<String> matchHeaderKey = finalCsvDataHeaderAsKey.keySet().stream()
 							.filter(csvHeader ->
 									this.stringContainsIgnoreCase(standardHeader, csvHeader, ","))
 							.findFirst();
 					
 					return matchHeaderKey.map(key ->
-							new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0), csvDataHeaderAsKey.get(key))
+							new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0), finalCsvDataHeaderAsKey.get(key))
 					).orElseGet(
 							() -> new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0),
 									Stream.of(headerMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
 											.flatMap(Collection::stream).collect(toList()))
 					);
-				}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue,
-						(m, n) -> m, LinkedHashMap::new));
+				}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (m, n) -> m, LinkedHashMap::new));
 				
 				//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
-				List<Iterator<String>> iterList = new ArrayList<>(ownerDataMap.values()).stream()
+				List<Iterator<String>> iteratorDataList = new ArrayList<>(ownerDataMap.values()).stream()
 						.map(List::iterator).collect(Collectors.toList());
 				
 				List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
-						.mapToObj(n -> iterList.stream()
+						.mapToObj(n -> iteratorDataList.stream()
 								.filter(Iterator::hasNext)
 								.map(Iterator::next)
 								.collect(Collectors.toList()))
@@ -452,14 +447,13 @@
 				
 				//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
 				String allLiner = transposeList.stream()
-						.map(l -> l.stream().collect(() -> new StringJoiner(","),
-								StringJoiner::add,
-								StringJoiner::merge))
-						.collect(() -> new StringJoiner("\n"),
-								StringJoiner::merge,
-								StringJoiner::merge).toString();
+						.map(l -> l.stream().map(StringHelper::csvValue).collect(() ->
+								new StringJoiner(","), StringJoiner::add, StringJoiner::merge))
+						.filter(m -> !m.toString().chars().distinct().mapToObj(c -> String.valueOf((char)c)).collect(Collectors.joining()).equals("\","))
+						.collect(() ->
+								new StringJoiner("\n"), StringJoiner::merge, StringJoiner::merge).toString();
 				
-				streamBuilder = new StringBuilder(allLiner);
+				streamBuilder.append(allLiner);
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
 				FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
 				return streamBuilder;
