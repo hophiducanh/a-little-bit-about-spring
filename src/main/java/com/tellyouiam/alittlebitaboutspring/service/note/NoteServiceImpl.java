@@ -38,6 +38,7 @@
 	import java.util.stream.Stream;
 	
 	import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.*;
+	import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.*;
 	import static java.time.temporal.ChronoField.*;
 	import static java.util.Collections.*;
 	import static java.util.Objects.*;
@@ -250,22 +251,22 @@
 						String gst = getCsvCellValue(r, gstIndex);
 						
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-								StringHelper.csvValue(ownerId),
-								StringHelper.csvValue(email),
-								StringHelper.csvValue(financeEmail),
-								StringHelper.csvValue(firstName),
-								StringHelper.csvValue(lastName),
-								StringHelper.csvValue(displayName),
-								StringHelper.csvValue(type),
-								StringHelper.csvValue(mobile),
-								StringHelper.csvValue(phone),
-								StringHelper.csvValue(fax),
-								StringHelper.csvValue(address),
-								StringHelper.csvValue(city),
-								StringHelper.csvValue(state),
-								StringHelper.csvValue(postCode),
-								StringHelper.csvValue(country),
-								StringHelper.csvValue(gst)
+								csvValue(ownerId),
+								csvValue(email),
+								csvValue(financeEmail),
+								csvValue(firstName),
+								csvValue(lastName),
+								csvValue(displayName),
+								csvValue(type),
+								csvValue(mobile),
+								csvValue(phone),
+								csvValue(fax),
+								csvValue(address),
+								csvValue(city),
+								csvValue(state),
+								csvValue(postCode),
+								csvValue(country),
+								csvValue(gst)
 						);
 						preparedData.add(rowBuilder);
 						
@@ -314,41 +315,39 @@
 				int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
 						.orElseThrow(IllegalAccessError::new).length;
 				
-				Multimap<Integer, List<String>> filteredDataMap = Stream.iterate(0, n -> n + 1).limit(rowLength)
+				//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
+				List<Map.Entry<Integer, List<String>>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
 						.map(i -> new SimpleImmutableEntry<>(i, finalCsvData.stream()
 								.map(line -> {
-									String[] r = readCsvLine(line);
+									String[] r = customSplitSpecific(line).toArray(new String[0]);
 									return getCsvCellValue(r, i);
 								}).collect(toList())))
-						.collect(MultimapCollector.toMultimap(Map.Entry::getKey, Map.Entry::getValue));
-				
-				List<Map.Entry<Integer, List<String>>> entries = filteredDataMap.entries().stream()
 						.filter(i -> (i.getValue().stream().distinct().count() > 2 || isNotEmpty(i.getValue().get(0))))
 						.collect(toList());
 				
 				//process for case header and data in separate col in csv.
 				Map<Integer, List<String>> formattedDataMap = new LinkedHashMap<>();
-				for (Map.Entry<Integer, List<String>> entry : entries) {
+				for (Map.Entry<Integer, List<String>> entry : columnEntries) {
 					Integer entryKey = entry.getKey();
 					List<String> entryValue = entry.getValue();
 					
-					if ((entries.indexOf(entry) >= entries.size() - 1) || (entries.indexOf(entry) == 0)) {
+					if ((columnEntries.indexOf(entry) >= columnEntries.size() - 1) || (columnEntries.indexOf(entry) == 0)) {
 						formattedDataMap.put(entryKey, entryValue);
 						continue;
 					}
 					
-					Map.Entry<Integer, List<String>> nextEntry = entries.get(entries.indexOf(entry) + 1);
+					Map.Entry<Integer, List<String>> nextEntry = columnEntries.get(columnEntries.indexOf(entry) + 1);
 					Integer nextEntryKey = nextEntry.getKey();
 					List<String> nextEntryValue = nextEntry.getValue();
 					
 					Optional<Map.Entry<Integer, List<String>>> previousEntry =
-							Optional.ofNullable(entries.get(entries.indexOf(entry) - 1));
+							Optional.ofNullable(columnEntries.get(columnEntries.indexOf(entry) - 1));
 					boolean isHavePreviousKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
 					boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
 					
 					//join two consecutive column in csv, one has header missing body, one has body missing header.
 					if (isConsecutive && !isHavePreviousKey
-							&& entries.indexOf(entry) != 0
+							&& columnEntries.indexOf(entry) != 0
 							&& isNotEmpty(entryValue.get(0))
 							&& entryValue.stream().distinct().count() < 3
 							&& isEmpty(nextEntryValue.get(0))
@@ -563,22 +562,22 @@
 						String nickName = getCsvCellValue(r, nickNameIndex);
 	
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-								StringHelper.csvValue(externalId),
-								StringHelper.csvValue(name),
-								StringHelper.csvValue(foaled),
-								StringHelper.csvValue(sire),
-								StringHelper.csvValue(dam),
-								StringHelper.csvValue(color),
-								StringHelper.csvValue(sex),
-								StringHelper.csvValue(avatar),
-								StringHelper.csvValue(addedDate),
-								StringHelper.csvValue(activeStatus),
-								StringHelper.csvValue(currentLocation),
-								StringHelper.csvValue(currentStatus),
-								StringHelper.csvValue(type),
-								StringHelper.csvValue(category),
-								StringHelper.csvValue(bonusScheme),
-								StringHelper.csvValue(nickName)
+								csvValue(externalId),
+								csvValue(name),
+								csvValue(foaled),
+								csvValue(sire),
+								csvValue(dam),
+								csvValue(color),
+								csvValue(sex),
+								csvValue(avatar),
+								csvValue(addedDate),
+								csvValue(activeStatus),
+								csvValue(currentLocation),
+								csvValue(currentStatus),
+								csvValue(type),
+								csvValue(category),
+								csvValue(bonusScheme),
+								csvValue(nickName)
 						);
 						builder.append(rowBuilder);
 					}
@@ -588,7 +587,7 @@
 					if (isAllEmpty(addedDateBuilder, activeStatusBuilder, currentLocationBuilder)) {
 						logger.warn("All of AddedDate && ActiveStatus && CurrentLocation can't be empty. At least addedDate required.");
 	
-						List<String> formattedData = StringHelper.convertStringBuilderToList(builder);
+						List<String> formattedData = convertStringBuilderToList(builder);
 						StringBuilder dataBuilder = new StringBuilder();
 	
 						String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
@@ -816,22 +815,22 @@
 						horseMap.put(name, addedDate);
 	
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
-								StringHelper.csvValue(externalId),
-								StringHelper.csvValue(name),
-								StringHelper.csvValue(foaled),
-								StringHelper.csvValue(sire),
-								StringHelper.csvValue(dam),
-								StringHelper.csvValue(color),
-								StringHelper.csvValue(sex),
-								StringHelper.csvValue(avatar),
-								StringHelper.csvValue(addedDate),
-								StringHelper.csvValue(activeStatus),
-								StringHelper.csvValue(currentLocation),
-								StringHelper.csvValue(currentStatus),
-								StringHelper.csvValue(type),
-								StringHelper.csvValue(category),
-								StringHelper.csvValue(bonusScheme),
-								StringHelper.csvValue(nickName)
+								csvValue(externalId),
+								csvValue(name),
+								csvValue(foaled),
+								csvValue(sire),
+								csvValue(dam),
+								csvValue(color),
+								csvValue(sex),
+								csvValue(avatar),
+								csvValue(addedDate),
+								csvValue(activeStatus),
+								csvValue(currentLocation),
+								csvValue(currentStatus),
+								csvValue(type),
+								csvValue(category),
+								csvValue(bonusScheme),
+								csvValue(nickName)
 						);
 						builder.append(rowBuilder);
 					}
@@ -1463,27 +1462,27 @@
 					
 							String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," +
 											"%s,%s\n",
-									StringHelper.csvValue(horseId),
-									StringHelper.csvValue(horseName),
-									StringHelper.csvValue(ownerId),
-									StringHelper.csvValue(commsEmail),
-									StringHelper.csvValue(financeEmail),
-									StringHelper.csvValue(firstName),
-									StringHelper.csvValue(lastName),
-									StringHelper.csvValue(displayName),
-									StringHelper.csvValue(type),
-									StringHelper.csvValue(mobile),
-									StringHelper.csvValue(phone),
-									StringHelper.csvValue(fax),
-									StringHelper.csvValue(address),
-									StringHelper.csvValue(city),
-									StringHelper.csvValue(state),
-									StringHelper.csvValue(postCode),
-									StringHelper.csvValue(country),
-									StringHelper.csvValue(gst),
-									StringHelper.csvValue(share),
-									StringHelper.csvValue(addedDate),
-									StringHelper.csvValue(exportedDate)
+									csvValue(horseId),
+									csvValue(horseName),
+									csvValue(ownerId),
+									csvValue(commsEmail),
+									csvValue(financeEmail),
+									csvValue(firstName),
+									csvValue(lastName),
+									csvValue(displayName),
+									csvValue(type),
+									csvValue(mobile),
+									csvValue(phone),
+									csvValue(fax),
+									csvValue(address),
+									csvValue(city),
+									csvValue(state),
+									csvValue(postCode),
+									csvValue(country),
+									csvValue(gst),
+									csvValue(share),
+									csvValue(addedDate),
+									csvValue(exportedDate)
 							);
 							
 							if (isEmpty(
@@ -1624,10 +1623,10 @@
 					}
 				
 					String extractedName = String.format("%s,%s,%s,%s\n",
-							StringHelper.csvValue(displayName),
-							StringHelper.csvValue(formattedDisplayName),
-							StringHelper.csvValue(firstName),
-							StringHelper.csvValue(lastName)
+							csvValue(displayName),
+							csvValue(formattedDisplayName),
+							csvValue(firstName),
+							csvValue(lastName)
 					);
 					normalNameBuilder.append(extractedName);
 				}
@@ -1641,10 +1640,10 @@
 				lastName = EMPTY;
 			
 				String extractedName = String.format("%s,%s,%s,%s\n",
-						StringHelper.csvValue(displayName),
-						StringHelper.csvValue(formattedDisplayName),
-						StringHelper.csvValue(firstName),
-						StringHelper.csvValue(lastName)
+						csvValue(displayName),
+						csvValue(formattedDisplayName),
+						csvValue(firstName),
+						csvValue(lastName)
 				);
 				organizationNameBuilder.append(extractedName);
 			} else {
@@ -1736,7 +1735,7 @@
 			String[] emailList = emailsStr.split(";");
 			
 			for (String email : emailList) {
-				if (!StringHelper.isValidEmail(email.trim())) {
+				if (!isValidEmail(email.trim())) {
 					logger.error("*********************Email is invalid: {} at line: {}. Please check!", email, line);
 					throw new CustomException(new ErrorInfo("Invalid Email"));
 				}
