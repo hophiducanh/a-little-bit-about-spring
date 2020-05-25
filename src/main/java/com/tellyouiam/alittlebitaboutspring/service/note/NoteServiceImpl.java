@@ -29,6 +29,7 @@
 	import java.util.AbstractMap.SimpleImmutableEntry;
 	import java.util.concurrent.atomic.AtomicInteger;
 	import java.util.function.BinaryOperator;
+	import java.util.function.Function;
 	import java.util.function.Predicate;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
@@ -295,11 +296,14 @@
 			StringBuilder streamBuilder = new StringBuilder();
 			
 			if (!CollectionUtils.isEmpty(csvData)) {
+				Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
+				Predicate<String> isFooterRow = row -> (row.matches("(.+)([\\d]+)\\sRecords(.+)"));
 				
 				//filter non-data row.
-				csvData = csvData.stream().filter(StringUtils::isNotEmpty)
-						.filter(row -> (!row.matches("^(,+)$")))
-						.filter(row -> (!row.matches("(.+)([\\d]+)\\sRecords(.+)")))
+				csvData = csvData.stream()
+						.filter(StringUtils::isNotEmpty)
+						.filter(isEmptyRowCsv.negate())
+						.filter(isFooterRow.negate())
 						.collect(toList());
 				
 				//find line is header
@@ -315,14 +319,26 @@
 				int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
 						.orElseThrow(IllegalAccessError::new).length;
 				
-				//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
+				Function<Integer, Map.Entry<Integer, List<String>>> colAccumulatorMapper = index -> {
+					//value of cell in row based on its index in row.
+					//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
+					Function<String, String> valueRowIndexMapper = line -> {
+						String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
+						return getCsvCellValue(rowArr, index);
+					};
+			
+					return new SimpleImmutableEntry<>(
+						index, finalCsvData.stream().map(valueRowIndexMapper).collect(toList())
+					);
+				};
+				
+				//col has owner data is col has header and has at least two different cell value.
+				Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry ->
+						(colEntry.getValue().stream().distinct().count() > 2 || isNotEmpty(colEntry.getValue().get(0)));
+				
 				List<Map.Entry<Integer, List<String>>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
-						.map(i -> new SimpleImmutableEntry<>(i, finalCsvData.stream()
-								.map(line -> {
-									String[] r = customSplitSpecific(line).toArray(new String[0]);
-									return getCsvCellValue(r, i);
-								}).collect(toList())))
-						.filter(i -> (i.getValue().stream().distinct().count() > 2 || isNotEmpty(i.getValue().get(0))))
+						.map(colAccumulatorMapper)
+						.filter(colHasOwnerData)
 						.collect(toList());
 				
 				//process for case header and data in separate col in csv.
