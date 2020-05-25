@@ -411,42 +411,44 @@
 				csvDataHeaderAsKey = Stream.of(csvDataHeaderAsKey, addressMap).flatMap(map -> map.entrySet().stream())
 						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, mergeFunction));
 				
-				Map<String, List<String>> headerMap = new LinkedHashMap<>();
+				Map<String, List<String>> standardHeaderMap = new LinkedHashMap<>();
 				
-				headerMap.put("OwnerID", singletonList("OwnerID"));
-				headerMap.put("Email", singletonList("Email"));
-				headerMap.put("FinanceEmail", singletonList("FinanceEmail"));
-				headerMap.put("FirstName, First Name", singletonList("FirstName"));
-				headerMap.put("LastName, Last Name", singletonList("LastName"));
-				headerMap.put("DisplayName, Name, Display Name", singletonList("DisplayName"));
-				headerMap.put("Type", singletonList("Type"));
-				headerMap.put("Mobile, Mobile Phone", singletonList("Mobile"));
-				headerMap.put("Phone", singletonList("Phone"));
-				headerMap.put("Fax", singletonList("Fax"));
-				headerMap.put("Address", singletonList("Address"));
-				headerMap.put("City", singletonList("City"));
-				headerMap.put("State", singletonList("State"));
-				headerMap.put("PostCode", singletonList("PostCode"));
-				headerMap.put("Country", singletonList("Country"));
-				headerMap.put("GST", singletonList("GST"));
+				standardHeaderMap.put("OwnerID", singletonList("OwnerID"));
+				standardHeaderMap.put("Email", singletonList("Email"));
+				standardHeaderMap.put("FinanceEmail", singletonList("FinanceEmail"));
+				standardHeaderMap.put("FirstName, First Name", singletonList("FirstName"));
+				standardHeaderMap.put("LastName, Last Name", singletonList("LastName"));
+				standardHeaderMap.put("DisplayName, Name, Display Name", singletonList("DisplayName"));
+				standardHeaderMap.put("Type", singletonList("Type"));
+				standardHeaderMap.put("Mobile, Mobile Phone", singletonList("Mobile"));
+				standardHeaderMap.put("Phone", singletonList("Phone"));
+				standardHeaderMap.put("Fax", singletonList("Fax"));
+				standardHeaderMap.put("Address", singletonList("Address"));
+				standardHeaderMap.put("City", singletonList("City"));
+				standardHeaderMap.put("State", singletonList("State"));
+				standardHeaderMap.put("PostCode", singletonList("PostCode"));
+				standardHeaderMap.put("Country", singletonList("Country"));
+				standardHeaderMap.put("GST", singletonList("GST"));
 				
 				int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
 						.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
 				
 				Map<String, List<String>> finalCsvDataHeaderAsKey = csvDataHeaderAsKey;
-				Map<String, List<String>> ownerDataMap = headerMap.keySet().stream().map(standardHeader -> {
-					Optional<String> matchHeaderKey = finalCsvDataHeaderAsKey.keySet().stream()
-							.filter(csvHeader ->
-									this.stringContainsIgnoreCase(standardHeader, csvHeader, ","))
-							.findFirst();
+				Map<String, List<String>> ownerDataMap = standardHeaderMap.keySet().stream().map(standardHeader -> {
 					
-					return matchHeaderKey.map(key ->
-							new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0), finalCsvDataHeaderAsKey.get(key))
-					).orElseGet(
-							() -> new SimpleImmutableEntry<>(headerMap.get(standardHeader).get(0),
-									Stream.of(headerMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
-											.flatMap(Collection::stream).collect(toList()))
-					);
+					Predicate<String> csvHeaderMatchStandardHeader = csvHeader ->
+							this.stringContainsIgnoreCase(standardHeader, csvHeader, ",");
+					
+					Optional<String> matchHeaderKey = finalCsvDataHeaderAsKey.keySet().stream()
+							.filter(csvHeaderMatchStandardHeader).findFirst();
+					
+					String standardKey = standardHeaderMap.get(standardHeader).get(0);
+					List<String> filledColMissingData = Stream
+							.of(standardHeaderMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
+							.flatMap(Collection::stream).collect(toList());
+					return matchHeaderKey
+							.map(key -> new SimpleImmutableEntry<>(standardKey, finalCsvDataHeaderAsKey.get(key)))
+							.orElseGet(() -> new SimpleImmutableEntry<>(standardKey, filledColMissingData));
 				}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (m, n) -> m, LinkedHashMap::new));
 				
 				//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
@@ -454,19 +456,27 @@
 						.map(List::iterator).collect(Collectors.toList());
 				
 				List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
-						.mapToObj(n -> iteratorDataList.stream()
-								.filter(Iterator::hasNext)
-								.map(Iterator::next)
-								.collect(Collectors.toList()))
-						.collect(Collectors.toList());
+						.mapToObj(
+								n -> iteratorDataList.stream().filter(Iterator::hasNext)
+								.map(Iterator::next).collect(Collectors.toList())
+						).collect(Collectors.toList());
+				
+				//filter line only contains " (quotes) and ,(comma)
+				Predicate<StringJoiner> validDataLine = line -> isNotEmpty(
+						line.toString().chars().distinct()
+						.mapToObj(c -> String.valueOf((char) c))
+						.collect(Collectors.joining())
+						.replace("\"", "")
+						.replace(",", "")
+				);
 				
 				//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
 				String allLiner = transposeList.stream()
-						.map(l -> l.stream().map(StringHelper::csvValue).collect(() ->
-								new StringJoiner(","), StringJoiner::add, StringJoiner::merge))
-						.filter(m -> !m.toString().chars().distinct().mapToObj(c -> String.valueOf((char)c)).collect(Collectors.joining()).equals("\","))
-						.collect(() ->
-								new StringJoiner("\n"), StringJoiner::merge, StringJoiner::merge).toString();
+						.map(l -> l.stream()
+								.map(StringHelper::csvValue)
+								.collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge)
+						).filter(validDataLine)
+						.collect(() -> new StringJoiner("\n"), StringJoiner::merge, StringJoiner::merge).toString();
 				
 				streamBuilder.append(allLiner);
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
