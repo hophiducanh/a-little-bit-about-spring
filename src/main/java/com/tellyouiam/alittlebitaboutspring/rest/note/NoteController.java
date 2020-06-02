@@ -63,9 +63,6 @@ public class NoteController {
 	@RequestMapping(method = RequestMethod.GET)
 	@ResponseBody
 	public final ResponseEntity<Object> getDate() {
-//		Date timestamp = Objects.requireNonNull(noteRepository.findById(1).orElse(null)).getTestDate();
-//		Date date = Objects.requireNonNull(noteRepository.findById(1).orElse(null)).getCreatedAt();
-//		List<Date> dates = Arrays.asList(timestamp, date);
 		
 		List<Note> notes = noteRepository.findByCode(15);
 		notes.forEach(n -> System.out.println(n.getCode()));
@@ -136,5 +133,32 @@ public class NoteController {
 		}
 		
 		return new ResponseEntity<>(null, new HttpHeaders(), HttpStatus.OK);
+	}
+	
+	//https://stackoverflow.com/questions/38811606/what-is-the-default-request-method-type-for-the-request-mapping
+	//if not specify mapping method >> all mapping method are accepted.
+	@RequestMapping(value = "/test")
+	@ResponseBody
+	public final ResponseEntity<Object> diffRequestMappingAndGetMapping() {
+		String result = "Difference request mapping get method and getmapping";
+		return new ResponseEntity<>(result, HttpStatus.OK);
+	}
+	
+	//path and value of request mapping are the same.
+	@RequestMapping(path = "/test/**")
+	@ResponseBody
+	public final ResponseEntity<Object> testRequestMapping() {
+		String result = "Testing was successful";
+		return new ResponseEntity<>(result, HttpStatus.OK);
+	}
+	
+	//@RequestMapping(path = "/testPath", value = "/test1") //can't compiled. path and value must be the same value
+	//https://gist.github.com/codeman688/575ce10fb6b6de5fe69fe63dab4ebfcc
+	//https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/bind/annotation/RequestMapping.html#path--
+	@RequestMapping(path = "/testPath", value = "/testPath")
+	@ResponseBody
+	public final ResponseEntity<Object> testPathAndValue() {
+		String result = "Difference path and value in request mapping";
+		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
 }
