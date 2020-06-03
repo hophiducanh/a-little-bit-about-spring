@@ -18,4 +18,6 @@ public interface NoteService {
 	Map<Object, Object> automateImportOwnerShips(List<MultipartFile> ownershipFiles) throws CustomException;
 	
 	Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException;
+	
+	Object formatHorseV2(MultipartFile horseFile, String dirName) throws IOException;
 }

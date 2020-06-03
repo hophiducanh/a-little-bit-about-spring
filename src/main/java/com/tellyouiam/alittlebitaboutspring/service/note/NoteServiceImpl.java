@@ -208,7 +208,7 @@
 					
 					builder.append(HORSE_FILE_HEADER);
 					
-					csvData = csvData.stream().skip(1).collect(Collectors.toList());
+					csvData = csvData.stream().skip(1).collect(toList());
 					
 					for (String line : csvData) {
 						if (StringUtils.isEmpty(line)) continue;
@@ -393,15 +393,15 @@
 					String postcode = Optional.ofNullable(splitAddress.get("postcode")).orElse("");
 					String country = Optional.ofNullable(splitAddress.get("country")).orElse("");
 					return Arrays.asList(address, suburb, state, postcode, country);
-				}).collect(Collectors.toList());
+				}).collect(toList());
 				
 				//Add header
 				splitAddressList.add(0, headerList);
 				
 				List<List<String>> transposedAddressList = IntStream.range(0, splitAddressList.get(0).size())
 						.mapToObj(i -> splitAddressList.stream().map(l -> l.get(i))
-								.collect(Collectors.toList())
-						).collect(Collectors.toList());
+								.collect(toList())
+						).collect(toList());
 				
 				Map<String, List<String>> addressMap = transposedAddressList.stream()
 						.collect(toMap(i -> i.get(0), u -> u));
@@ -409,7 +409,7 @@
 				long distinctPostCode = csvDataHeaderAsKey.getOrDefault("PostCode", singletonList("")).stream().distinct().count();
 				BinaryOperator<List<String>> mergeFunction = (newValue, oldValue) -> distinctPostCode == 1 ? oldValue : newValue;
 				csvDataHeaderAsKey = Stream.of(csvDataHeaderAsKey, addressMap).flatMap(map -> map.entrySet().stream())
-						.collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, mergeFunction));
+						.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, mergeFunction));
 				
 				Map<String, List<String>> standardHeaderMap = new LinkedHashMap<>();
 				
@@ -453,19 +453,19 @@
 				
 				//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
 				List<Iterator<String>> iteratorDataList = new ArrayList<>(ownerDataMap.values()).stream()
-						.map(List::iterator).collect(Collectors.toList());
+						.map(List::iterator).collect(toList());
 				
 				List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
 						.mapToObj(
 								n -> iteratorDataList.stream().filter(Iterator::hasNext)
-								.map(Iterator::next).collect(Collectors.toList())
-						).collect(Collectors.toList());
+								.map(Iterator::next).collect(toList())
+						).collect(toList());
 				
 				//filter line only contains " (quotes) and ,(comma)
 				Predicate<StringJoiner> validDataLine = line -> isNotEmpty(
 						line.toString().chars().distinct()
 						.mapToObj(c -> String.valueOf((char) c))
-						.collect(Collectors.joining())
+						.collect(joining())
 						.replace("\"", "")
 						.replace(",", "")
 				);
@@ -480,6 +480,188 @@
 				
 				streamBuilder.append(allLiner);
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
+				FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
+				return streamBuilder;
+			}
+			return null;
+		}
+		
+		@Override
+		public Object formatHorseV2(MultipartFile horseFile, String dirName) throws IOException {
+			List<String> csvData = this.getCsvData(horseFile);
+			StringBuilder streamBuilder = new StringBuilder();
+			
+			if (!CollectionUtils.isEmpty(csvData)) {
+				Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
+				Predicate<String> isFooterRow = row -> (row.matches("(.+)([\\d]+)\\sRecords(.+)"));
+				Predicate<String> nonDataRow = row -> (row.matches("^,([^,]+),(.+)((\\w|\\d)+)(.+)$"));
+				
+				//filter non-data row.
+				csvData = csvData.stream()
+						.filter(StringUtils::isNotEmpty)
+						.filter(isEmptyRowCsv.negate())
+						.filter(isFooterRow.negate())
+						.filter(nonDataRow)
+						.collect(toList());
+				
+				List<String> finalCsvData = csvData;
+				String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
+				int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
+						.orElseThrow(IllegalAccessError::new).length;
+				
+				Function<Integer, Map.Entry<Integer, List<String>>> colAccumulatorMapper = index -> {
+					//value of cell in row based on its index in row.
+					//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
+					Function<String, String> valueRowIndexMapper = line -> {
+						String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
+						return getCsvCellValue(rowArr, index);
+					};
+					
+					return new SimpleImmutableEntry<>(
+							index, finalCsvData.stream().map(valueRowIndexMapper).collect(toList())
+					);
+				};
+				
+				//col has owner data is col has header and has at least two different cell value.
+				Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry ->
+						(colEntry.getValue().stream().distinct().count() > 2 || isNotEmpty(colEntry.getValue().get(0)));
+				
+				List<Map.Entry<Integer, List<String>>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
+						.map(colAccumulatorMapper)
+						.filter(colHasOwnerData)
+						.collect(toList());
+				
+				//process for case header and data in separate col in csv.
+				Map<Integer, List<String>> formattedDataMap = new LinkedHashMap<>();
+				for (Map.Entry<Integer, List<String>> entry : columnEntries) {
+					Integer entryKey = entry.getKey();
+					List<String> entryValue = entry.getValue();
+					
+					if ((columnEntries.indexOf(entry) >= columnEntries.size() - 1) || (columnEntries.indexOf(entry) == 0)) {
+						formattedDataMap.put(entryKey, entryValue);
+						continue;
+					}
+					
+					Map.Entry<Integer, List<String>> nextEntry = columnEntries.get(columnEntries.indexOf(entry) + 1);
+					Integer nextEntryKey = nextEntry.getKey();
+					List<String> nextEntryValue = nextEntry.getValue();
+					
+					Optional<Map.Entry<Integer, List<String>>> previousEntry =
+							Optional.ofNullable(columnEntries.get(columnEntries.indexOf(entry) - 1));
+					boolean isHavePreviousKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
+					boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
+					
+					//join two consecutive column in csv, one has header missing body, one has body missing header.
+					if (isConsecutive && !isHavePreviousKey
+							&& columnEntries.indexOf(entry) != 0
+							&& isNotEmpty(entryValue.get(0))
+							&& entryValue.stream().distinct().count() < 3
+							&& isEmpty(nextEntryValue.get(0))
+							&& nextEntryValue.stream().distinct().count() > 2) {
+						
+						List<String> mergedEntryValue = Stream.iterate(0, i -> i + 1).limit(entryValue.size())
+								.map(i -> entryValue.get(i).concat(nextEntryValue.get(i)).trim())
+								.collect(toList());
+						
+						formattedDataMap.put(nextEntryKey, mergedEntryValue);
+					} else {
+						formattedDataMap.putIfAbsent(entryKey, entryValue);
+					}
+				}
+				
+				//if column is not date column >> retain as raw, if column is date column but already is DMY format >> retain as raw
+				//else >> reformat
+				Predicate<String> containsDate = value -> value.matches("^\\d{1,2}/\\d{1,2}/\\d{1,4}$");
+				Function<Map.Entry<Integer, List<String>>, List<String>> australiaDateMapping = entry ->
+						(!isAustraliaFormatV2(entry.getValue()) && entry.getValue().stream().noneMatch(containsDate))
+								? entry.getValue()
+								: isAustraliaFormatV2(entry.getValue())
+								? entry.getValue()
+								: entry.getValue().stream().map(rawDate -> {
+									if (isNotEmpty(rawDate) && (isMDYFormat(rawDate) || isDMYFormat(rawDate))) {
+										return LocalDate.parse(rawDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+									}
+									return rawDate;
+								}).collect(toList());
+				
+				Map<String, List<String>> csvDataHeaderAsKey = formattedDataMap.entrySet().stream()
+						.filter(entry -> isNotEmpty(entry.getValue().get(0)))
+						.collect(toMap(entry -> entry.getValue().get(0), australiaDateMapping));
+				
+				Map<String, List<String>> standardHeaderMap = new LinkedHashMap<>();
+				
+				standardHeaderMap.put("External Id, ExternalId", singletonList("ExternalId"));
+				standardHeaderMap.put("Name", singletonList("Name"));
+				standardHeaderMap.put("Foaled, DOB", singletonList("Foaled"));
+				standardHeaderMap.put("Sire", singletonList("Sire"));
+				standardHeaderMap.put("Dam", singletonList("Dam"));
+				standardHeaderMap.put("Colour, Color", singletonList("Colour"));
+				standardHeaderMap.put("Sex", singletonList("Sex"));
+				standardHeaderMap.put("Avatar", singletonList("Avatar"));
+				standardHeaderMap.put("Added Date", singletonList("Added Date"));
+				standardHeaderMap.put("Active Status, ActiveStatus", singletonList("Status"));
+				standardHeaderMap.put("Address", singletonList("Current Location"));
+				standardHeaderMap.put("Current Status, CurrentStatus", singletonList("Current Status"));
+				standardHeaderMap.put("Type", singletonList("Type"));
+				standardHeaderMap.put("Category", singletonList("Category"));
+				standardHeaderMap.put("Bonus Scheme, BonusScheme, Schemes", singletonList("Bonus Scheme"));
+				standardHeaderMap.put("Nick Name, NickName", singletonList("Nickname"));
+				standardHeaderMap.put("Country", singletonList("Country"));
+				standardHeaderMap.put("Microchip", singletonList("Microchip"));
+				standardHeaderMap.put("Brand", singletonList("Brand"));
+				
+				int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
+						.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
+				
+				Map<String, List<String>> ownerDataMap = standardHeaderMap.keySet().stream().map(standardHeader -> {
+					
+					Predicate<String> csvHeaderMatchStandardHeader = csvHeader ->
+							this.stringContainsIgnoreCase(standardHeader, csvHeader, ",");
+					
+					Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
+							.filter(csvHeaderMatchStandardHeader).findFirst();
+					
+					String standardKey = standardHeaderMap.get(standardHeader).get(0);
+					List<String> filledColMissingData = Stream
+							.of(standardHeaderMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
+							.flatMap(Collection::stream).collect(toList());
+					return matchHeaderKey
+							.map(key -> {
+								csvDataHeaderAsKey.get(key).set(0, standardKey);
+								return new SimpleImmutableEntry<>(standardKey, csvDataHeaderAsKey.get(key));
+							})
+							.orElseGet(() -> new SimpleImmutableEntry<>(standardKey, filledColMissingData));
+				}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (m, n) -> m, LinkedHashMap::new));
+				
+				//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
+				List<Iterator<String>> iteratorDataList = new ArrayList<>(ownerDataMap.values()).stream()
+						.map(List::iterator).collect(toList());
+				
+				List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
+						.mapToObj(
+								n -> iteratorDataList.stream().filter(Iterator::hasNext)
+										.map(Iterator::next).collect(toList())
+						).collect(toList());
+				
+				//filter line only contains " (quotes) and ,(comma)
+				Predicate<StringJoiner> validDataLine = line -> isNotEmpty (
+						line.toString().chars().distinct()
+								.mapToObj(c -> String.valueOf((char) c))
+								.collect(joining())
+								.replace("\"", "")
+								.replace(",", "")
+				);
+				
+				//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
+				String allLiner = transposeList.stream()
+						.map(l -> l.stream()
+								.map(StringHelper::csvValue)
+								.collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge)
+						).filter(validDataLine)
+						.collect(() -> new StringJoiner("\n"), StringJoiner::merge, StringJoiner::merge).toString();
+				
+				streamBuilder.append(allLiner);
+				String path = getOutputFolder(dirName) + File.separator + "formatted-horse-v2.csv";
 				FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
 				return streamBuilder;
 			}
@@ -537,12 +719,15 @@
 					int categoryIndex = checkColumnIndex(header, "Category");
 					int bonusSchemeIndex = checkColumnIndex(header, "Bonus Scheme", "BonusScheme", "Schemes");
 					int nickNameIndex = checkColumnIndex(header, "Nick Name", "NickName");
+					int countryIndex = checkColumnIndex(header, "Country");
+					int microchipIndex = checkColumnIndex(header, "Microchip");
+					int brandIndex = checkColumnIndex(header, "Brand");
 	
-					String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+					String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 							"ExternalId", "Name", "Foaled", "Sire", "Dam", "Color",
-							"Sex", "Avatar", "AddedDate", "ActiveStatus/Status",
-							"CurrentLocation/HorseLocation", "CurrentStatus/HorseStatus",
-							"Type", "Category", "BonusScheme", "NickName"
+							"Sex", "Avatar", "AddedDate", "ActiveStatus",
+							"CurrentLocation", "CurrentStatus",
+							"Type", "Category", "BonusScheme", "NickName", "Country", "Microchip", "Brand"
 					);
 	
 					builder.append(rowHeader);
@@ -586,8 +771,11 @@
 						String category = getCsvCellValue(r, categoryIndex);
 						String bonusScheme = getCsvCellValue(r, bonusSchemeIndex);
 						String nickName = getCsvCellValue(r, nickNameIndex);
+						String country = getCsvCellValue(r, countryIndex);
+						String microchip = getCsvCellValue(r, microchipIndex);
+						String brand = getCsvCellValue(r, brandIndex);
 	
-						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 								csvValue(externalId),
 								csvValue(name),
 								csvValue(foaled),
@@ -603,7 +791,10 @@
 								csvValue(type),
 								csvValue(category),
 								csvValue(bonusScheme),
-								csvValue(nickName)
+								csvValue(nickName),
+								csvValue(country),
+								csvValue(microchip),
+								csvValue(brand)
 						);
 						builder.append(rowBuilder);
 					}
@@ -737,7 +928,10 @@
 					int categoryIndex = checkColumnIndex(header, "Category");
 					int bonusSchemeIndex = checkColumnIndex(header, "Bonus Scheme", "BonusScheme", "Schemes");
 					int nickNameIndex = checkColumnIndex(header, "Nick Name", "NickName");
-	
+					int countryIndex = checkColumnIndex(header, "Country");
+					int microchipIndex = checkColumnIndex(header, "Microchip");
+					int brandIndex = checkColumnIndex(header, "Brand");
+					
 					int daysHereIndex = checkColumnIndex(header, "Days Here", "Days");
 	
 					String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
@@ -810,6 +1004,9 @@
 						String category = getCsvCellValue(r, categoryIndex);
 						String bonusScheme = getCsvCellValue(r, bonusSchemeIndex);
 						String nickName = getCsvCellValue(r, nickNameIndex);
+						String country = getCsvCellValue(r, countryIndex);
+						String microchip = getCsvCellValue(r, microchipIndex);
+						String brand = getCsvCellValue(r, brandIndex);
 	
 						// If dayHere is empty, get exportedDate of ownership file. Because of:
 						// When dayHere is empty, usually departed date in horse line of ownership file also empty too.
@@ -856,7 +1053,10 @@
 								csvValue(type),
 								csvValue(category),
 								csvValue(bonusScheme),
-								csvValue(nickName)
+								csvValue(nickName),
+								csvValue(country),
+								csvValue(microchip),
+								csvValue(brand)
 						);
 						builder.append(rowBuilder);
 					}
@@ -1701,6 +1901,52 @@
 				isParsable = false;
 			}
 			return isParsable;
+		}
+		
+		private boolean isAustraliaFormatV2(List<String> dates) {
+			boolean isAustraliaFormat = false;
+			
+			// MM/DD/YYYY format
+			List<String> mdyFormatList = new ArrayList<>();
+			
+			// DD/MM/YYYY format
+			List<String> ausFormatList = new ArrayList<>();
+			
+			for (String rawDate : dates) {
+				
+				if (StringUtils.isEmpty(rawDate)) continue;
+				
+				if (!rawDate.matches("^\\d{1,2}/\\d{1,2}/\\d{1,4}$")) continue;
+				
+				if (isNotEmpty(rawDate)) {
+					
+					//Process for case: 15/08/2013 15:30
+					String date = rawDate.split("\\p{Z}")[0];
+					
+					if (isDMYFormat(date)) {
+						ausFormatList.add(date);
+					} else if (isMDYFormat(date)) {
+						mdyFormatList.add(date);
+					} else {
+						logger.info("UNKNOWN TYPE OF DATE");
+					}
+				}
+			}
+			
+			// if file contains only one date like: 03/27/2019 >> MM/DD/YYYY format.
+			// if all date value in the file have format like: D/M/YYYY format (E.g: 5/6/2020) >> recheck in racingAustralia.horse
+			if (CollectionUtils.isEmpty(mdyFormatList) && !CollectionUtils.isEmpty(ausFormatList)) {
+				isAustraliaFormat = true;
+				logger.info("Type of DATE is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.");
+				
+			} else if (!CollectionUtils.isEmpty(mdyFormatList)) {
+				logger.info("Type of DATE is MM/DD/YYY format");
+				
+			} else {
+				logger.info("Type of DATE is UNDEFINED");
+			}
+			
+			return isAustraliaFormat;
 		}
 		
 		private boolean isAustraliaFormat(List<String> csvData, int dateIndex, String fileType) {
