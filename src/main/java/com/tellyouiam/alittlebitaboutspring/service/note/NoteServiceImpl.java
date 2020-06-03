@@ -429,6 +429,7 @@
 				standardHeaderMap.put("PostCode", singletonList("PostCode"));
 				standardHeaderMap.put("Country", singletonList("Country"));
 				standardHeaderMap.put("GST", singletonList("GST"));
+				standardHeaderMap.put("Debtor", singletonList("Debtor"));
 				
 				int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
 						.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
@@ -909,6 +910,9 @@
 					// CATEGORY
 					// BONUS SCHEME
 					// NICK NAME
+					// COUNTRY
+					// MICROCHIP
+					// BRAND
 	
 					String[] header = readCsvLine(csvData.get(0));
 	
@@ -1037,7 +1041,7 @@
 	
 						horseMap.put(name, addedDate);
 	
-						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 								csvValue(externalId),
 								csvValue(name),
 								csvValue(foaled),
