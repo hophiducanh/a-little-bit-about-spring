@@ -38,7 +38,6 @@ public class NoteController {
 	private NoteService noteService;
 	
 	@PostMapping
-	@ResponseBody
 	public final ResponseEntity<Object> createNote(@Valid @RequestBody Note note) {
 		note.setCode(null);
 		note.setCreatedAt(new Date(0));
@@ -50,7 +49,6 @@ public class NoteController {
 	}
 	
 	@DeleteMapping
-	@ResponseBody
 	public final ResponseEntity<Object> deleteNote(@Valid @RequestBody Note note) {
 		note.setCode(1000000011);
 		note.setCreatedAt(new Date(0));
@@ -61,7 +59,6 @@ public class NoteController {
 	}
 	
 	@RequestMapping(method = RequestMethod.GET)
-	@ResponseBody
 	public final ResponseEntity<Object> getDate() {
 		
 		List<Note> notes = noteRepository.findByCode(15);
@@ -71,7 +68,6 @@ public class NoteController {
 	}
 	
 	@RequestMapping(value = "/owner/automate-import-owner", method = RequestMethod.POST)
-	@ResponseBody
 	public final ResponseEntity<Object> automateImportOwner(@RequestPart MultipartFile ownerFile,
 	                                                        @RequestParam String dirName) {
 		Object result = null;
@@ -98,7 +94,6 @@ public class NoteController {
 	}
 	
 	@RequestMapping(value = "/owner/automate-import-horse", method = RequestMethod.POST)
-	@ResponseBody
 	public final ResponseEntity<Object> automateImportHorse(@RequestPart MultipartFile horseFile,
                                                             @RequestPart(required = false) List<MultipartFile> ownershipFiles,
 	                                                        @RequestParam String dirName) {
@@ -124,8 +119,19 @@ public class NoteController {
 		return new ResponseEntity<>(result, new HttpHeaders(), HttpStatus.OK);
 	}
 	
+	//union data two horse file.
+	@PostMapping(value = "/horse/v2/merge")
+	public final void mergeTwoHorseFile(@RequestPart MultipartFile first,
+	                                                  @RequestPart MultipartFile second,
+	                                                  @RequestParam String dirName) {
+		try {
+			noteService.mergeHorseFile(first, second, dirName);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	@RequestMapping(value = "/owner/automate-import-ownership", method = RequestMethod.POST)
-	@ResponseBody
 	public final ResponseEntity<Object> automateImportOwnerShip(@RequestPart final List<MultipartFile> ownershipFiles,
 	                                                            @RequestParam(required = false) String dirName) {
 		
@@ -151,7 +157,6 @@ public class NoteController {
 	//https://stackoverflow.com/questions/38811606/what-is-the-default-request-method-type-for-the-request-mapping
 	//if not specify mapping method >> all mapping method are accepted.
 	@RequestMapping(value = "/test")
-	@ResponseBody
 	public final ResponseEntity<Object> diffRequestMappingAndGetMapping() {
 		String result = "Difference request mapping get method and getmapping";
 		return new ResponseEntity<>(result, HttpStatus.OK);
@@ -159,7 +164,6 @@ public class NoteController {
 	
 	//path and value of request mapping are the same.
 	@RequestMapping(path = "/test/**")
-	@ResponseBody
 	public final ResponseEntity<Object> testRequestMapping() {
 		String result = "Testing was successful";
 		return new ResponseEntity<>(result, HttpStatus.OK);
@@ -169,7 +173,6 @@ public class NoteController {
 	//https://gist.github.com/codeman688/575ce10fb6b6de5fe69fe63dab4ebfcc
 	//https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/bind/annotation/RequestMapping.html#path--
 	@RequestMapping(path = "/testPath", value = "/testPath")
-	@ResponseBody
 	public final ResponseEntity<Object> testPathAndValue() {
 		String result = "Difference path and value in request mapping";
 		return new ResponseEntity<>(result, HttpStatus.OK);

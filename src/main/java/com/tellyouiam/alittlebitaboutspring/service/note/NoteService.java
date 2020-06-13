@@ -20,4 +20,6 @@ public interface NoteService {
 	Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException;
 	
 	Object formatHorseV2(MultipartFile horseFile, String dirName) throws IOException;
+	
+	void mergeHorseFile(MultipartFile first, MultipartFile second, String dirName) throws IOException;
 }

@@ -3,6 +3,7 @@
 	import com.google.common.collect.Multimap;
 	import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.utils.*;
+	import org.apache.commons.collections4.SetUtils;
 	import org.apache.commons.lang3.ArrayUtils;
 	import org.apache.commons.lang3.StringUtils;
 	import org.apache.commons.lang3.math.NumberUtils;
@@ -45,6 +46,7 @@
 	import static java.util.Objects.*;
 	import static java.util.stream.Collectors.*;
 	import static org.apache.commons.lang3.StringUtils.*;
+	import static org.springframework.util.CollectionUtils.isEmpty;
 	
 	@Service
 	public class NoteServiceImpl implements NoteService {
@@ -166,7 +168,7 @@
 				
 				String ownerErrorData = StringUtils.EMPTY;
 				
-				if (!CollectionUtils.isEmpty(csvData)) {
+				if (!isEmpty(csvData)) {
 					
 					// ---------- common cols --------------------------------------
 					// OWNER_KEY (ID or EMAIL), can leave blank if ID is EMAIL
@@ -292,10 +294,11 @@
 		
 		@Override
 		public Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException {
+			//InputStream inputStream = new BufferedInputStream(ownerFile.getInputStream());
 			List<String> csvData = this.getCsvData(ownerFile);
 			StringBuilder streamBuilder = new StringBuilder();
 			
-			if (!CollectionUtils.isEmpty(csvData)) {
+			if (!isEmpty(csvData)) {
 				Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
 				Predicate<String> isFooterRow = row -> (row.matches("(.+)([\\d]+)\\sRecords(.+)"));
 				
@@ -366,7 +369,7 @@
 							&& columnEntries.indexOf(entry) != 0
 							&& isNotEmpty(entryValue.get(0))
 							&& entryValue.stream().distinct().count() < 3
-							&& isEmpty(nextEntryValue.get(0))
+							&& StringUtils.isEmpty(nextEntryValue.get(0))
 							&& nextEntryValue.stream().distinct().count() > 2) {
 						
 						List<String> mergedEntryValue = Stream.iterate(0, i -> i + 1).limit(entryValue.size())
@@ -384,33 +387,33 @@
 						.filter(e-> isNotEmpty(e.getValue().get(0)))
 						.collect(toMap(e -> e.getValue().get(0), Map.Entry::getValue));
 				
-				List<String> headerList = Arrays.asList("Address", "Suburb", "State", "PostCode", "Country");
-				List<List<String>> splitAddressList = csvDataHeaderAsKey.get("Address").stream().skip(1).map(rawAddress -> {
-					Map<String, String> splitAddress = OwnerSplitAddress.splitAddress(rawAddress);
-					String address = Optional.ofNullable(splitAddress.get("address")).orElse("");
-					String suburb = Optional.ofNullable(splitAddress.get("suburb")).orElse("");
-					String state = Optional.ofNullable(splitAddress.get("state")).orElse("");
-					String postcode = Optional.ofNullable(splitAddress.get("postcode")).orElse("");
-					String country = Optional.ofNullable(splitAddress.get("country")).orElse("");
-					return Arrays.asList(address, suburb, state, postcode, country);
-				}).collect(toList());
-				
-				//Add header
-				splitAddressList.add(0, headerList);
-				
-				List<List<String>> transposedAddressList = IntStream.range(0, splitAddressList.get(0).size())
-						.mapToObj(i -> splitAddressList.stream().map(l -> l.get(i))
-								.collect(toList())
-						).collect(toList());
-				
-				Map<String, List<String>> addressMap = transposedAddressList.stream()
-						.collect(toMap(i -> i.get(0), u -> u));
-				
-				long distinctPostCode = csvDataHeaderAsKey.getOrDefault("PostCode", singletonList("")).stream().distinct().count();
-				BinaryOperator<List<String>> mergeFunction = (newValue, oldValue) -> distinctPostCode == 1 ? oldValue : newValue;
-				csvDataHeaderAsKey = Stream.of(csvDataHeaderAsKey, addressMap).flatMap(map -> map.entrySet().stream())
-						.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, mergeFunction));
-				
+//				List<String> headerList = Arrays.asList("Address", "Suburb", "State", "PostCode", "Country");
+//				List<List<String>> splitAddressList = csvDataHeaderAsKey.get("Address").stream().skip(1).map(rawAddress -> {
+//					Map<String, String> splitAddress = OwnerSplitAddress.splitAddress(rawAddress);
+//					String address = Optional.ofNullable(splitAddress.get("address")).orElse("");
+//					String suburb = Optional.ofNullable(splitAddress.get("suburb")).orElse("");
+//					String state = Optional.ofNullable(splitAddress.get("state")).orElse("");
+//					String postcode = Optional.ofNullable(splitAddress.get("postcode")).orElse("");
+//					String country = Optional.ofNullable(splitAddress.get("country")).orElse("");
+//					return Arrays.asList(address, suburb, state, postcode, country);
+//				}).collect(toList());
+//
+//				//Add header
+//				splitAddressList.add(0, headerList);
+//
+//				List<List<String>> transposedAddressList = IntStream.range(0, splitAddressList.get(0).size())
+//						.mapToObj(i -> splitAddressList.stream().map(l -> l.get(i))
+//								.collect(toList())
+//						).collect(toList());
+//
+//				Map<String, List<String>> addressMap = transposedAddressList.stream()
+//						.collect(toMap(i -> i.get(0), u -> u));
+//
+//				long distinctPostCode = csvDataHeaderAsKey.getOrDefault("PostCode", singletonList("")).stream().distinct().count();
+//				BinaryOperator<List<String>> mergeFunction = (newValue, oldValue) -> distinctPostCode == 1 ? oldValue : newValue;
+//				csvDataHeaderAsKey = Stream.of(csvDataHeaderAsKey, addressMap).flatMap(map -> map.entrySet().stream())
+//						.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, mergeFunction));
+//
 				Map<String, List<String>> standardHeaderMap = new LinkedHashMap<>();
 				
 				standardHeaderMap.put("OwnerID", singletonList("OwnerID"));
@@ -492,7 +495,7 @@
 			List<String> csvData = this.getCsvData(horseFile);
 			StringBuilder streamBuilder = new StringBuilder();
 			
-			if (!CollectionUtils.isEmpty(csvData)) {
+			if (!isEmpty(csvData)) {
 				Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
 				Predicate<String> isFooterRow = row -> (row.matches("(.+)([\\d]+)\\sRecords(.+)"));
 				Predicate<String> nonDataRow = row -> (row.matches("^,([^,]+),(.+)((\\w|\\d)+)(.+)$"));
@@ -557,7 +560,7 @@
 							&& columnEntries.indexOf(entry) != 0
 							&& isNotEmpty(entryValue.get(0))
 							&& entryValue.stream().distinct().count() < 3
-							&& isEmpty(nextEntryValue.get(0))
+							&& StringUtils.isEmpty(nextEntryValue.get(0))
 							&& nextEntryValue.stream().distinct().count() > 2) {
 						
 						List<String> mergedEntryValue = Stream.iterate(0, i -> i + 1).limit(entryValue.size())
@@ -601,7 +604,7 @@
 				standardHeaderMap.put("Avatar", singletonList("Avatar"));
 				standardHeaderMap.put("Added Date", singletonList("Added Date"));
 				standardHeaderMap.put("Active Status, ActiveStatus", singletonList("Status"));
-				standardHeaderMap.put("Address", singletonList("Current Location"));
+				standardHeaderMap.put("Current Location", singletonList("Property"));
 				standardHeaderMap.put("Current Status, CurrentStatus", singletonList("Current Status"));
 				standardHeaderMap.put("Type", singletonList("Type"));
 				standardHeaderMap.put("Category", singletonList("Category"));
@@ -669,6 +672,81 @@
 			return null;
 		}
 		
+		public int getMaxRowLength(List<String> csvData) {
+			String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
+			return Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
+					.orElseThrow(IllegalAccessError::new).length;
+		}
+		
+		public Map<Integer, List<String>> dataAccumulator(final List<String> firstCsvData, final List<String> secondCsvData) {
+			Function<Integer, Map.Entry<Integer, List<String>>> colAccumulatorMapper = index -> {
+				//value of cell in row based on its index in row.
+				//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
+				Function<String, String> valueRowIndexMapper = line -> {
+					String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
+					return getCsvCellValue(rowArr, index);
+				};
+				List<String> firstColData = firstCsvData.stream().map(valueRowIndexMapper).collect(toList());
+				List<String> secondColData = secondCsvData.stream().map(valueRowIndexMapper).collect(toList());
+				return new SimpleImmutableEntry<>(
+						index, (firstColData.stream().distinct().count() == 2) ? secondColData : firstColData
+				);
+			};
+			
+			//col has owner data is col has header and has at least two different cell value.
+			Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry ->
+					(colEntry.getValue().stream().distinct().count() > 2 || isNotEmpty(colEntry.getValue().get(0)));
+			
+			int rowLength = this.getMaxRowLength(firstCsvData);
+			Map<Integer, List<String>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
+					.map(colAccumulatorMapper)
+					.filter(colHasOwnerData)
+					.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
+			
+			return columnEntries;
+		}
+		
+		public void mergeHorseFile(MultipartFile first, MultipartFile second, String dirName) throws IOException {
+			List<String> firstCsvData = this.getCsvData(first);
+			List<String> secondCsvData = this.getCsvData(second);
+			Map<Integer, List<String>> joinCsvData = this.dataAccumulator(firstCsvData, secondCsvData);
+			
+			StringBuilder streamBuilder = new StringBuilder();
+			
+			int maxMapValueSize = joinCsvData.values().stream().map(List::size)
+					.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
+			
+			List<Iterator<String>> iteratorDataList = new ArrayList<>(joinCsvData.values()).stream()
+					.map(List::iterator).collect(toList());
+			
+			List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
+					.mapToObj(
+							n -> iteratorDataList.stream().filter(Iterator::hasNext)
+									.map(Iterator::next).collect(toList())
+					).collect(toList());
+			
+			//filter line only contains " (quotes) and ,(comma)
+			Predicate<StringJoiner> validDataLine = line -> isNotEmpty (
+					line.toString().chars().distinct()
+							.mapToObj(c -> String.valueOf((char) c))
+							.collect(joining())
+							.replace("\"", "")
+							.replace(",", "")
+			);
+			
+			//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
+			String allLiner = transposeList.stream()
+					.map(l -> l.stream()
+							.map(StringHelper::csvValue)
+							.collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge)
+					).filter(validDataLine)
+					.collect(() -> new StringJoiner("\n"), StringJoiner::merge, StringJoiner::merge).toString();
+			
+			streamBuilder.append(allLiner);
+			String path = getOutputFolder(dirName) + File.separator + "merge-horse-v2.csv";
+			FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
+		}
+		
 		private Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {
 	
 			try {
@@ -682,7 +760,7 @@
 				StringBuilder activeStatusBuilder = new StringBuilder();
 				StringBuilder currentLocationBuilder = new StringBuilder();
 	
-				if (!CollectionUtils.isEmpty(csvData)) {
+				if (!isEmpty(csvData)) {
 	
 					// read from horse file first, standard columns order:
 					// EXTERNAL ID, can leave blank if use hash code from name as id
@@ -809,7 +887,7 @@
 						StringBuilder dataBuilder = new StringBuilder();
 	
 						String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-						if (!CollectionUtils.isEmpty(formattedData)) {
+						if (!isEmpty(formattedData)) {
 							String[] formattedHeader = readCsvLine(formattedData.get(0));
 	
 							//Get addedDate index from header
@@ -875,7 +953,7 @@
 	
 		@SuppressWarnings("unchecked")
 		public Object automateImportHorse(MultipartFile horseFile, List<MultipartFile> ownershipFiles, String dirName) {
-			if (CollectionUtils.isEmpty(ownershipFiles)) {
+			if (isEmpty(ownershipFiles)) {
 				return this.importHorseFromMiStable(horseFile, dirName);
 			}
 	
@@ -891,7 +969,7 @@
 				csvData = csvData.stream().filter(StringUtils::isNotEmpty).collect(toList());
 	
 				StringBuilder builder = new StringBuilder();
-				if (!CollectionUtils.isEmpty(csvData)) {
+				if (!isEmpty(csvData)) {
 	
 					// read from horse file first, standard columns order:
 					// EXTERNAL ID, can leave blank if use hash code from name as id
@@ -959,7 +1037,7 @@
 	
 						count++;
 	
-						if (isEmpty(line)) continue;
+						if (StringUtils.isEmpty(line)) continue;
 	
 						if (line.matches("(?m)^([,]+)$")) {
 							logger.info("***************************Empty CSV Data at line number: {}", count);
@@ -976,7 +1054,7 @@
 						String externalId = getCsvCellValue(r, externalIdIndex);
 						String name = getCsvCellValue(r, nameIndex);
 	
-						if (isEmpty(name)) {
+						if (StringUtils.isEmpty(name)) {
 							logger.info("**************************Empty Horse Name: {} at line: {}", name, line);
 							continue;
 						}
@@ -993,8 +1071,8 @@
 						String sire = getCsvCellValue(r, sireIndex);
 						String dam = getCsvCellValue(r, damIndex);
 	
-						if (isEmpty(name) && isEmpty(sire) && isEmpty(dam)
-								&& isEmpty(rawFoaled)) continue;
+						if (StringUtils.isEmpty(name) && StringUtils.isEmpty(sire) && StringUtils.isEmpty(dam)
+								&& StringUtils.isEmpty(rawFoaled)) continue;
 	
 						String color = getCsvCellValue(r, colorIndex);
 						String sex = getCsvCellValue(r, sexIndex);
@@ -1019,7 +1097,7 @@
 						// (Normally in ownership file because ownership file and horse file are exported in the same day).
 						// If not in the same day, we have to determine what's horse file exported date is.
 	
-						if (isEmpty(dayHere)) {
+						if (StringUtils.isEmpty(dayHere)) {
 							Set<String> ownershipKeyMap = horseOwnershipMap.keySet();
 							boolean isSameHorseName = ownershipKeyMap.stream().anyMatch(name::equalsIgnoreCase);
 
@@ -1029,7 +1107,7 @@
 							} else {
 								// Address case addedDate, activeStatus and current location in horse file are empty.
 								// We will face an error if we keep this data intact.
-								if (isEmpty(addedDate) && isEmpty(activeStatus) && isEmpty(currentLocation)) {
+								if (StringUtils.isEmpty(addedDate) && StringUtils.isEmpty(activeStatus) && StringUtils.isEmpty(currentLocation)) {
 									addedDate = csvExportedDateStr;
 								}
 							}
@@ -1246,10 +1324,10 @@
 						String horseName = departedDateMatcher.group(1).trim();
 						String horseDepartedDate = departedDateMatcher.group(3).trim();
 						
-						if (isEmpty(horseName))
+						if (StringUtils.isEmpty(horseName))
 							continue;
 						
-						if (isEmpty(horseDepartedDate))
+						if (StringUtils.isEmpty(horseDepartedDate))
 							logger.info("Horse without departed date: {}", horseName);
 						
 						if (!isDMYFormat(horseDepartedDate)) {
@@ -1544,7 +1622,7 @@
 							String shareStr = blankHorseNameData[i - 1][1].trim();
 							double sharePercent = 0.00;
 							
-							if (isEmpty(shareStr)) {
+							if (StringUtils.isEmpty(shareStr)) {
 								sharePercent = 0.00;
 							} else {
 								shareStr = shareStr.replace("%", "");
@@ -1566,7 +1644,7 @@
 			
 					List<String> csvDataList = this.getListFrom2DArrString(blankHorseNameData);
 			
-					if (!CollectionUtils.isEmpty(csvDataList)) {
+					if (!isEmpty(csvDataList)) {
 				
 						// ---------- cols of file ownership ---------------------------
 						// HORSE KEY (ID or NAME), can leave blank if key is horse name
@@ -1644,7 +1722,7 @@
 								String tryingFinanceEmail = mixingEmailTypeMatcher.group(2).trim();
 								commsEmail = this.getValidEmailStr(tryingCommsEmail, line);
 						
-								if (isEmpty(financeEmail)) {
+								if (StringUtils.isEmpty(financeEmail)) {
 									financeEmail = this.getValidEmailStr(tryingFinanceEmail, line);
 								}
 							} else {
@@ -1715,7 +1793,7 @@
 									csvValue(exportedDate)
 							);
 							
-							if (isEmpty(
+							if (StringUtils.isEmpty(
 									rowBuilder.replaceAll("[\",\\s]+", "")
 							)) continue;
 							
@@ -1822,7 +1900,7 @@
 			//We wanna extract this name to firstName, lastName, displayName:
 			//Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
 			if (ctMatcher.find()) {
-				if (isEmpty(firstName) && isEmpty(lastName)) {
+				if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
 					int ctStartedIndex = ctMatcher.start();
 					int ctEndIndex = ctMatcher.end();
 				
@@ -1939,11 +2017,11 @@
 			
 			// if file contains only one date like: 03/27/2019 >> MM/DD/YYYY format.
 			// if all date value in the file have format like: D/M/YYYY format (E.g: 5/6/2020) >> recheck in racingAustralia.horse
-			if (CollectionUtils.isEmpty(mdyFormatList) && !CollectionUtils.isEmpty(ausFormatList)) {
+			if (isEmpty(mdyFormatList) && !isEmpty(ausFormatList)) {
 				isAustraliaFormat = true;
 				logger.info("Type of DATE is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.");
 				
-			} else if (!CollectionUtils.isEmpty(mdyFormatList)) {
+			} else if (!isEmpty(mdyFormatList)) {
 				logger.info("Type of DATE is MM/DD/YYY format");
 				
 			} else {
@@ -1964,7 +2042,7 @@
 	
 			for (String line : csvData) {
 	
-				if (isEmpty(line)) continue;
+				if (StringUtils.isEmpty(line)) continue;
 	
 				//ignore ,,,,,,,,,,,,,, line.
 				if (line.matches("(?m)^([,]+)$")) continue;
@@ -1992,11 +2070,11 @@
 	
 			// if file contains only one date like: 03/27/2019 >> MM/DD/YYYY format.
 			// if all date value in the file have format like: D/M/YYYY format (E.g: 5/6/2020) >> recheck in racingAustralia.horse
-			if (CollectionUtils.isEmpty(mdyFormatList) && !CollectionUtils.isEmpty(ausFormatList)) {
+			if (isEmpty(mdyFormatList) && !isEmpty(ausFormatList)) {
 				isAustraliaFormat = true;
 				logger.info("Type of DATE in {} file is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.", upperCase(fileType));
 	
-			} else if (!CollectionUtils.isEmpty(mdyFormatList)) {
+			} else if (!isEmpty(mdyFormatList)) {
 				logger.info("Type of DATE in {} file is MM/DD/YYY format", upperCase(fileType));
 	
 			} else {
@@ -2007,7 +2085,7 @@
 		}
 		
 		private String getValidEmailStr(String emailsStr, String line) throws CustomException {
-			if (isEmpty(emailsStr)) return EMPTY;
+			if (StringUtils.isEmpty(emailsStr)) return EMPTY;
 			String[] emailList = emailsStr.split(";");
 			
 			for (String email : emailList) {
