@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.service.note;
+package com.tellyouiam.alittlebitaboutspring.service.note.v1;
 
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import org.springframework.stereotype.Service;
@@ -16,10 +16,4 @@ public interface NoteService {
 	Object automateImportHorse(MultipartFile horseFile, List<MultipartFile> ownershipFiles, String dirName) throws CustomException;
 	
 	Map<Object, Object> automateImportOwnerShips(List<MultipartFile> ownershipFiles) throws CustomException;
-	
-	Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException;
-	
-	Object formatHorseV2(MultipartFile horseFile, String dirName) throws IOException;
-	
-	void mergeHorseFile(MultipartFile first, MultipartFile second, String dirName) throws IOException;
 }

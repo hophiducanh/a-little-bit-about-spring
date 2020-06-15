@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.service.note;
+package com.tellyouiam.alittlebitaboutspring.service.note.utils;
 
 import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
 import org.slf4j.Logger;
