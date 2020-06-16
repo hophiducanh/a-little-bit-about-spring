@@ -1,6 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.service.note.utils;
 
-import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

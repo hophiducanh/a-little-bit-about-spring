@@ -3,35 +3,25 @@ package com.tellyouiam.alittlebitaboutspring.service.masterdata;
 import com.itextpdf.text.Rectangle;
 import com.itextpdf.text.pdf.PdfReader;
 import com.itextpdf.text.pdf.parser.*;
-import com.tellyouiam.alittlebitaboutspring.utils.LambdaExceptionHelper;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.pdmodel.PDPage;
-import org.apache.pdfbox.text.PDFTextStripperByArea;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
-import java.awt.geom.Rectangle2D;
 import java.io.*;
-import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.function.IntFunction;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static com.tellyouiam.alittlebitaboutspring.utils.LambdaExceptionHelper.*;
+import static com.tellyouiam.alittlebitaboutspring.utils.stream.LambdaExceptionHelper.*;
 
 @Service
 public class MasterDataCrawlServiceImpl implements MasterDataCrawlService {

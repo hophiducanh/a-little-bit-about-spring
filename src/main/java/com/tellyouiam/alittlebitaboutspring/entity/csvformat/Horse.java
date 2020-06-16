@@ -1,10 +1,10 @@
 package com.tellyouiam.alittlebitaboutspring.entity.csvformat;
 
 import com.opencsv.bean.CsvBindAndJoinByName;
-import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.getMultiMapSingleStringValue;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.getMultiMapSingleStringValue;
 import static java.time.temporal.ChronoField.*;
 
-import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections4.MultiValuedMap;

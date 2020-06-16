@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.stream;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableSet;

@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.stream;
 
 import java.util.function.Function;
 import java.util.function.IntFunction;

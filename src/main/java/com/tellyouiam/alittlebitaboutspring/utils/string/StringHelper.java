@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.string;
 
 import org.apache.commons.collections4.MultiValuedMap;
 import org.apache.commons.lang3.StringUtils;
@@ -22,7 +22,7 @@ public class StringHelper {
 		} else if (value instanceof String) {
 			return String.format("\"%s\"", ((String) value).replace('"', '\'').replace("\ufe0f", ""));
 		} else if (value instanceof Date) {
-			return new SimpleDateFormat(DATE_TIME_FORMAT_IN_CSV).format((Date) value).toString();
+			return new SimpleDateFormat(DATE_TIME_FORMAT_IN_CSV).format((Date) value);
 		}
 		
 		return value.toString();

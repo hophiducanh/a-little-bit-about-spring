@@ -1,9 +1,13 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.stream;
 
+import org.apache.poi.ss.formula.functions.T;
+
+import java.util.Collection;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collector;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author : Ho Anh
@@ -55,7 +59,15 @@ public class StreamHelper {
 			if (list.size() == 0) {
 				throw new IllegalStateException();
 			}
-			return list.get(list.size()-1);
+			return list.get(list.size() - 1);
 		};
+	}
+	
+	public static <T> long countDistinctCollectionElement(Collection<T> collection) {
+		return collection.stream().distinct().count();
+	}
+	
+	public static <T> long countDistinctStreamElement(Stream<T> stream) {
+		return stream.distinct().count();
 	}
 }

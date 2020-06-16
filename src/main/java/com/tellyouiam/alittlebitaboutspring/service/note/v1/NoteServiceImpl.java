@@ -1,11 +1,11 @@
 	package com.tellyouiam.alittlebitaboutspring.service.note.v1;
 	
 	import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
-	import com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper;
-	import com.tellyouiam.alittlebitaboutspring.utils.CollectionsHelper;
-	import com.tellyouiam.alittlebitaboutspring.utils.CsvHelper;
-	import com.tellyouiam.alittlebitaboutspring.utils.ErrorInfo;
-	import com.tellyouiam.alittlebitaboutspring.utils.FileHelper;
+	import com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper;
+	import com.tellyouiam.alittlebitaboutspring.utils.collection.MapHelper;
+	import com.tellyouiam.alittlebitaboutspring.utils.string.CsvHelper;
+	import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
+	import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 	import org.apache.commons.lang3.ArrayUtils;
 	import org.apache.commons.lang3.StringUtils;
 	import org.apache.commons.lang3.math.NumberUtils;
@@ -40,18 +40,18 @@
 	import java.util.regex.Matcher;
 	import java.util.regex.Pattern;
 	
-	import static com.tellyouiam.alittlebitaboutspring.service.note.consts.CommonConst.*;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.checkColumnIndex;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.getCsvData;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.getOutputFolder;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.isAustraliaFormat;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.isDMYFormat;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.isRecognizedAsValidDate;
-	import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.getCsvCellValue;
-	import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.getPostcode;
-	import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.readCsvLine;
-	import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.convertStringBuilderToList;
-	import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.csvValue;
+	import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.*;
+	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.checkColumnIndex;
+	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.getCsvData;
+	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.getOutputFolder;
+	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isAustraliaFormat;
+	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isDMYFormat;
+	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isRecognizedAsValidDate;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValue;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getPostcode;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.convertStringBuilderToList;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.csvValue;
 	import static java.util.Collections.max;
 	import static java.util.stream.Collectors.joining;
 	import static java.util.stream.Collectors.toList;
@@ -604,7 +604,7 @@
 					}
 	
 					//compare horse data from horse file and ownerShip file to make sure horse data are exact or not.
-					Map<String, String> fromHorseFile = CollectionsHelper.getDiffMap(horseMap, horseOwnershipMap, false);
+					Map<String, String> fromHorseFile = MapHelper.getDiffMap(horseMap, horseOwnershipMap, false);
 					Set<String> keyHorse = fromHorseFile.keySet();
 					Map<String, String> fromOwnerShipFile = horseOwnershipMap.entrySet().stream()
 							.filter(x -> keyHorse.contains(x.getKey()))
@@ -625,11 +625,11 @@
 		
 		@Override
 		public Map<Object, Object> automateImportOwnerShips(List<MultipartFile> ownershipFiles) {
-			String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+			String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 					"HorseId", "HorseName",
 					"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
 					"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-					"Country", "GST", "Shares", "FromDate", "ExportedDate"
+					"Country", "GST", "Shares", "FromDate", "ExportedDate", "Debtor"
 			);
 		
 			String nameHeader = String.format("%s,%s,%s,%s\n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
@@ -861,7 +861,7 @@
 						throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
 					}
 			
-					String[][] data = CommonHelper.get2DArrayFromString(allLines);
+					String[][] data = NoteHelper.get2DArrayFromString(allLines);
 					
 					//Trying to prevent arrayIndexOutOfBoundException. Unify the row's length in the two-dimensional array.
 					int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength)).get().length;
@@ -948,7 +948,7 @@
 			
 					List<Integer> allIndexes = new ArrayList<>(setAllIndexes);
 			
-					List<String> csvDataWithBankColumns = CommonHelper.getListFrom2DArrString(data);
+					List<String> csvDataWithBankColumns = NoteHelper.getListFrom2DArrString(data);
 			
 					//write csv data after format original csv file >> ignored completely empty column.
 					StringBuilder builder = new StringBuilder();
@@ -965,7 +965,7 @@
 						builder.append(rowBuilder);
 					}
 			
-					String[][] blankHorseNameData = CommonHelper.get2DArrayFromString(builder.toString());
+					String[][] blankHorseNameData = NoteHelper.get2DArrayFromString(builder.toString());
 			
 					//fill empty horse name cells as same as previous cell data.
 					//ignore reading header
@@ -1014,7 +1014,7 @@
 						}
 					}
 			
-					List<String> csvDataList = CommonHelper.getListFrom2DArrString(blankHorseNameData);
+					List<String> csvDataList = NoteHelper.getListFrom2DArrString(blankHorseNameData);
 			
 					if (!isEmpty(csvDataList)) {
 				
@@ -1065,6 +1065,7 @@
 						int shareIndex = checkColumnIndex(header, "Shares", "Share", "Ownership", "Share %");
 						int addedDateIndex = checkColumnIndex(header, "AddedDate", "Added Date");
 						int realGstIndex = checkColumnIndex(header, "GST");
+						int debtorIndex = checkColumnIndex(header, "Debtor");
 				
 						//process file without header
 						csvDataList = csvDataList.stream().skip(1).collect(toList());
@@ -1092,14 +1093,14 @@
 						
 								String tryingCommsEmail = mixingEmailTypeMatcher.group(4).trim();
 								String tryingFinanceEmail = mixingEmailTypeMatcher.group(2).trim();
-								commsEmail = CommonHelper.getValidEmailStr(tryingCommsEmail, line);
+								commsEmail = NoteHelper.getValidEmailStr(tryingCommsEmail, line);
 						
 								if (StringUtils.isEmpty(financeEmail)) {
-									financeEmail = CommonHelper.getValidEmailStr(tryingFinanceEmail, line);
+									financeEmail = NoteHelper.getValidEmailStr(tryingFinanceEmail, line);
 								}
 							} else {
-								commsEmail = CommonHelper.getValidEmailStr(commsEmail, line);
-								financeEmail = CommonHelper.getValidEmailStr(financeEmail, line);
+								commsEmail = NoteHelper.getValidEmailStr(commsEmail, line);
+								financeEmail = NoteHelper.getValidEmailStr(financeEmail, line);
 							}
 					
 							String firstName = getCsvCellValue(r, firstNameIndex);
@@ -1129,6 +1130,7 @@
 							String country = getCsvCellValue(r, countryIndex);
 							String gst = getCsvCellValue(r, realGstIndex);
 							String share = getCsvCellValue(r, shareIndex);
+							String debtor = getCsvCellValue(r, debtorIndex);
 					
 							String rawAddedDate = getCsvCellValue(r, addedDateIndex);
 							//remove all whitespace include unicode character
@@ -1138,10 +1140,9 @@
 							String addedDate = (!isAustraliaFormat && isNotEmpty(rawAddedDate))
 									? LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT)
 									: rawAddedDate;
-							
 					
 							String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," +
-											"%s,%s\n",
+											"%s,%s,%s,%s%n",
 									csvValue(horseId),
 									csvValue(horseName),
 									csvValue(ownerId),
@@ -1162,7 +1163,8 @@
 									csvValue(gst),
 									csvValue(share),
 									csvValue(addedDate),
-									csvValue(exportedDate)
+									csvValue(exportedDate),
+									csvValue(debtor)
 							);
 							
 							if (StringUtils.isEmpty(

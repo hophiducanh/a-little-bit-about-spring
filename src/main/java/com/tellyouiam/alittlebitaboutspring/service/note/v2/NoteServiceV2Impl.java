@@ -1,9 +1,8 @@
 package com.tellyouiam.alittlebitaboutspring.service.note.v2;
 
-import com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper;
-import com.tellyouiam.alittlebitaboutspring.utils.FileHelper;
-import com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper;
-import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -29,18 +28,23 @@ import java.util.function.Predicate;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.CommonConst.AMERICAN_CUSTOM_DATE_FORMAT;
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.CommonConst.AUSTRALIA_FORMAL_DATE_FORMAT;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.isAustraliaFormatV2;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.isDMYFormat;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.CommonHelper.isMDYFormat;
-import static com.tellyouiam.alittlebitaboutspring.utils.FileHelper.getOutputFolder;
-import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.getCsvCellValue;
-import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.customSplitSpecific;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AMERICAN_CUSTOM_DATE_FORMAT;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AUSTRALIA_FORMAL_DATE_FORMAT;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.CSV_LINE_END;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.CSV_LINE_SEPARATOR;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.QUOTE_CHAR;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.*;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isAustraliaFormatV2;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isDMYFormat;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isMDYFormat;
+import static com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper.getOutputFolder;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValue;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
@@ -49,7 +53,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 	
 	public Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException {
 		//InputStream inputStream = new BufferedInputStream(ownerFile.getInputStream());
-		List<String> csvData = CommonHelper.getCsvData(ownerFile);
+		List<String> csvData = getCsvData(ownerFile);
 		StringBuilder streamBuilder = new StringBuilder();
 		
 		if (!isEmpty(csvData)) {
@@ -65,9 +69,9 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			
 			//find line is header
 			Predicate<String> isLineContainHeader = line -> Stream.of("Name", "Address", "Phone", "Mobile")
-					.anyMatch(headerElement -> CommonHelper.containsIgnoreCase(line, headerElement));
+					.anyMatch(headerElement -> containsIgnoreCase(line, headerElement));
 			
-			String headerLine = csvData.stream().filter(isLineContainHeader).findFirst().orElse("");
+			String headerLine = csvData.stream().filter(isLineContainHeader).findFirst().orElse(EMPTY);
 			int headerLineNum = csvData.indexOf(headerLine);
 			csvData = csvData.stream().skip(headerLineNum).collect(toList());
 			
@@ -191,13 +195,12 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
 					.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
 			
-			Map<String, List<String>> finalCsvDataHeaderAsKey = csvDataHeaderAsKey;
 			Map<String, List<String>> ownerDataMap = standardHeaderMap.keySet().stream().map(standardHeader -> {
 				
 				Predicate<String> csvHeaderMatchStandardHeader = csvHeader ->
-						CommonHelper.stringContainsIgnoreCase(standardHeader, csvHeader, ",");
+						stringContainsIgnoreCase(standardHeader, csvHeader, ",");
 				
-				Optional<String> matchHeaderKey = finalCsvDataHeaderAsKey.keySet().stream()
+				Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
 						.filter(csvHeaderMatchStandardHeader).findFirst();
 				
 				String standardKey = standardHeaderMap.get(standardHeader).get(0);
@@ -205,19 +208,13 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 						.of(standardHeaderMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
 						.flatMap(Collection::stream).collect(toList());
 				return matchHeaderKey
-						.map(key -> new AbstractMap.SimpleImmutableEntry<>(standardKey, finalCsvDataHeaderAsKey.get(key)))
+						.map(key -> new AbstractMap.SimpleImmutableEntry<>(standardKey, csvDataHeaderAsKey.get(key)))
 						.orElseGet(() -> new AbstractMap.SimpleImmutableEntry<>(standardKey, filledColMissingData));
 			}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (m, n) -> m, LinkedHashMap::new));
 			
 			//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
 			List<Iterator<String>> iteratorDataList = new ArrayList<>(ownerDataMap.values()).stream()
 					.map(List::iterator).collect(toList());
-			
-			List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
-					.mapToObj(
-							n -> iteratorDataList.stream().filter(Iterator::hasNext)
-									.map(Iterator::next).collect(toList())
-					).collect(toList());
 			
 			//filter line only contains " (quotes) and ,(comma)
 			Predicate<StringJoiner> validDataLine = line -> isNotEmpty(
@@ -228,13 +225,15 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 							.replace(",", "")
 			);
 			
-			//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
-			String allLiner = transposeList.stream()
-					.map(l -> l.stream()
+			String allLiner = IntStream.range(0, maxMapValueSize)
+					.mapToObj(
+							n -> iteratorDataList.stream().filter(Iterator::hasNext)
+									.map(Iterator::next).collect(toList())
+					).map(l -> l.stream()
 							.map(StringHelper::csvValue)
 							.collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge)
 					).filter(validDataLine)
-					.collect(() -> new StringJoiner("\n"), StringJoiner::merge, StringJoiner::merge).toString();
+					.collect(() -> new StringJoiner(StringUtils.LF), StringJoiner::merge, StringJoiner::merge).toString();
 			
 			streamBuilder.append(allLiner);
 			String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
@@ -246,7 +245,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 	
 	@Override
 	public Object formatHorseV2(MultipartFile horseFile, String dirName) throws IOException {
-		List<String> csvData = CommonHelper.getCsvData(horseFile);
+		List<String> csvData = getCsvData(horseFile);
 		StringBuilder streamBuilder = new StringBuilder();
 		
 		if (!isEmpty(csvData)) {
@@ -374,7 +373,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			Map<String, List<String>> ownerDataMap = standardHeaderMap.keySet().stream().map(standardHeader -> {
 				
 				Predicate<String> csvHeaderMatchStandardHeader = csvHeader ->
-						CommonHelper.stringContainsIgnoreCase(standardHeader, csvHeader, ",");
+						stringContainsIgnoreCase(standardHeader, csvHeader, ",");
 				
 				Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
 						.filter(csvHeaderMatchStandardHeader).findFirst();
@@ -437,16 +436,16 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			};
 			List<String> firstColData = firstCsvData.stream().map(valueRowIndexMapper).collect(toList());
 			List<String> secondColData = secondCsvData.stream().map(valueRowIndexMapper).collect(toList());
-			return new AbstractMap.SimpleImmutableEntry<>(
-					index, (firstColData.stream().distinct().count() == 2) ? secondColData : firstColData
-			);
+			
+			//merge two columns has same title. Get second col if the first one is empty (Only header)
+			List<String> mergeColData = isCsvColHasOnlyHeader(firstColData) ? secondColData : firstColData;
+			return new AbstractMap.SimpleImmutableEntry<>(index, mergeColData);
 		};
 		
-		//col has owner data is col has header and has at least two different cell value.
-		Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry ->
-				(colEntry.getValue().stream().distinct().count() > 2 || isNotEmpty(colEntry.getValue().get(0)));
+		//col has owner data is col has at least two different cell value.
+		Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry -> isCsvColHasRealData(colEntry.getValue());
 		
-		int rowLength = CommonHelper.getMaxRowLength(firstCsvData);
+		int rowLength = getMaxRowLength(firstCsvData);
 		Map<Integer, List<String>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
 				.map(colAccumulatorMapper)
 				.filter(colHasOwnerData)
@@ -456,16 +455,16 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 	}
 	
 	public void mergeHorseFile(MultipartFile first, MultipartFile second, String dirName) throws IOException {
-		List<String> firstCsvData = CommonHelper.getCsvData(first);
-		List<String> secondCsvData = CommonHelper.getCsvData(second);
-		Map<Integer, List<String>> joinCsvData = this.dataAccumulator(firstCsvData, secondCsvData);
+		List<String> firstCsvData = getCsvData(first);
+		List<String> secondCsvData = getCsvData(second);
+		Map<Integer, List<String>> joinCsvDataMap = this.dataAccumulator(firstCsvData, secondCsvData);
 		
 		StringBuilder streamBuilder = new StringBuilder();
 		
-		int maxMapValueSize = joinCsvData.values().stream().map(List::size)
+		int maxMapValueSize = joinCsvDataMap.values().stream().map(List::size)
 				.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
 		
-		List<Iterator<String>> iteratorDataList = new ArrayList<>(joinCsvData.values()).stream()
+		List<Iterator<String>> iteratorDataList = new ArrayList<>(joinCsvDataMap.values()).stream()
 				.map(List::iterator).collect(toList());
 		
 		List<List<String>> transposeList = IntStream.range(0, maxMapValueSize)
@@ -474,22 +473,25 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 								.map(Iterator::next).collect(toList())
 				).collect(toList());
 		
-		//filter line only contains " (quotes) and ,(comma)
-		Predicate<StringJoiner> validDataLine = line -> isNotEmpty (
+		//filter line only contains " (quotes) and ,(comma) >> is not empty after remove quote and comma
+		Predicate<StringJoiner> isNotEmptyCsvLine = line -> isNotEmpty(
 				line.toString().chars().distinct()
 						.mapToObj(c -> String.valueOf((char) c))
 						.collect(joining())
-						.replace("\"", "")
-						.replace(",", "")
+						.replace(QUOTE_CHAR, EMPTY)
+						.replace(CSV_LINE_SEPARATOR, EMPTY)
 		);
+		
+		Function<List<String>, StringJoiner> convertListToCsvLine = list -> list.stream()
+				.map(StringHelper::csvValue)
+				.collect(() -> new StringJoiner(CSV_LINE_SEPARATOR), StringJoiner::add, StringJoiner::merge);
 		
 		//https://stackoverflow.com/questions/48672931/efficiently-joining-text-in-nested-lists
 		String allLiner = transposeList.stream()
-				.map(l -> l.stream()
-						.map(StringHelper::csvValue)
-						.collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge)
-				).filter(validDataLine)
-				.collect(() -> new StringJoiner("\n"), StringJoiner::merge, StringJoiner::merge).toString();
+				.map(convertListToCsvLine)
+				.filter(isNotEmptyCsvLine)
+				.collect(() -> new StringJoiner(CSV_LINE_END), StringJoiner::merge, StringJoiner::merge)
+				.toString();
 		
 		streamBuilder.append(allLiner);
 		String path = getOutputFolder(dirName) + File.separator + "merge-horse-v2.csv";

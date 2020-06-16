@@ -3,7 +3,7 @@ package com.tellyouiam.alittlebitaboutspring.rest.note;
 import com.tellyouiam.alittlebitaboutspring.entity.note.Note;
 import com.tellyouiam.alittlebitaboutspring.service.note.v1.NoteService;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
-import com.tellyouiam.alittlebitaboutspring.utils.FileHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;

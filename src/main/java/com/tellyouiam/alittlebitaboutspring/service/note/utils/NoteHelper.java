@@ -1,11 +1,9 @@
 package com.tellyouiam.alittlebitaboutspring.service.note.utils;
 
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
-import com.tellyouiam.alittlebitaboutspring.service.note.consts.CommonConst;
-import com.tellyouiam.alittlebitaboutspring.service.note.v1.NoteServiceImpl;
-import com.tellyouiam.alittlebitaboutspring.utils.ErrorInfo;
-import com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper;
-import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
+import com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -30,11 +28,11 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.CommonConst.*;
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.CommonConst.AMERICAN_CUSTOM_DATE_FORMAT;
-import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.getCsvCellValue;
-import static com.tellyouiam.alittlebitaboutspring.utils.OnboardHelper.readCsvLine;
-import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.isValidEmail;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.*;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AMERICAN_CUSTOM_DATE_FORMAT;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValue;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.isValidEmail;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -42,9 +40,9 @@ import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.upperCase;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
-public class CommonHelper {
+public class NoteHelper {
 	
-	private static final Logger logger = LoggerFactory.getLogger(CommonHelper.class);
+	private static final Logger logger = LoggerFactory.getLogger(NoteHelper.class);
 	
 	public static List<String> getCsvData(MultipartFile multipart) throws IOException {
 		InputStream is = multipart.getInputStream();
@@ -286,6 +284,19 @@ public class CommonHelper {
 		String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
 		return Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
 				.orElseThrow(IllegalAccessError::new).length;
+	}
+	
+	public static long countDistinctColElement(List<String> colValues) {
+		return colValues.stream().distinct().count();
+	}
+	
+	public static boolean isCsvColHasOnlyHeader(List<String> colValues) {
+		return colValues.stream().distinct().count() == 2;
+	}
+	
+	//distinct CSV col has data except header cell, empty cell
+	public static boolean isCsvColHasRealData(List<String> colValues) {
+		return colValues.stream().distinct().count() > 2;
 	}
 	
 	public static String getOutputFolderPath() {

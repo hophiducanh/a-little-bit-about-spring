@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.string;
 
 import org.springframework.util.StringUtils;
 

@@ -1,7 +1,8 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.string;
 
 import com.opencsv.CSVReader;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
+import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.number;
 
 import lombok.Getter;
 import lombok.NoArgsConstructor;

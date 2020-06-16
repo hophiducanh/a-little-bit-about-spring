@@ -3,7 +3,7 @@ package com.tellyouiam.alittlebitaboutspring.entity.csvformat;
 import com.opencsv.bean.CsvBindAndJoinByName;
 import com.opencsv.bean.CsvBindByName;
 import com.tellyouiam.alittlebitaboutspring.converter.CustomJoinNameDoubleStringConverter;
-import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.getMultiMapSingleDoubleValue;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.getMultiMapSingleDoubleValue;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.collections4.MultiValuedMap;

@@ -9,7 +9,12 @@ import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.YEAR;
 
-public class CommonConst {
+public class NoteConst {
+	
+	public static final String CSV_LINE_SEPARATOR = ",";
+	public static final String CSV_LINE_END = "\n";
+	public static final String QUOTE_CHAR = "\"";
+	
 	public static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
 	public static final String REMOVE_LINE_BREAK_PATTERN = "\nCT\\b";
 	public static final String REMOVE_INVALID_SHARES_PATTERN = "\\bInt.Party\\b";

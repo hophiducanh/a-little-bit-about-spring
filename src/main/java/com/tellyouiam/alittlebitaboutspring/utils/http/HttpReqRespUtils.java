@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.http;
 
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
@@ -40,5 +40,9 @@ public class HttpReqRespUtils {
 		}
 		
 		return request.getRemoteAddr();
+	}
+	
+	public static void main(String[] args) {
+		System.out.println(getClientIpAddressIfServletRequestExist());
 	}
 }

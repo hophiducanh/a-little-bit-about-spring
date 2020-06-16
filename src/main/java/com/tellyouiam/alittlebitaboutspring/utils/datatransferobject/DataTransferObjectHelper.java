@@ -1,4 +1,4 @@
-package com.tellyouiam.alittlebitaboutspring.utils;
+package com.tellyouiam.alittlebitaboutspring.utils.datatransferobject;
 
 import java.util.ArrayList;
 import java.util.Arrays;

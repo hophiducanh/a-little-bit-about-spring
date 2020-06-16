@@ -5,7 +5,7 @@ import com.opencsv.bean.CsvToBeanBuilder;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.Horse;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.OpeningBalance;
 import com.tellyouiam.alittlebitaboutspring.filter.EmptyLineFilter;
-import com.tellyouiam.alittlebitaboutspring.utils.StringHelper;
+import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,7 +22,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-import static com.tellyouiam.alittlebitaboutspring.utils.StringHelper.getMultiMapSingleStringValue;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.getMultiMapSingleStringValue;
 
 @Service
 public class CsvServiceImpl implements CsvService {
