@@ -38,7 +38,7 @@ import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper
 import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isDMYFormat;
 import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isMDYFormat;
 import static com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper.getOutputFolder;
-import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValue;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
@@ -85,7 +85,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 				//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
 				Function<String, String> valueRowIndexMapper = line -> {
 					String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
-					return getCsvCellValue(rowArr, index);
+					return getCsvCellValueAtIndex(rowArr, index);
 				};
 				
 				return new AbstractMap.SimpleImmutableEntry<>(
@@ -271,7 +271,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 				//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
 				Function<String, String> valueRowIndexMapper = line -> {
 					String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
-					return getCsvCellValue(rowArr, index);
+					return getCsvCellValueAtIndex(rowArr, index);
 				};
 				
 				return new AbstractMap.SimpleImmutableEntry<>(
@@ -432,7 +432,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
 			Function<String, String> valueRowIndexMapper = line -> {
 				String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
-				return getCsvCellValue(rowArr, index);
+				return getCsvCellValueAtIndex(rowArr, index);
 			};
 			List<String> firstColData = firstCsvData.stream().map(valueRowIndexMapper).collect(toList());
 			List<String> secondColData = secondCsvData.stream().map(valueRowIndexMapper).collect(toList());

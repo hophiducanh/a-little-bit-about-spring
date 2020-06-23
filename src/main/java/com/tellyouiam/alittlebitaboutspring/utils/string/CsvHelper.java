@@ -106,9 +106,9 @@ public class CsvHelper {
 				lineBuilder = new StringBuilder();
 				String[] r = OnboardHelper.readCsvLine(item);
 				
-				String mobile = OnboardHelper.getCsvCellValue(r, mobileIndex);
-				String phone = OnboardHelper.getCsvCellValue(r, phoneIndex);
-				String fax = OnboardHelper.getCsvCellValue(r, faxIndex);
+				String mobile = OnboardHelper.getCsvCellValueAtIndex(r, mobileIndex);
+				String phone = OnboardHelper.getCsvCellValueAtIndex(r, phoneIndex);
+				String fax = OnboardHelper.getCsvCellValueAtIndex(r, faxIndex);
 				
 				if (isValidPhoneMobileFaxNumber(mobile))
 					lineBuilder.append(String.format("Invalid mobile:%s\n", mobile));

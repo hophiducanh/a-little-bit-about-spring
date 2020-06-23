@@ -9,6 +9,7 @@
 	import org.apache.commons.lang3.ArrayUtils;
 	import org.apache.commons.lang3.StringUtils;
 	import org.apache.commons.lang3.math.NumberUtils;
+	import org.apache.commons.text.similarity.LevenshteinDistance;
 	import org.apache.http.NameValuePair;
 	import org.apache.http.client.utils.URIBuilder;
 	import org.slf4j.Logger;
@@ -23,19 +24,7 @@
 	import java.nio.file.Files;
 	import java.nio.file.Paths;
 	import java.time.LocalDate;
-	import java.time.format.DateTimeFormatter;
-	import java.util.ArrayList;
-	import java.util.Arrays;
-	import java.util.Comparator;
-	import java.util.HashMap;
-	import java.util.HashSet;
-	import java.util.Iterator;
-	import java.util.LinkedHashMap;
-	import java.util.List;
-	import java.util.Map;
-	import java.util.NoSuchElementException;
-	import java.util.Set;
-	import java.util.TreeMap;
+	import java.util.*;
 	import java.util.function.Predicate;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
@@ -48,18 +37,17 @@
 	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isAustraliaFormat;
 	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isDMYFormat;
 	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isRecognizedAsValidDate;
-	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValue;
-	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getPostcode;
-	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
-	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.convertStringBuilderToList;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.*;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvRow;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.csvValue;
 	import static java.util.Collections.max;
+	import static java.util.Objects.*;
 	import static java.util.stream.Collectors.joining;
 	import static java.util.stream.Collectors.toList;
 	import static java.util.stream.Collectors.toMap;
+	import static org.apache.commons.lang3.StringUtils.*;
 	import static org.apache.commons.lang3.StringUtils.EMPTY;
 	import static org.apache.commons.lang3.StringUtils.SPACE;
-	import static org.apache.commons.lang3.StringUtils.isAllEmpty;
 	import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 	import static org.apache.commons.lang3.StringUtils.substring;
 	import static org.apache.commons.lang3.StringUtils.substringAfterLast;
@@ -71,9 +59,9 @@
 	
 		private static final Logger logger = LoggerFactory.getLogger(NoteServiceImpl.class);
 	
-		private static final String HORSE_FILE_HEADER = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-				"OwnerID", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName", "Type",
-				"Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode", "Country", "GST");
+		private static final String HORSE_FILE_HEADER = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+				"OwnerId", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName", "Type",
+				"Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode", "Country", "Gst", "Debtor");
 		
 		@Override
 		public Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException {
@@ -81,8 +69,10 @@
 				List<String> csvData = getCsvData(ownerFile);
 				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
+				StringBuilder finalBuilder = new StringBuilder();
+				finalBuilder.append(HORSE_FILE_HEADER);
 				
-				String ownerErrorData = StringUtils.EMPTY;
+				String ownerErrorData = EMPTY;
 				
 				if (!isEmpty(csvData)) {
 					
@@ -123,10 +113,16 @@
 					int postCodeIndex = checkColumnIndex(header, "PostCode");
 					int countryIndex = checkColumnIndex(header, "Country");
 					int gstIndex = checkColumnIndex(header, "GST");
+					int debtorIndex = checkColumnIndex(header, "Debtor");
 					
 					builder.append(HORSE_FILE_HEADER);
 					
 					csvData = csvData.stream().skip(1).collect(toList());
+					Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
+					csvData = csvData.stream().skip(1)
+							.filter(StringUtils::isNotEmpty)
+							.filter(isEmptyRowCsv.negate())
+							.collect(toList());
 					
 					for (String line : csvData) {
 						if (StringUtils.isEmpty(line)) continue;
@@ -148,28 +144,29 @@
 							continue;
 						}
 						
-						String ownerId = getCsvCellValue(r, ownerIdIndex);
-						String email = getCsvCellValue(r, emailIndex);
-						String financeEmail = getCsvCellValue(r, financeEmailIndex);
-						String firstName = getCsvCellValue(r, firstNameIndex);
-						String lastName = getCsvCellValue(r, lastNameIndex);
-						String displayName = getCsvCellValue(r, displayNameIndex);
-						String type = getCsvCellValue(r, typeIndex);
+						String ownerId = getCsvCellValueAtIndex(r, ownerIdIndex);
+						String email = getCsvCellValueAtIndex(r, emailIndex);
+						String financeEmail = getCsvCellValueAtIndex(r, financeEmailIndex);
+						String firstName = getCsvCellValueAtIndex(r, firstNameIndex);
+						String lastName = getCsvCellValueAtIndex(r, lastNameIndex);
+						String displayName = getCsvCellValueAtIndex(r, displayNameIndex);
+						String type = getCsvCellValueAtIndex(r, typeIndex);
 						
-						String mobile = getCsvCellValue(r, mobileIndex);
+						String mobile = getCsvCellValueAtIndex(r, mobileIndex);
 						
-						String phone = getCsvCellValue(r, phoneIndex);
+						String phone = getCsvCellValueAtIndex(r, phoneIndex);
 						
-						String fax = getCsvCellValue(r, faxIndex);
-						String address = getCsvCellValue(r, addressIndex);
+						String fax = getCsvCellValueAtIndex(r, faxIndex);
+						String address = getCsvCellValueAtIndex(r, addressIndex);
 						
-						String city = getCsvCellValue(r, cityIndex);
-						String state = getCsvCellValue(r, stateIndex);
-						String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
-						String country = getCsvCellValue(r, countryIndex);
-						String gst = getCsvCellValue(r, gstIndex);
+						String city = getCsvCellValueAtIndex(r, cityIndex);
+						String state = getCsvCellValueAtIndex(r, stateIndex);
+						String postCode = getPostcode(getCsvCellValueAtIndex(r, postCodeIndex));
+						String country = getCsvCellValueAtIndex(r, countryIndex);
+						String gst = getCsvCellValueAtIndex(r, gstIndex);
+						String debtor = getCsvCellValueAtIndex(r, debtorIndex);
 						
-						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 								csvValue(ownerId),
 								csvValue(email),
 								csvValue(financeEmail),
@@ -185,8 +182,14 @@
 								csvValue(state),
 								csvValue(postCode),
 								csvValue(country),
-								csvValue(gst)
+								csvValue(gst),
+								csvValue(debtor)
 						);
+						
+						if (StringUtils.isEmpty(
+								rowBuilder.replaceAll("[\",\\s]+", "")
+						)) continue;
+						
 						preparedData.add(rowBuilder);
 						
 						builder.append(rowBuilder);
@@ -195,13 +198,182 @@
 					ownerErrorData = CsvHelper.validateInputFile(preparedData);
 				}
 				
-				String errorDataPath = getOutputFolder(dirName) + File.separator + "owner-input-error.csv";
-				FileHelper.writeDataToFile(errorDataPath, ownerErrorData.getBytes());
+				int ownerIdIndex = 0;
+				int emailIndex = 1;
+				int financeEmailIndex = 2;
+				int firstNameIndex = 3;
+				int lastNameIndex = 4;
+				int displayNameIndex = 5;
+				int typeIndex = 6;
+				int mobileIndex = 7;
+				int phoneIndex = 8;
+				int faxIndex = 9;
+				int addressIndex = 10;
+				int cityIndex = 11;
+				int stateIndex = 12;
+				int postCodeIndex = 13;
+				int countryIndex = 14;
+				int gstIndex = 15;
+				int debtorIndex = 16;
+				
+				LevenshteinDistance distance = new LevenshteinDistance();
+				for (int i = 0; i < preparedData.size() - 1; i++) {
+					String[] current = readCsvLine(preparedData.get(i));
+					String[] next = readCsvLine(preparedData.get(i + 1));
+					String[] previous = null;
+					if (i > 0) previous = readCsvLine(preparedData.get(i - 1));
+					
+					String ownerId = readCsvRow(current, ownerIdIndex);
+					
+					String preEmail = nonNull(previous) ? readCsvRow(previous, emailIndex) : EMPTY;
+					String email = readCsvRow(current, emailIndex);
+					String nextEmail = readCsvRow(next, emailIndex);
+					
+					String financeEmail = readCsvRow(current, financeEmailIndex);
+					String firstName = readCsvRow(current, firstNameIndex);
+					String lastName = readCsvRow(current, lastNameIndex);
+					
+					String preDisplayName = nonNull(previous) ? readCsvRow(previous, displayNameIndex) : EMPTY;
+					String displayName = readCsvRow(current, displayNameIndex);
+					String nextDisplayName = readCsvRow(next, displayNameIndex);
+					
+					String type = readCsvRow(current, typeIndex);
+					
+					String preMobile = nonNull(previous) ? readCsvRow(previous, mobileIndex) : EMPTY;
+					String mobile = readCsvRow(current, mobileIndex);
+					String nextMobile = readCsvRow(next, mobileIndex);
+					
+					String prePhone = nonNull(previous) ? readCsvRow(previous, phoneIndex) : EMPTY;
+					String phone = readCsvRow(current, phoneIndex);
+					String nextPhone = readCsvRow(next, phoneIndex);
+					
+					String fax = readCsvRow(current, faxIndex);
+					
+					String preAddress = nonNull(previous) ? readCsvRow(previous, addressIndex) : EMPTY;
+					String addresses = readCsvRow(current, addressIndex);
+					String nextAddress = readCsvRow(next, addressIndex);
+					
+					String city = readCsvRow(current, cityIndex);
+					String state = readCsvRow(current, stateIndex);
+					String postCode = readCsvRow(current, postCodeIndex);
+					String country = readCsvRow(current, countryIndex);
+					String gst = readCsvRow(current, gstIndex);
+					String debtor = readCsvRow(current, debtorIndex);
+					
+					boolean dupPhone = false;
+					boolean dupMobile = false;
+					int index = 0;
+					if (email.equalsIgnoreCase(nextEmail) || email.contains(nextEmail) || nextEmail.contains(email)) {
+						
+						if (nextEmail.contains(email)) {
+							email = nextEmail;
+						}
+						
+						if (StringUtils.isEmpty(addresses) ^ StringUtils.isEmpty(nextAddress)) {
+							if (StringUtils.isEmpty(addresses)) {
+								addresses = nextAddress;
+							}
+						}
+						
+						if (isNotEmpty(addresses)) {
+							String[] addressArr = addresses.split(";");
+							
+							for (String address : addressArr) {
+								int diff = distance.apply(
+										deleteWhitespace(address.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()),
+										deleteWhitespace(nextAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase())
+								);
+								
+								if (isNotEmpty(nextAddress) && diff != 0) {
+									addresses = addresses.concat(";").concat(nextAddress);
+								}
+							}
+						}
+						
+						if (phone.equalsIgnoreCase(nextPhone)) {
+							dupPhone = true;
+						}
+						
+						if (mobile.equalsIgnoreCase(nextMobile)) {
+							dupMobile = true;
+						}
+						
+						if (dupPhone || dupMobile) {
+							i++;
+						}
+					}
+					
+					if (nonNull(previous)) {
+						if (preEmail.equalsIgnoreCase(email) || email.contains(preEmail) || preEmail.contains(email)) {
+							
+							if (preEmail.contains(email)) {
+								email = nextEmail;
+							}
+							
+							if (StringUtils.isEmpty(preAddress) ^ StringUtils.isEmpty(addresses)) {
+								if (StringUtils.isEmpty(preAddress)) {
+									preAddress = addresses;
+								}
+							}
+							
+							if (isNotEmpty(preAddress)) {
+								String[] addressArr = preAddress.split(";");
+								
+								for (String address : addressArr) {
+									int diff = distance.apply(
+											deleteWhitespace(address.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()),
+											deleteWhitespace(nextAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase())
+									);
+									
+									if (isNotEmpty(addresses) && diff != 0) {
+										preAddress = preAddress.concat(";").concat(addresses);
+									}
+								}
+							}
+							
+							if (prePhone.equalsIgnoreCase(phone)) {
+								dupPhone = true;
+							}
+							
+							if (preMobile.equalsIgnoreCase(mobile)) {
+								dupMobile = true;
+							}
+							
+							if (dupPhone || dupMobile) {
+								continue;
+							}
+						}
+					}
+					
+					String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+							csvValue(ownerId),
+							csvValue(email),
+							csvValue(financeEmail),
+							csvValue(firstName),
+							csvValue(lastName),
+							csvValue(displayName),
+							csvValue(type),
+							csvValue(mobile),
+							csvValue(phone),
+							csvValue(fax),
+							csvValue(addresses),
+							csvValue(city),
+							csvValue(state),
+							csvValue(postCode),
+							csvValue(country),
+							csvValue(gst),
+							csvValue(debtor)
+					);
+					
+					finalBuilder.append(rowBuilder);
+				}
+//				String errorDataPath = getOutputFolder(dirName) + File.separator + "owner-input-error.csv";
+//				FileHelper.writeDataToFile(errorDataPath, ownerErrorData.getBytes());
 				
 				String path = getOutputFolder(dirName) + File.separator + "formatted-owner.csv";
-				FileHelper.writeDataToFile(path, builder.toString().getBytes());
+				FileHelper.writeDataToFile(path, finalBuilder.toString().getBytes());
 				
-				return builder;
+				return finalBuilder;
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -273,15 +445,19 @@
 					builder.append(rowHeader);
 					
 					Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
-					csvData = csvData.stream().skip(1).filter(StringUtils::isNotEmpty).filter(isEmptyRowCsv.negate()).collect(toList());
+					csvData = csvData.stream().skip(1)
+							.filter(StringUtils::isNotEmpty)
+							.filter(isEmptyRowCsv.negate())
+							.collect(toList());
+					
 					boolean isAustraliaFormat = isAustraliaFormat(csvData, foaledIndex, "horse");
 					for (String line : csvData) {
 						String[] r = readCsvLine(line);
 	
-						String externalId = getCsvCellValue(r, externalIdIndex);
-						String name = getCsvCellValue(r, nameIndex);
+						String externalId = getCsvCellValueAtIndex(r, externalIdIndex);
+						String name = getCsvCellValueAtIndex(r, nameIndex);
 	
-						String rawFoaled = getCsvCellValue(r, foaledIndex);
+						String rawFoaled = getCsvCellValueAtIndex(r, foaledIndex);
 						String foaled;
 	
 						if (!isAustraliaFormat && isNotEmpty(rawFoaled)) {
@@ -290,30 +466,30 @@
 							foaled = rawFoaled;
 						}
 	
-						String sire = getCsvCellValue(r, sireIndex);
-						String dam = getCsvCellValue(r, damIndex);
-						String color = getCsvCellValue(r, colorIndex);
-						String sex = getCsvCellValue(r, sexIndex);
+						String sire = getCsvCellValueAtIndex(r, sireIndex);
+						String dam = getCsvCellValueAtIndex(r, damIndex);
+						String color = getCsvCellValueAtIndex(r, colorIndex);
+						String sex = getCsvCellValueAtIndex(r, sexIndex);
 	
-						String avatar = getCsvCellValue(r, avatarIndex);
+						String avatar = getCsvCellValueAtIndex(r, avatarIndex);
 	
-						String addedDate = getCsvCellValue(r, addedDateIndex);
+						String addedDate = getCsvCellValueAtIndex(r, addedDateIndex);
 						addedDateBuilder.append(addedDate);
 	
-						String activeStatus = getCsvCellValue(r, activeStatusIndex);
+						String activeStatus = getCsvCellValueAtIndex(r, activeStatusIndex);
 						addedDateBuilder.append(activeStatus);
 	
-						String currentLocation = getCsvCellValue(r, horseLocationIndex);
+						String currentLocation = getCsvCellValueAtIndex(r, horseLocationIndex);
 						addedDateBuilder.append(currentLocation);
 	
-						String currentStatus = getCsvCellValue(r, horseStatusIndex);
-						String type = getCsvCellValue(r, typeIndex);
-						String category = getCsvCellValue(r, categoryIndex);
-						String bonusScheme = getCsvCellValue(r, bonusSchemeIndex);
-						String nickName = getCsvCellValue(r, nickNameIndex);
-						String country = getCsvCellValue(r, countryIndex);
-						String microchip = getCsvCellValue(r, microchipIndex);
-						String brand = getCsvCellValue(r, brandIndex);
+						String currentStatus = getCsvCellValueAtIndex(r, horseStatusIndex);
+						String type = getCsvCellValueAtIndex(r, typeIndex);
+						String category = getCsvCellValueAtIndex(r, categoryIndex);
+						String bonusScheme = getCsvCellValueAtIndex(r, bonusSchemeIndex);
+						String nickName = getCsvCellValueAtIndex(r, nickNameIndex);
+						String country = getCsvCellValueAtIndex(r, countryIndex);
+						String microchip = getCsvCellValueAtIndex(r, microchipIndex);
+						String brand = getCsvCellValueAtIndex(r, brandIndex);
 	
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 								csvValue(externalId),
@@ -512,15 +688,15 @@
 	
 						String[] r = readCsvLine(line);
 	
-						String externalId = getCsvCellValue(r, externalIdIndex);
-						String name = getCsvCellValue(r, nameIndex);
+						String externalId = getCsvCellValueAtIndex(r, externalIdIndex);
+						String name = getCsvCellValueAtIndex(r, nameIndex);
 	
 						if (StringUtils.isEmpty(name)) {
 							logger.info("**************************Empty Horse Name: {} at line: {}", name, line);
 							continue;
 						}
 	
-						String rawFoaled = getCsvCellValue(r, foaledIndex);
+						String rawFoaled = getCsvCellValueAtIndex(r, foaledIndex);
 						rawFoaled = rawFoaled.split("\\p{Z}")[0];
 						String foaled;
 						if (!isAustraliaFormat && isNotEmpty(rawFoaled)) {
@@ -529,27 +705,27 @@
 							foaled = rawFoaled;
 						}
 	
-						String sire = getCsvCellValue(r, sireIndex);
-						String dam = getCsvCellValue(r, damIndex);
+						String sire = getCsvCellValueAtIndex(r, sireIndex);
+						String dam = getCsvCellValueAtIndex(r, damIndex);
 	
 						if (StringUtils.isEmpty(name) && StringUtils.isEmpty(sire) && StringUtils.isEmpty(dam)
 								&& StringUtils.isEmpty(rawFoaled)) continue;
 	
-						String color = getCsvCellValue(r, colorIndex);
-						String sex = getCsvCellValue(r, sexIndex);
-						String avatar = getCsvCellValue(r, avatarIndex);
-						String dayHere = getCsvCellValue(r, daysHereIndex);
-						String addedDate = getCsvCellValue(r, addedDateIndex);
-						String activeStatus = getCsvCellValue(r, activeStatusIndex);
-						String currentLocation = getCsvCellValue(r, horseLocationIndex);
-						String currentStatus = getCsvCellValue(r, horseStatusIndex);
-						String type = getCsvCellValue(r, typeIndex);
-						String category = getCsvCellValue(r, categoryIndex);
-						String bonusScheme = getCsvCellValue(r, bonusSchemeIndex);
-						String nickName = getCsvCellValue(r, nickNameIndex);
-						String country = getCsvCellValue(r, countryIndex);
-						String microchip = getCsvCellValue(r, microchipIndex);
-						String brand = getCsvCellValue(r, brandIndex);
+						String color = getCsvCellValueAtIndex(r, colorIndex);
+						String sex = getCsvCellValueAtIndex(r, sexIndex);
+						String avatar = getCsvCellValueAtIndex(r, avatarIndex);
+						String dayHere = getCsvCellValueAtIndex(r, daysHereIndex);
+						String addedDate = getCsvCellValueAtIndex(r, addedDateIndex);
+						String activeStatus = getCsvCellValueAtIndex(r, activeStatusIndex);
+						String currentLocation = getCsvCellValueAtIndex(r, horseLocationIndex);
+						String currentStatus = getCsvCellValueAtIndex(r, horseStatusIndex);
+						String type = getCsvCellValueAtIndex(r, typeIndex);
+						String category = getCsvCellValueAtIndex(r, categoryIndex);
+						String bonusScheme = getCsvCellValueAtIndex(r, bonusSchemeIndex);
+						String nickName = getCsvCellValueAtIndex(r, nickNameIndex);
+						String country = getCsvCellValueAtIndex(r, countryIndex);
+						String microchip = getCsvCellValueAtIndex(r, microchipIndex);
+						String brand = getCsvCellValueAtIndex(r, brandIndex);
 	
 						// If dayHere is empty, get exportedDate of ownership file. Because of:
 						// When dayHere is empty, usually departed date in horse line of ownership file also empty too.
@@ -1077,11 +1253,11 @@
 						for (String line : csvDataList) {
 							String[] r = readCsvLine(line);
 					
-							String horseId = getCsvCellValue(r, horseIdIndex);
-							String horseName = getCsvCellValue(r, horseNameIndex);
-							String ownerId = getCsvCellValue(r, ownerIdIndex);
-							String commsEmail = getCsvCellValue(r, commsEmailIndex);
-							String financeEmail = getCsvCellValue(r, financeEmailIndex);
+							String horseId = getCsvCellValueAtIndex(r, horseIdIndex);
+							String horseName = getCsvCellValueAtIndex(r, horseNameIndex);
+							String ownerId = getCsvCellValueAtIndex(r, ownerIdIndex);
+							String commsEmail = getCsvCellValueAtIndex(r, commsEmailIndex);
+							String financeEmail = getCsvCellValueAtIndex(r, financeEmailIndex);
 	
 							/*
 							 ### **Process case email cell like:
@@ -1105,9 +1281,9 @@
 								financeEmail = NoteHelper.getValidEmailStr(financeEmail, line);
 							}
 					
-							String firstName = getCsvCellValue(r, firstNameIndex);
-							String lastName = getCsvCellValue(r, lastNameIndex);
-							String displayName = getCsvCellValue(r, displayNameIndex);
+							String firstName = getCsvCellValueAtIndex(r, firstNameIndex);
+							String lastName = getCsvCellValueAtIndex(r, lastNameIndex);
+							String displayName = getCsvCellValueAtIndex(r, displayNameIndex);
 					
 							//TODO : temporarily not required.
 							//We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
@@ -1121,20 +1297,20 @@
 //							lastName = ownershipNameMap.get("lastName");
 //							displayName = ownershipNameMap.get("displayName");
 					
-							String type = getCsvCellValue(r, typeIndex);
-							String mobile = getCsvCellValue(r, mobileIndex);
-							String phone = getCsvCellValue(r, phoneIndex);
-							String fax = getCsvCellValue(r, faxIndex);
-							String address = getCsvCellValue(r, addressIndex);
-							String city = getCsvCellValue(r, cityIndex);
-							String state = getCsvCellValue(r, stateIndex);
-							String postCode = getPostcode(getCsvCellValue(r, postCodeIndex));
-							String country = getCsvCellValue(r, countryIndex);
-							String gst = getCsvCellValue(r, realGstIndex);
-							String share = getCsvCellValue(r, shareIndex);
-							String debtor = getCsvCellValue(r, debtorIndex);
+							String type = getCsvCellValueAtIndex(r, typeIndex);
+							String mobile = getCsvCellValueAtIndex(r, mobileIndex);
+							String phone = getCsvCellValueAtIndex(r, phoneIndex);
+							String fax = getCsvCellValueAtIndex(r, faxIndex);
+							String address = getCsvCellValueAtIndex(r, addressIndex);
+							String city = getCsvCellValueAtIndex(r, cityIndex);
+							String state = getCsvCellValueAtIndex(r, stateIndex);
+							String postCode = getPostcode(getCsvCellValueAtIndex(r, postCodeIndex));
+							String country = getCsvCellValueAtIndex(r, countryIndex);
+							String gst = getCsvCellValueAtIndex(r, realGstIndex);
+							String share = getCsvCellValueAtIndex(r, shareIndex);
+							String debtor = getCsvCellValueAtIndex(r, debtorIndex);
 					
-							String rawAddedDate = getCsvCellValue(r, addedDateIndex);
+							String rawAddedDate = getCsvCellValueAtIndex(r, addedDateIndex);
 							//remove all whitespace include unicode character
 							rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
 							

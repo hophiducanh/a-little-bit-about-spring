@@ -30,7 +30,7 @@ import java.util.stream.Stream;
 
 import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.*;
 import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AMERICAN_CUSTOM_DATE_FORMAT;
-import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValue;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.isValidEmail;
 import static java.util.Objects.requireNonNull;
@@ -233,7 +233,7 @@ public class NoteHelper {
 			if (line.matches(CSV_HORSE_COUNT_PATTERN)) continue;
 			
 			String[] r = readCsvLine(line);
-			String rawDateTime = getCsvCellValue(r, dateIndex);
+			String rawDateTime = getCsvCellValueAtIndex(r, dateIndex);
 			
 			if (isNotEmpty(rawDateTime)) {
 				
