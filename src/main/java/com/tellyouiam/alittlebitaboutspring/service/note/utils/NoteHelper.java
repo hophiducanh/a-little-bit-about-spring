@@ -254,7 +254,7 @@ public class NoteHelper {
 		// if all date value in the file have format like: D/M/YYYY format (E.g: 5/6/2020) >> recheck in racingAustralia.horse
 		if (isEmpty(mdyFormatList) && !isEmpty(ausFormatList)) {
 			isAustraliaFormat = true;
-			logger.info("Type of DATE in {} file is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.", upperCase(fileType));
+//			logger.info("Type of DATE in {} file is DD/MM/YYY format **OR** M/D/Y format >>>>>>>>> Please check.", upperCase(fileType));
 			
 		} else if (!isEmpty(mdyFormatList)) {
 			logger.info("Type of DATE in {} file is MM/DD/YYY format", upperCase(fileType));

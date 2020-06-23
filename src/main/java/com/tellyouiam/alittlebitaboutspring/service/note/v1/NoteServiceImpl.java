@@ -36,6 +36,7 @@
 	import java.util.NoSuchElementException;
 	import java.util.Set;
 	import java.util.TreeMap;
+	import java.util.function.Predicate;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
 	import java.util.regex.Pattern;
@@ -270,8 +271,10 @@
 					);
 	
 					builder.append(rowHeader);
-	
-					csvData = csvData.stream().skip(1).collect(toList());
+					
+					Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
+					csvData = csvData.stream().skip(1).filter(StringUtils::isNotEmpty).filter(isEmptyRowCsv.negate()).collect(toList());
+					boolean isAustraliaFormat = isAustraliaFormat(csvData, foaledIndex, "horse");
 					for (String line : csvData) {
 						String[] r = readCsvLine(line);
 	
@@ -279,9 +282,7 @@
 						String name = getCsvCellValue(r, nameIndex);
 	
 						String rawFoaled = getCsvCellValue(r, foaledIndex);
-						String foaled = EMPTY;
-	
-						boolean isAustraliaFormat = isAustraliaFormat(csvData, foaledIndex, "horse");
+						String foaled;
 	
 						if (!isAustraliaFormat && isNotEmpty(rawFoaled)) {
 							foaled = LocalDate.parse(rawFoaled, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
@@ -340,59 +341,59 @@
 	
 					// Address case addedDate, activeStatus and current location in horse file are empty.
 					// We will face with an error if we keep this data intact.
-					if (isAllEmpty(addedDateBuilder, activeStatusBuilder, currentLocationBuilder)) {
-						logger.warn("All of AddedDate && ActiveStatus && CurrentLocation can't be empty. At least addedDate required.");
-	
-						List<String> formattedData = convertStringBuilderToList(builder);
-						StringBuilder dataBuilder = new StringBuilder();
-	
-						String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-						if (!isEmpty(formattedData)) {
-							String[] formattedHeader = readCsvLine(formattedData.get(0));
-	
-							//Get addedDate index from header
-							int addedDateOrdinal = checkColumnIndex(formattedHeader, "AddedDate");
-	
-							//Append a header at first line of StringBuilder data to write to file.
-							dataBuilder.append(formattedData.get(0)).append("\n");
-	
-							//process data ignore header
-							for (String line : formattedData.stream().skip(1).collect(toList())) {
-	
-								String[] row = readCsvLine(line);
-	
-								for (int i = 0; i < row.length; i++) {
-	
-									//replace empty addedDate with current date.
-									if (i == addedDateOrdinal) {
-										row[addedDateOrdinal] = currentDate;
-										dataBuilder.append(row[i]).append(",");
-										continue;
-									}
-									dataBuilder.append(row[i]).append(",");
-								}
-								dataBuilder.append("\n");
-							}
-						}
-	
-						if (dataBuilder.toString().contains(currentDate)) {
-							logger.info("******************** Successfully generated addedDate with dd/MM/yyyy format : {}", currentDate);
-						} else {
-							logger.error("******************** Error created when trying to attach generated addedDate to output file.");
-						}
-	
-						try {
-							File file = new File(path);
-	
-							FileOutputStream os = new FileOutputStream(file);
-							os.write(dataBuilder.toString().getBytes());
-							os.flush();
-							os.close();
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-						return dataBuilder;
-					}
+//					if (isAllEmpty(addedDateBuilder, activeStatusBuilder, currentLocationBuilder)) {
+//						logger.warn("All of AddedDate && ActiveStatus && CurrentLocation can't be empty. At least addedDate required.");
+//
+//						List<String> formattedData = convertStringBuilderToList(builder);
+//						StringBuilder dataBuilder = new StringBuilder();
+//
+//						String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+//						if (!isEmpty(formattedData)) {
+//							String[] formattedHeader = readCsvLine(formattedData.get(0));
+//
+//							//Get addedDate index from header
+//							int addedDateOrdinal = checkColumnIndex(formattedHeader, "AddedDate");
+//
+//							//Append a header at first line of StringBuilder data to write to file.
+//							dataBuilder.append(formattedData.get(0)).append("\n");
+//
+//							//process data ignore header
+//							for (String line : formattedData.stream().skip(1).collect(toList())) {
+//
+//								String[] row = readCsvLine(line);
+//
+//								for (int i = 0; i < row.length; i++) {
+//
+//									//replace empty addedDate with current date.
+//									if (i == addedDateOrdinal) {
+//										row[addedDateOrdinal] = currentDate;
+//										dataBuilder.append(row[i]).append(",");
+//										continue;
+//									}
+//									dataBuilder.append(row[i]).append(",");
+//								}
+//								dataBuilder.append("\n");
+//							}
+//						}
+//
+//						if (dataBuilder.toString().contains(currentDate)) {
+//							logger.info("******************** Successfully generated addedDate with dd/MM/yyyy format : {}", currentDate);
+//						} else {
+//							logger.error("******************** Error created when trying to attach generated addedDate to output file.");
+//						}
+//
+//						try {
+//							File file = new File(path);
+//
+//							FileOutputStream os = new FileOutputStream(file);
+//							os.write(dataBuilder.toString().getBytes());
+//							os.flush();
+//							os.close();
+//						} catch (IOException e) {
+//							e.printStackTrace();
+//						}
+//						return dataBuilder;
+//					}
 				}
 	
 				try {
@@ -476,11 +477,11 @@
 					
 					int daysHereIndex = checkColumnIndex(header, "Days Here", "Days");
 	
-					String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
+					String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 							"ExternalId", "Name", "Foaled", "Sire", "Dam", "Color",
 							"Sex", "Avatar", "AddedDate", "ActiveStatus/Status",
 							"CurrentLocation/HorseLocation", "CurrentStatus/HorseStatus",
-							"Type", "Category", "BonusScheme", "NickName"
+							"Type", "Category", "BonusScheme", "NickName", "Country", "MicroChip", "Brand"
 					);
 	
 					builder.append(rowHeader);
@@ -681,7 +682,8 @@
 									LocalDate.parse(exportedDate, ARDEX_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
 						}
 					}
-					exportedDateList.add(exportedDate);
+					//exportedDateList.add(exportedDate);
+					exportedDateList.add("17/06/2020");
 					
 					// Line has departedDate likely to extract:
 					//Azurite (IRE) ( Azamour (IRE) - High Lite (GB)) 9yo Bay Gelding     Michael Hickmott Bloodstock - In
@@ -839,27 +841,27 @@
 			
 					//remove unnecessary line like:
 					// ,,With Share Ownership Information ,,,,,,,,,,,,,,,,,,,,
-					Matcher unnecessaryDataMatcher = Pattern.compile(REMOVE_UNNECESSARY_DATA).matcher(allLines);
-					if (unnecessaryDataMatcher.find()) {
-						allLines = allLines.replaceAll(REMOVE_UNNECESSARY_DATA, "");
-					} else {
-						logger.warn("Data seemingly weird. Please check!");
-					}
-			
-					unnecessaryDataMatcher.reset();
-					StringBuilder ignoredData = new StringBuilder();
-					int gossipDataCount = 0;
-					while (unnecessaryDataMatcher.find()) {
-						gossipDataCount++;
-						ignoredData.append(unnecessaryDataMatcher.group());
-					}
-			
-					logger.info("******************************IGNORED DATA**********************************\n {}",
-							ignoredData);
-					//normally unnecessary lines to ignored between 5 and 10.;
-					if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
-						throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
-					}
+//					Matcher unnecessaryDataMatcher = Pattern.compile(REMOVE_UNNECESSARY_DATA).matcher(allLines);
+//					if (unnecessaryDataMatcher.find()) {
+//						allLines = allLines.replaceAll(REMOVE_UNNECESSARY_DATA, "");
+//					} else {
+//						logger.warn("Data seemingly weird. Please check!");
+//					}
+//
+//					unnecessaryDataMatcher.reset();
+//					StringBuilder ignoredData = new StringBuilder();
+//					int gossipDataCount = 0;
+//					while (unnecessaryDataMatcher.find()) {
+//						gossipDataCount++;
+//						ignoredData.append(unnecessaryDataMatcher.group());
+//					}
+//
+//					logger.info("******************************IGNORED DATA**********************************\n {}",
+//							ignoredData);
+//					//normally unnecessary lines to ignored between 5 and 10.;
+//					if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
+//						throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
+//					}
 			
 					String[][] data = NoteHelper.get2DArrayFromString(allLines);
 					
@@ -1141,7 +1143,7 @@
 									? LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT)
 									: rawAddedDate;
 					
-							String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," +
+							String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s," +
 											"%s,%s,%s,%s%n",
 									csvValue(horseId),
 									csvValue(horseName),
