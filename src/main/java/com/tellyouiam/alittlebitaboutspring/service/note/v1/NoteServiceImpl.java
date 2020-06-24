@@ -102,7 +102,7 @@
 					int financeEmailIndex = checkColumnIndex(header, "FinanceEmail");
 					int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
 					int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name");
-					int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name");
+					int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name", "Display");
 					int typeIndex = checkColumnIndex(header, "Type");
 					int mobileIndex = checkColumnIndex(header, "Mobile", "Mobile Phone");
 					int phoneIndex = checkColumnIndex(header, "Phone");
@@ -119,7 +119,7 @@
 					
 					csvData = csvData.stream().skip(1).collect(toList());
 					Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
-					csvData = csvData.stream().skip(1)
+					csvData = csvData.stream()
 							.filter(StringUtils::isNotEmpty)
 							.filter(isEmptyRowCsv.negate())
 							.collect(toList());
@@ -146,6 +146,7 @@
 						
 						String ownerId = getCsvCellValueAtIndex(r, ownerIdIndex);
 						String email = getCsvCellValueAtIndex(r, emailIndex);
+						email = email.replace(",", ";");
 						String financeEmail = getCsvCellValueAtIndex(r, financeEmailIndex);
 						String firstName = getCsvCellValueAtIndex(r, firstNameIndex);
 						String lastName = getCsvCellValueAtIndex(r, lastNameIndex);
@@ -229,7 +230,7 @@
 						try {
 							previous = readCsvLine(result.get(referenceMap.get(i - 1)));
 						} catch (Exception e) {
-							System.out.println(e.getMessage());
+						
 						}
 					}
 					
@@ -287,7 +288,17 @@
 					
 					referenceMap.putIfAbsent(i, isNotEmpty(email) ? email : isNotEmpty(mobile) ? mobile : phone);
 					
-					if (!verifyMap.containsKey(email) && isNotEmpty(email) && (email.equalsIgnoreCase(nextEmail) || email.contains(nextEmail) || nextEmail.contains(email))) {
+					if ((!verifyMap.containsKey(email) && !verifyMap.containsKey("logbasex" + (i - 1))
+							&& !verifyMap.containsKey("logbasex" + (i - 2))
+							&& !verifyMap.containsKey("logbasex" + (i - 3))
+							&& !verifyMap.containsKey("logbasex" + (i - 4))
+							&& !verifyMap.containsKey("logbasex" + (i - 5))
+							&& !verifyMap.containsKey("logbasex" + (i - 6))
+							&& !verifyMap.containsKey("logbasex" + (i - 7))
+							&& !verifyMap.containsKey("logbasex" + (i - 8))
+							&& isNotEmpty(email) && (email.equalsIgnoreCase(nextEmail) || email.contains(nextEmail) || nextEmail.contains(email)))
+							&& !displayName.equals(preDisplayName)
+					) {
 						
 						verifyMap.put(email, i);
 						if (nextEmail.contains(email)) {
@@ -317,7 +328,7 @@
 						
 						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 								csvValue(ownerId),
-								csvValue(email),
+								csvValue(email.contains("logbasex") ? EMPTY : email),
 								csvValue(financeEmail),
 								csvValue(firstName),
 								csvValue(lastName),
@@ -337,103 +348,6 @@
 						
 						result.put(email, rowBuilder);
 					}
-					
-//					if (!verifyMap.containsKey(mobile) && (mobile.equalsIgnoreCase(nextMobile))) {
-//						isContinued = true;
-//						if (isContinued) continue;
-//						verifyMap.put(mobile, i);
-//
-//						if (StringUtils.isEmpty(addresses) ^ StringUtils.isEmpty(nextAddress)) {
-//							if (StringUtils.isEmpty(addresses)) {
-//								addresses = nextAddress;
-//							}
-//						}
-//
-//						if (isNotEmpty(addresses)) {
-//							String[] addressArr = addresses.split(";");
-//
-//							for (String address : addressArr) {
-//								int diff = distance.apply(
-//										deleteWhitespace(address.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()),
-//										deleteWhitespace(nextAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase())
-//								);
-//
-//								if (isNotEmpty(nextAddress) && diff != 0) {
-//									addresses = addresses.concat(";").concat(nextAddress);
-//								}
-//							}
-//						}
-//
-//						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-//								csvValue(ownerId),
-//								csvValue(email),
-//								csvValue(financeEmail),
-//								csvValue(firstName),
-//								csvValue(lastName),
-//								csvValue(displayName),
-//								csvValue(type),
-//								csvValue(mobile),
-//								csvValue(phone),
-//								csvValue(fax),
-//								csvValue(addresses),
-//								csvValue(city),
-//								csvValue(state),
-//								csvValue(postCode),
-//								csvValue(country),
-//								csvValue(gst),
-//								csvValue(debtor)
-//						);
-//						result.put(mobile, rowBuilder);
-//					}
-//
-//					if (!verifyMap.containsKey(phone) && (phone.equalsIgnoreCase(nextPhone))) {
-//						isContinued = true;
-//						if (isContinued) continue;
-//						verifyMap.put(phone, i);
-//
-//						if (StringUtils.isEmpty(addresses) ^ StringUtils.isEmpty(nextAddress)) {
-//							if (StringUtils.isEmpty(addresses)) {
-//								addresses = nextAddress;
-//							}
-//						}
-//
-//						if (isNotEmpty(addresses)) {
-//							String[] addressArr = addresses.split(";");
-//
-//							for (String address : addressArr) {
-//								int diff = distance.apply(
-//										deleteWhitespace(address.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()),
-//										deleteWhitespace(nextAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase())
-//								);
-//
-//								if (isNotEmpty(nextAddress) && diff != 0) {
-//									addresses = addresses.concat(";").concat(nextAddress);
-//								}
-//							}
-//						}
-//
-//						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-//								csvValue(ownerId),
-//								csvValue(email),
-//								csvValue(financeEmail),
-//								csvValue(firstName),
-//								csvValue(lastName),
-//								csvValue(displayName),
-//								csvValue(type),
-//								csvValue(mobile),
-//								csvValue(phone),
-//								csvValue(fax),
-//								csvValue(addresses),
-//								csvValue(city),
-//								csvValue(state),
-//								csvValue(postCode),
-//								csvValue(country),
-//								csvValue(gst),
-//								csvValue(debtor)
-//						);
-//						result.put(phone, rowBuilder);
-//
-//					}
 					
 					if (nonNull(previous)) {
 						if (preEmail.equalsIgnoreCase(email) || email.contains(preEmail) || preEmail.contains(email)) {
@@ -457,11 +371,11 @@
 									
 									String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 											csvValue(ownerId),
-											csvValue(email),
+											csvValue(email.contains("logbasex") ? EMPTY : email),
 											csvValue(financeEmail),
 											csvValue(firstName),
 											csvValue(lastName),
-											csvValue(displayName),
+											csvValue(preDisplayName),
 											csvValue(type),
 											csvValue(mobile),
 											csvValue(phone),
