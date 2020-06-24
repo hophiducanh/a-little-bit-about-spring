@@ -268,6 +268,7 @@ public class NoteHelper {
 	
 	public static String getValidEmailStr(String emailsStr, String line) throws CustomException {
 		if (StringUtils.isEmpty(emailsStr)) return EMPTY;
+		emailsStr = emailsStr.replaceAll(",", ";");
 		String[] emailList = emailsStr.split(";");
 		
 		for (String email : emailList) {

@@ -217,11 +217,21 @@
 				int debtorIndex = 16;
 				
 				LevenshteinDistance distance = new LevenshteinDistance();
+				Map<Object, Object> verifyMap = new LinkedHashMap<>();
+				Map<Object, Object> referenceMap = new LinkedHashMap<>();
+				Map<Object, String> result = new LinkedHashMap<>();
+				
 				for (int i = 0; i < preparedData.size() - 1; i++) {
 					String[] current = readCsvLine(preparedData.get(i));
 					String[] next = readCsvLine(preparedData.get(i + 1));
 					String[] previous = null;
-					if (i > 0) previous = readCsvLine(preparedData.get(i - 1));
+					if (i > 0) {
+						try {
+							previous = readCsvLine(result.get(referenceMap.get(i - 1)));
+						} catch (Exception e) {
+							System.out.println(e.getMessage());
+						}
+					}
 					
 					String ownerId = readCsvRow(current, ownerIdIndex);
 					
@@ -260,11 +270,26 @@
 					String gst = readCsvRow(current, gstIndex);
 					String debtor = readCsvRow(current, debtorIndex);
 					
-					boolean dupPhone = false;
-					boolean dupMobile = false;
-					int index = 0;
-					if (email.equalsIgnoreCase(nextEmail) || email.contains(nextEmail) || nextEmail.contains(email)) {
+					if (StringUtils.isEmpty(email)) {
+						email = "logbasex" + i;
+					}
+					
+					if (StringUtils.isEmpty(nextEmail)) {
+						nextEmail = "logbasex" + i;
+					}
+					
+					if ((email.equalsIgnoreCase(nextEmail) || email.contains(nextEmail) || nextEmail.contains(email))) {
+						int finalI = i;
+						if (referenceMap.values().stream().anyMatch(u -> u.equals("logbasex" + (finalI - 1)))) {
+							referenceMap.put(i, "logbasex" + (i - 1));
+						}
+					}
+					
+					referenceMap.putIfAbsent(i, isNotEmpty(email) ? email : isNotEmpty(mobile) ? mobile : phone);
+					
+					if (!verifyMap.containsKey(email) && isNotEmpty(email) && (email.equalsIgnoreCase(nextEmail) || email.contains(nextEmail) || nextEmail.contains(email))) {
 						
+						verifyMap.put(email, i);
 						if (nextEmail.contains(email)) {
 							email = nextEmail;
 						}
@@ -290,18 +315,125 @@
 							}
 						}
 						
-						if (phone.equalsIgnoreCase(nextPhone)) {
-							dupPhone = true;
-						}
+						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+								csvValue(ownerId),
+								csvValue(email),
+								csvValue(financeEmail),
+								csvValue(firstName),
+								csvValue(lastName),
+								csvValue(displayName),
+								csvValue(type),
+								csvValue(mobile),
+								csvValue(phone),
+								csvValue(fax),
+								csvValue(addresses),
+								csvValue(city),
+								csvValue(state),
+								csvValue(postCode),
+								csvValue(country),
+								csvValue(gst),
+								csvValue(debtor)
+						);
 						
-						if (mobile.equalsIgnoreCase(nextMobile)) {
-							dupMobile = true;
-						}
-						
-						if (dupPhone || dupMobile) {
-							i++;
-						}
+						result.put(email, rowBuilder);
 					}
+					
+//					if (!verifyMap.containsKey(mobile) && (mobile.equalsIgnoreCase(nextMobile))) {
+//						isContinued = true;
+//						if (isContinued) continue;
+//						verifyMap.put(mobile, i);
+//
+//						if (StringUtils.isEmpty(addresses) ^ StringUtils.isEmpty(nextAddress)) {
+//							if (StringUtils.isEmpty(addresses)) {
+//								addresses = nextAddress;
+//							}
+//						}
+//
+//						if (isNotEmpty(addresses)) {
+//							String[] addressArr = addresses.split(";");
+//
+//							for (String address : addressArr) {
+//								int diff = distance.apply(
+//										deleteWhitespace(address.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()),
+//										deleteWhitespace(nextAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase())
+//								);
+//
+//								if (isNotEmpty(nextAddress) && diff != 0) {
+//									addresses = addresses.concat(";").concat(nextAddress);
+//								}
+//							}
+//						}
+//
+//						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+//								csvValue(ownerId),
+//								csvValue(email),
+//								csvValue(financeEmail),
+//								csvValue(firstName),
+//								csvValue(lastName),
+//								csvValue(displayName),
+//								csvValue(type),
+//								csvValue(mobile),
+//								csvValue(phone),
+//								csvValue(fax),
+//								csvValue(addresses),
+//								csvValue(city),
+//								csvValue(state),
+//								csvValue(postCode),
+//								csvValue(country),
+//								csvValue(gst),
+//								csvValue(debtor)
+//						);
+//						result.put(mobile, rowBuilder);
+//					}
+//
+//					if (!verifyMap.containsKey(phone) && (phone.equalsIgnoreCase(nextPhone))) {
+//						isContinued = true;
+//						if (isContinued) continue;
+//						verifyMap.put(phone, i);
+//
+//						if (StringUtils.isEmpty(addresses) ^ StringUtils.isEmpty(nextAddress)) {
+//							if (StringUtils.isEmpty(addresses)) {
+//								addresses = nextAddress;
+//							}
+//						}
+//
+//						if (isNotEmpty(addresses)) {
+//							String[] addressArr = addresses.split(";");
+//
+//							for (String address : addressArr) {
+//								int diff = distance.apply(
+//										deleteWhitespace(address.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()),
+//										deleteWhitespace(nextAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase())
+//								);
+//
+//								if (isNotEmpty(nextAddress) && diff != 0) {
+//									addresses = addresses.concat(";").concat(nextAddress);
+//								}
+//							}
+//						}
+//
+//						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+//								csvValue(ownerId),
+//								csvValue(email),
+//								csvValue(financeEmail),
+//								csvValue(firstName),
+//								csvValue(lastName),
+//								csvValue(displayName),
+//								csvValue(type),
+//								csvValue(mobile),
+//								csvValue(phone),
+//								csvValue(fax),
+//								csvValue(addresses),
+//								csvValue(city),
+//								csvValue(state),
+//								csvValue(postCode),
+//								csvValue(country),
+//								csvValue(gst),
+//								csvValue(debtor)
+//						);
+//						result.put(phone, rowBuilder);
+//
+//					}
 					
 					if (nonNull(previous)) {
 						if (preEmail.equalsIgnoreCase(email) || email.contains(preEmail) || preEmail.contains(email)) {
@@ -317,52 +449,60 @@
 							}
 							
 							if (isNotEmpty(preAddress)) {
-								String[] addressArr = preAddress.split(";");
 								
-								for (String address : addressArr) {
-									int diff = distance.apply(
-											deleteWhitespace(address.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()),
-											deleteWhitespace(nextAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase())
+								if (!preAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()
+										.contains(addresses.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()) ) {
+									
+									preAddress = preAddress.concat(";").concat(addresses);
+									
+									String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+											csvValue(ownerId),
+											csvValue(email),
+											csvValue(financeEmail),
+											csvValue(firstName),
+											csvValue(lastName),
+											csvValue(displayName),
+											csvValue(type),
+											csvValue(mobile),
+											csvValue(phone),
+											csvValue(fax),
+											csvValue(preAddress),
+											csvValue(city),
+											csvValue(state),
+											csvValue(postCode),
+											csvValue(country),
+											csvValue(gst),
+											csvValue(debtor)
 									);
 									
-									if (isNotEmpty(addresses) && diff != 0) {
-										preAddress = preAddress.concat(";").concat(addresses);
-									}
+									result.replace(email, rowBuilder);
+									
 								}
 							}
 							
-							if (prePhone.equalsIgnoreCase(phone)) {
-								dupPhone = true;
-							}
-							
-							if (preMobile.equalsIgnoreCase(mobile)) {
-								dupMobile = true;
-							}
-							
-							if (dupPhone || dupMobile) {
-								continue;
-							}
 						}
 					}
-					
+				}
+				
+				for (String data : result.values()) {
 					String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-							csvValue(ownerId),
-							csvValue(email),
-							csvValue(financeEmail),
-							csvValue(firstName),
-							csvValue(lastName),
-							csvValue(displayName),
-							csvValue(type),
-							csvValue(mobile),
-							csvValue(phone),
-							csvValue(fax),
-							csvValue(addresses),
-							csvValue(city),
-							csvValue(state),
-							csvValue(postCode),
-							csvValue(country),
-							csvValue(gst),
-							csvValue(debtor)
+							csvValue(readCsvRow(readCsvLine(data), ownerIdIndex)),
+							csvValue(readCsvRow(readCsvLine(data), emailIndex)),
+							csvValue(readCsvRow(readCsvLine(data), financeEmailIndex)),
+							csvValue(readCsvRow(readCsvLine(data), firstNameIndex)),
+							csvValue(readCsvRow(readCsvLine(data), lastNameIndex)),
+							csvValue(readCsvRow(readCsvLine(data), displayNameIndex)),
+							csvValue(readCsvRow(readCsvLine(data), typeIndex)),
+							csvValue(readCsvRow(readCsvLine(data), mobileIndex)),
+							csvValue(readCsvRow(readCsvLine(data), phoneIndex)),
+							csvValue(readCsvRow(readCsvLine(data), faxIndex)),
+							csvValue(readCsvRow(readCsvLine(data), addressIndex)),
+							csvValue(readCsvRow(readCsvLine(data), cityIndex)),
+							csvValue(readCsvRow(readCsvLine(data), stateIndex)),
+							csvValue(readCsvRow(readCsvLine(data), postCodeIndex)),
+							csvValue(readCsvRow(readCsvLine(data), countryIndex)),
+							csvValue(readCsvRow(readCsvLine(data), gstIndex)),
+							csvValue(readCsvRow(readCsvLine(data), debtorIndex))
 					);
 					
 					finalBuilder.append(rowBuilder);
@@ -420,7 +560,7 @@
 					int foaledIndex = checkColumnIndex(header, "DOB", "foaled");
 					int sireIndex = checkColumnIndex(header, "Sire");
 					int damIndex = checkColumnIndex(header, "Dam");
-					int colorIndex = checkColumnIndex(header, "Color");
+					int colorIndex = checkColumnIndex(header, "Color", "Colour");
 					int sexIndex = checkColumnIndex(header, "Gender", "Sex");
 					int avatarIndex = checkColumnIndex(header, "Avatar");
 					int addedDateIndex = checkColumnIndex(header, "AddedDate");
