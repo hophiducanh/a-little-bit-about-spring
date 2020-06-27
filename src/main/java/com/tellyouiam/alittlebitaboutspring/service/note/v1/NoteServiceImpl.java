@@ -29,6 +29,8 @@
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
 	import java.util.regex.Pattern;
+	import java.util.stream.Collectors;
+	import java.util.stream.Stream;
 	
 	import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.*;
 	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.checkColumnIndex;
@@ -40,12 +42,11 @@
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.*;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvRow;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.csvValue;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
 	import static java.util.Collections.max;
-	import static java.util.Objects.*;
 	import static java.util.stream.Collectors.joining;
 	import static java.util.stream.Collectors.toList;
 	import static java.util.stream.Collectors.toMap;
-	import static org.apache.commons.lang3.StringUtils.*;
 	import static org.apache.commons.lang3.StringUtils.EMPTY;
 	import static org.apache.commons.lang3.StringUtils.SPACE;
 	import static org.apache.commons.lang3.StringUtils.isNotEmpty;
@@ -62,6 +63,8 @@
 		private static final String HORSE_FILE_HEADER = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 				"OwnerId", "Email", "FinanceEmail", "FirstName", "LastName", "DisplayName", "Type",
 				"Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode", "Country", "Gst", "Debtor");
+		
+		private static final LevenshteinDistance distance = new LevenshteinDistance();
 		
 		@Override
 		public Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException {
@@ -217,53 +220,30 @@
 				int gstIndex = 15;
 				int debtorIndex = 16;
 				
-				LevenshteinDistance distance = new LevenshteinDistance();
-				Map<Object, Object> verifyMap = new LinkedHashMap<>();
-				Map<Object, Object> referenceMap = new LinkedHashMap<>();
-				Map<Object, String> result = new LinkedHashMap<>();
-				
-				for (int i = 0; i < preparedData.size() - 1; i++) {
+				for (int i = 0; i < preparedData.size(); i++) {
 					String[] current = readCsvLine(preparedData.get(i));
-					String[] next = readCsvLine(preparedData.get(i + 1));
-					String[] previous = null;
-					if (i > 0) {
-						try {
-							previous = readCsvLine(result.get(referenceMap.get(i - 1)));
-						} catch (Exception e) {
-						
-						}
-					}
+					String[] next1 = ((i + 1) < preparedData.size()) ? readCsvLine(preparedData.get(i + 1)) : null;
+					String[] next2 = ((i + 2) < preparedData.size()) ? readCsvLine(preparedData.get(i + 2)) : null;
+					String[] next3 = ((i + 3) < preparedData.size()) ? readCsvLine(preparedData.get(i + 3)) : null;
+					String[] next4 = ((i + 4) < preparedData.size()) ? readCsvLine(preparedData.get(i + 4)) : null;
+					String[] next5 = ((i + 5) < preparedData.size()) ? readCsvLine(preparedData.get(i + 5)) : null;
+					String[] next6 = ((i + 6) < preparedData.size()) ? readCsvLine(preparedData.get(i + 6)) : null;
+					String[] next7 = ((i + 7) < preparedData.size()) ? readCsvLine(preparedData.get(i + 7)) : null;
+					String[] next8 = ((i + 8) < preparedData.size()) ? readCsvLine(preparedData.get(i + 8)) : null;
+					String[] next9 = ((i + 9) < preparedData.size()) ? readCsvLine(preparedData.get(i + 9)) : null;
+					String[] next10 = ((i + 10) < preparedData.size()) ? readCsvLine(preparedData.get(i + 10)) : null;
 					
 					String ownerId = readCsvRow(current, ownerIdIndex);
-					
-					String preEmail = nonNull(previous) ? readCsvRow(previous, emailIndex) : EMPTY;
 					String email = readCsvRow(current, emailIndex);
-					String nextEmail = readCsvRow(next, emailIndex);
-					
 					String financeEmail = readCsvRow(current, financeEmailIndex);
 					String firstName = readCsvRow(current, firstNameIndex);
 					String lastName = readCsvRow(current, lastNameIndex);
-					
-					String preDisplayName = nonNull(previous) ? readCsvRow(previous, displayNameIndex) : EMPTY;
 					String displayName = readCsvRow(current, displayNameIndex);
-					String nextDisplayName = readCsvRow(next, displayNameIndex);
-					
 					String type = readCsvRow(current, typeIndex);
-					
-					String preMobile = nonNull(previous) ? readCsvRow(previous, mobileIndex) : EMPTY;
 					String mobile = readCsvRow(current, mobileIndex);
-					String nextMobile = readCsvRow(next, mobileIndex);
-					
-					String prePhone = nonNull(previous) ? readCsvRow(previous, phoneIndex) : EMPTY;
 					String phone = readCsvRow(current, phoneIndex);
-					String nextPhone = readCsvRow(next, phoneIndex);
-					
 					String fax = readCsvRow(current, faxIndex);
-					
-					String preAddress = nonNull(previous) ? readCsvRow(previous, addressIndex) : EMPTY;
-					String addresses = readCsvRow(current, addressIndex);
-					String nextAddress = readCsvRow(next, addressIndex);
-					
+					String address = readCsvRow(current, addressIndex);
 					String city = readCsvRow(current, cityIndex);
 					String state = readCsvRow(current, stateIndex);
 					String postCode = readCsvRow(current, postCodeIndex);
@@ -271,156 +251,160 @@
 					String gst = readCsvRow(current, gstIndex);
 					String debtor = readCsvRow(current, debtorIndex);
 					
-					if (StringUtils.isEmpty(email)) {
-						email = "logbasex" + i;
-					}
+					//-----------------------------
 					
-					if (StringUtils.isEmpty(nextEmail)) {
-						nextEmail = "logbasex" + i;
-					}
 					
-					if ((email.equalsIgnoreCase(nextEmail) || email.contains(nextEmail) || nextEmail.contains(email))) {
-						int finalI = i;
-						if (referenceMap.values().stream().anyMatch(u -> u.equals("logbasex" + (finalI - 1)))) {
-							referenceMap.put(i, "logbasex" + (i - 1));
-						}
-					}
+					String address1 = readCsvRow(next1, addressIndex);
+					String address2 = readCsvRow(next2, addressIndex);
+					String address3 = readCsvRow(next3, addressIndex);
+					String address4 = readCsvRow(next4, addressIndex);
+					String address5 = readCsvRow(next5, addressIndex);
+					String address6 = readCsvRow(next6, addressIndex);
+					String address7 = readCsvRow(next7, addressIndex);
+					String address8 = readCsvRow(next8, addressIndex);
+					String address9 = readCsvRow(next9, addressIndex);
+					String address10 = readCsvRow(next10, addressIndex);
 					
-					referenceMap.putIfAbsent(i, isNotEmpty(email) ? email : isNotEmpty(mobile) ? mobile : phone);
 					
-					if ((!verifyMap.containsKey(email) && !verifyMap.containsKey("logbasex" + (i - 1))
-							&& !verifyMap.containsKey("logbasex" + (i - 2))
-							&& !verifyMap.containsKey("logbasex" + (i - 3))
-							&& !verifyMap.containsKey("logbasex" + (i - 4))
-							&& !verifyMap.containsKey("logbasex" + (i - 5))
-							&& !verifyMap.containsKey("logbasex" + (i - 6))
-							&& !verifyMap.containsKey("logbasex" + (i - 7))
-							&& !verifyMap.containsKey("logbasex" + (i - 8))
-							&& isNotEmpty(email) && (email.equalsIgnoreCase(nextEmail) || email.contains(nextEmail) || nextEmail.contains(email)))
-							&& !displayName.equals(preDisplayName)
-					) {
-						
-						verifyMap.put(email, i);
-						if (nextEmail.contains(email)) {
-							email = nextEmail;
-						}
-						
-						if (StringUtils.isEmpty(addresses) ^ StringUtils.isEmpty(nextAddress)) {
-							if (StringUtils.isEmpty(addresses)) {
-								addresses = nextAddress;
-							}
-						}
-						
-						if (isNotEmpty(addresses)) {
-							String[] addressArr = addresses.split(";");
-							
-							for (String address : addressArr) {
-								int diff = distance.apply(
-										deleteWhitespace(address.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()),
-										deleteWhitespace(nextAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase())
-								);
-								
-								if (isNotEmpty(nextAddress) && diff != 0) {
-									addresses = addresses.concat(";").concat(nextAddress);
+					String phone1 = readCsvRow(next1, phoneIndex);
+					String phone2 = readCsvRow(next2, phoneIndex);
+					String phone3 = readCsvRow(next3, phoneIndex);
+					String phone4 = readCsvRow(next4, phoneIndex);
+					String phone5 = readCsvRow(next5, phoneIndex);
+					String phone6 = readCsvRow(next6, phoneIndex);
+					String phone7 = readCsvRow(next7, phoneIndex);
+					String phone8 = readCsvRow(next8, phoneIndex);
+					String phone9 = readCsvRow(next9, phoneIndex);
+					String phone10 = readCsvRow(next10, phoneIndex);
+					
+					String mobile1 = readCsvRow(next1, mobileIndex);
+					String mobile2 = readCsvRow(next2, mobileIndex);
+					String mobile3 = readCsvRow(next3, mobileIndex);
+					String mobile4 = readCsvRow(next4, mobileIndex);
+					String mobile5 = readCsvRow(next5, mobileIndex);
+					String mobile6 = readCsvRow(next6, mobileIndex);
+					String mobile7 = readCsvRow(next7, mobileIndex);
+					String mobile8 = readCsvRow(next8, mobileIndex);
+					String mobile9 = readCsvRow(next9, mobileIndex);
+					String mobile10 = readCsvRow(next10, mobileIndex);
+					
+					String displayName1 = readCsvRow(next1, displayNameIndex);
+					String displayName2 = readCsvRow(next2, displayNameIndex);
+					String displayName3 = readCsvRow(next3, displayNameIndex);
+					String displayName4 = readCsvRow(next4, displayNameIndex);
+					String displayName5 = readCsvRow(next5, displayNameIndex);
+					String displayName6 = readCsvRow(next6, displayNameIndex);
+					String displayName7 = readCsvRow(next7, displayNameIndex);
+					String displayName8 = readCsvRow(next8, displayNameIndex);
+					String displayName9 = readCsvRow(next9, displayNameIndex);
+					String displayName10 = readCsvRow(next10, displayNameIndex);
+					
+					String email1 = readCsvRow(next1, emailIndex);
+					String email2 = readCsvRow(next2, emailIndex);
+					String email3 = readCsvRow(next3, emailIndex);
+					String email4 = readCsvRow(next4, emailIndex);
+					String email5 = readCsvRow(next5, emailIndex);
+					String email6 = readCsvRow(next6, emailIndex);
+					String email7 = readCsvRow(next7, emailIndex);
+					String email8 = readCsvRow(next8, emailIndex);
+					String email9 = readCsvRow(next9, emailIndex);
+					String email10 = readCsvRow(next10, emailIndex);
+					
+					int emailCount = 1;
+					int phoneCount = 1;
+					int mobileCount = 1;
+					int displayNameCount = 1;
+					int addressCount = 1;
+					int max = 0;
+					
+					//count email of only one displayName
+					emailCount = getEmailCount(email, email1, email2, email3, email4,
+							email5, email6, email7, email8, displayName, displayName1, displayName2, displayName3, displayName4,
+							displayName5, displayName6, displayName7, displayName8, emailCount);
+					
+					phoneCount = getEmailCount(phone, phone1, phone2, phone3, phone4,
+							phone5, phone6, phone7, phone8, displayName, displayName1, displayName2, displayName3, displayName4,
+							displayName5, displayName6, displayName7, displayName8, phoneCount);
+					
+					mobileCount = getEmailCount(mobile, mobile1, mobile2, mobile3, mobile4,
+							mobile5, mobile6, mobile7, mobile8, displayName, displayName1, displayName2, displayName3, displayName4,
+							displayName5, displayName6, displayName7, displayName8, mobileCount);
+					
+					displayNameCount = getCount(displayName, displayName1, displayName2, displayName3, displayName4,
+							displayName5, displayName6, displayName7, displayName8, displayNameCount);
+					
+					addressCount = getAddressCount(address, address1, address2, address3, address4,
+							address5, address6, address7, address8, addressCount);
+					
+					max = Stream.of(emailCount, phoneCount, mobileCount, displayNameCount, addressCount).max(Integer::compareTo).orElse(0);
+					
+					if (max == 1) {
+						if (isALlEmpty(phone, mobile, email)) {
+							if (isNotEmpty(address) && isNotEmpty(displayName)) {
+								if (displayName.equals(displayName1) || displayName1.isEmpty()) {
+									++ max;
+									if (displayName.equals(displayName2) || displayName2.isEmpty()) {
+										++ max;
+										if (displayName.equals(displayName3) || displayName3.isEmpty()) {
+											++ max;
+											if (displayName.equals(displayName4) || displayName4.isEmpty()) {
+												++ max;
+												if (displayName.equals(displayName5) || displayName5.isEmpty()) {
+													++ max;
+													if (displayName.equals(displayName6) || displayName6.isEmpty()) {
+														++ max;
+														if (displayName.equals(displayName7) || displayName7.isEmpty()) {
+															++ max;
+															if (displayName.equals(displayName8) || displayName8.isEmpty()) {
+																++ max;
+															}
+														}
+													}
+												}
+											}
+										}
+									}
 								}
 							}
 						}
-						
-						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-								csvValue(ownerId),
-								csvValue(email.contains("logbasex") ? EMPTY : email),
-								csvValue(financeEmail),
-								csvValue(firstName),
-								csvValue(lastName),
-								csvValue(displayName),
-								csvValue(type),
-								csvValue(mobile),
-								csvValue(phone),
-								csvValue(fax),
-								csvValue(addresses),
-								csvValue(city),
-								csvValue(state),
-								csvValue(postCode),
-								csvValue(country),
-								csvValue(gst),
-								csvValue(debtor)
-						);
-						
-						result.put(email, rowBuilder);
 					}
 					
-					if (nonNull(previous)) {
-						if (preEmail.equalsIgnoreCase(email) || email.contains(preEmail) || preEmail.contains(email)) {
-							
-							if (preEmail.contains(email)) {
-								email = nextEmail;
-							}
-							
-							if (StringUtils.isEmpty(preAddress) ^ StringUtils.isEmpty(addresses)) {
-								if (StringUtils.isEmpty(preAddress)) {
-									preAddress = addresses;
-								}
-							}
-							
-							if (isNotEmpty(preAddress)) {
-								
-								if (!preAddress.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()
-										.contains(addresses.replace("Pty Ltd", "").replace("P/L", "").toLowerCase()) ) {
-									
-									preAddress = preAddress.concat(";").concat(addresses);
-									
-									String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-											csvValue(ownerId),
-											csvValue(email.contains("logbasex") ? EMPTY : email),
-											csvValue(financeEmail),
-											csvValue(firstName),
-											csvValue(lastName),
-											csvValue(preDisplayName),
-											csvValue(type),
-											csvValue(mobile),
-											csvValue(phone),
-											csvValue(fax),
-											csvValue(preAddress),
-											csvValue(city),
-											csvValue(state),
-											csvValue(postCode),
-											csvValue(country),
-											csvValue(gst),
-											csvValue(debtor)
-									);
-									
-									result.replace(email, rowBuilder);
-									
-								}
-							}
-							
-						}
+					if (i + max <= preparedData.size()) {
+						address = preparedData.subList(i, i + max).stream().map(line -> {
+							String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
+							return getCsvCellValueAtIndex(rowArr, addressIndex);
+						}).distinct().filter(StringUtils::isNotEmpty).collect(Collectors.joining(";"));
+						
+						email = preparedData.subList(i, i + max).stream().map(line -> {
+							String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
+							return getCsvCellValueAtIndex(rowArr, emailIndex);
+						}).distinct().filter(StringUtils::isNotEmpty).collect(Collectors.joining(";"));
 					}
-				}
-				
-				for (String data : result.values()) {
+					
+					i = i + max - 1;
+					
 					String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-							csvValue(readCsvRow(readCsvLine(data), ownerIdIndex)),
-							csvValue(readCsvRow(readCsvLine(data), emailIndex)),
-							csvValue(readCsvRow(readCsvLine(data), financeEmailIndex)),
-							csvValue(readCsvRow(readCsvLine(data), firstNameIndex)),
-							csvValue(readCsvRow(readCsvLine(data), lastNameIndex)),
-							csvValue(readCsvRow(readCsvLine(data), displayNameIndex)),
-							csvValue(readCsvRow(readCsvLine(data), typeIndex)),
-							csvValue(readCsvRow(readCsvLine(data), mobileIndex)),
-							csvValue(readCsvRow(readCsvLine(data), phoneIndex)),
-							csvValue(readCsvRow(readCsvLine(data), faxIndex)),
-							csvValue(readCsvRow(readCsvLine(data), addressIndex)),
-							csvValue(readCsvRow(readCsvLine(data), cityIndex)),
-							csvValue(readCsvRow(readCsvLine(data), stateIndex)),
-							csvValue(readCsvRow(readCsvLine(data), postCodeIndex)),
-							csvValue(readCsvRow(readCsvLine(data), countryIndex)),
-							csvValue(readCsvRow(readCsvLine(data), gstIndex)),
-							csvValue(readCsvRow(readCsvLine(data), debtorIndex))
+							csvValue(ownerId),
+							csvValue(email.contains("logbasex") ? EMPTY : email),
+							csvValue(financeEmail),
+							csvValue(firstName),
+							csvValue(lastName),
+							csvValue(displayName),
+							csvValue(type),
+							csvValue(mobile),
+							csvValue(phone),
+							csvValue(fax),
+							csvValue(address),
+							csvValue(city),
+							csvValue(state),
+							csvValue(postCode),
+							csvValue(country),
+							csvValue(gst),
+							csvValue(debtor)
 					);
-					
 					finalBuilder.append(rowBuilder);
 				}
+				
 //				String errorDataPath = getOutputFolder(dirName) + File.separator + "owner-input-error.csv";
 //				FileHelper.writeDataToFile(errorDataPath, ownerErrorData.getBytes());
 				
@@ -432,6 +416,139 @@
 				e.printStackTrace();
 			}
 			return null;
+		}
+		
+		private boolean isALlEmpty (String... params) {
+			return Stream.of(params).noneMatch(StringUtils::isNotEmpty);
+		}
+		
+		private int getCount(String email, String email1, String email2, String email3, String email4, String email5,
+		                     String email6, String email7, String email8, int emailCount) {
+			if (isNotEmpty(email)) {
+				if (email.equals(email1)) {
+					++ emailCount;
+					if (email.equals(email2)) {
+						++ emailCount;
+						if (email.equals(email3)) {
+							++ emailCount;
+							if (email.equals(email4)) {
+								++ emailCount;
+								if (email.equals(email5)) {
+									++ emailCount;
+									if (email.equals(email6)) {
+										++ emailCount;
+										if (email.equals(email7)) {
+											++ emailCount;
+											if (email.equals(email8)) {
+												++ emailCount;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			return emailCount;
+		}
+		
+		//ardex 2020 june 17: Pang, Barry (need distinct)
+		private boolean isNotDupDisplayName(String name, String name1) {
+			return Stream.of(name, name1).distinct().filter(StringUtils::isNotEmpty).count() == 1;
+		}
+		
+		private int getEmailCount(String email,
+		                          String email1,
+		                          String email2,
+		                          String email3,
+		                          String email4,
+		                          String email5,
+		                          String email6,
+		                          String email7,
+		                          String email8,
+		                          String displayName,
+		                          String displayName1,
+		                          String displayName2,
+		                          String displayName3,
+		                          String displayName4,
+		                          String displayName5,
+		                          String displayName6,
+		                          String displayName7,
+		                          String displayName8,
+		                          int emailCount) {
+			if (isNotEmpty(email)) {
+				if (email.equals(email1) && isNotDupDisplayName(displayName, displayName1)) {
+					++ emailCount;
+					if (email.equals(email2) && isNotDupDisplayName(displayName, displayName2)) {
+						++ emailCount;
+						if (email.equals(email3) && isNotDupDisplayName(displayName, displayName3)) {
+							++ emailCount;
+							if (email.equals(email4) && isNotDupDisplayName(displayName, displayName4)) {
+								++ emailCount;
+								if (email.equals(email5) && isNotDupDisplayName(displayName, displayName5)) {
+									++ emailCount;
+									if (email.equals(email6) && isNotDupDisplayName(displayName, displayName6)) {
+										++ emailCount;
+										if (email.equals(email7) && isNotDupDisplayName(displayName, displayName7)) {
+											++ emailCount;
+											if (email.equals(email8) && isNotDupDisplayName(displayName, displayName8)) {
+												++ emailCount;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			return emailCount;
+		}
+		
+		private String formatAddress(String address) {
+			return isNotEmpty(address)
+					? StringUtils.deleteWhitespace(address).replace("Pty Ltd", "").replace("P/L", "").toLowerCase()
+					: EMPTY;
+		}
+		
+		private int getAddressCount(String address, String address1, String address2, String address3, String address4, String address5,
+		                            String address6, String address7, String address8, int addressCount) {
+			if (isNotEmpty(address)) {
+				address = formatAddress(address);
+				if (distance.apply(address, formatAddress(address1)) < 2) {
+					++ addressCount;
+					
+					if (distance.apply(address, formatAddress(address2)) < 2) {
+						++ addressCount;
+						
+						if (distance.apply(address, formatAddress(address3)) < 2) {
+							++ addressCount;
+							
+							if (distance.apply(address, formatAddress(address4)) < 2) {
+								++ addressCount;
+								
+								if (distance.apply(address, formatAddress(address5)) < 2) {
+									++ addressCount;
+									
+									if (distance.apply(address, formatAddress(address6)) < 2) {
+										++ addressCount;
+										
+										if (distance.apply(address, formatAddress(address7)) < 2) {
+											++ addressCount;
+											
+											if (distance.apply(address, formatAddress(address8)) < 2) {
+												++ addressCount;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			return addressCount;
 		}
 		
 		private Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {

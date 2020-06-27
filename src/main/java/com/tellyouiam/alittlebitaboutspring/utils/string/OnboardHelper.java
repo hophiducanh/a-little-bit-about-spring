@@ -17,7 +17,8 @@ public class OnboardHelper {
 	}
 
 	public static String readCsvRow(String[] r, int index) {
-
+	
+		if (r == null) return "";
 		String stringValue = r[index];
 		if (StringUtils.isEmpty(stringValue))
 			return stringValue;

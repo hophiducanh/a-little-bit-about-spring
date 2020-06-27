@@ -24,5 +24,6 @@ public class Main {
 		List<Integer> l = Arrays.asList(1,2,3);
 		List<Integer> k = Arrays.asList(1,2,5);
 		CollectionUtils.disjunction(l, k).forEach(System.out::println);
+		
 	}
 }
