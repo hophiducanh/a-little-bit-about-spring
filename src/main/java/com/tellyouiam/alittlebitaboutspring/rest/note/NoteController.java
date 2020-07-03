@@ -30,12 +30,28 @@ import java.util.Map;
 @RestController
 @RequestMapping(value = "/note")
 public class NoteController {
-	
+	//https://www.vojtechruzicka.com/field-dependency-injection-considered-harmful/
 	@Autowired
 	private NoteRepository noteRepository;
 	
-	@Autowired
+	// field injection
+//	@Autowired
+//	private NoteService noteService;
+	
+	//constructor injection
+//	private final NoteService noteService;
+//
+//	public NoteController(NoteService noteService) {
+//		this.noteService = noteService;
+//	}
+	
+	//setter injection
 	private NoteService noteService;
+	
+	@Autowired
+	public void setDependencyA(NoteService noteService) {
+		this.noteService = noteService;
+	}
 	
 	@PostMapping
 	public final ResponseEntity<Object> createNote(@Valid @RequestBody Note note) {
