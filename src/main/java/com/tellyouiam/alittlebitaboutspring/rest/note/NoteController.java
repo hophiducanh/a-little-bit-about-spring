@@ -155,4 +155,16 @@ public class NoteController {
 		String result = "Difference path and value in request mapping";
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
+	
+	@PostMapping(value = "/name/reformat")
+	public final ResponseEntity<Object> reformatName(@RequestPart MultipartFile file,
+	                                                 @RequestParam String dirName) {
+	
+		try {
+			noteService.reformatName(file, dirName);
+		} catch (CustomException | IOException e) {
+			e.printStackTrace();
+		}
+		return ResponseEntity.ok(dirName);
+	}
 }

@@ -34,7 +34,7 @@ public class WriteListToExcelFile {
 		Iterator<Country> iterator = countryList.iterator();
 		
 		int rowIndex = 0;
-		while(iterator.hasNext()){
+		while(iterator.hasNext()) {
 			Country country = iterator.next();
 			Row row = sheet.createRow(rowIndex++);
 			Cell cell0 = row.createCell(0);

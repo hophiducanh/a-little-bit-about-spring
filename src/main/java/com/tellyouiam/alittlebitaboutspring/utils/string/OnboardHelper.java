@@ -2,6 +2,9 @@ package com.tellyouiam.alittlebitaboutspring.utils.string;
 
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class OnboardHelper {
 	
 	private static final String NULL_VALUE_AS_STRING = "NULL";
@@ -11,7 +14,22 @@ public class OnboardHelper {
 	public static String[] readCsvLine(String line) {
 		return line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)", -1);
 	}
-
+	
+	public static String[] splitCsvLineByComma(String s) {
+		List<String> words = new ArrayList<>();
+		boolean notInsideComma = true;
+		int start = 0;
+		for (int i = 0; i < s.length(); i++) {
+			if (s.charAt(i) == ',' && notInsideComma) {
+				words.add(s.substring(start, i));
+				start = i + 1;
+			} else if (s.charAt(i) == '"')
+				notInsideComma = !notInsideComma;
+		}
+		words.add(s.substring(start));
+		return words.toArray(new String[0]);
+	}
+	
 	public static String getCsvCellValueAtIndex(String[] r, int index) {
 		return index != -1 ? readCsvRow(r, index) : org.apache.commons.lang3.StringUtils.EMPTY;
 	}

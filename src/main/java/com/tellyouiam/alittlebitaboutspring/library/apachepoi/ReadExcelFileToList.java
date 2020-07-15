@@ -2,6 +2,8 @@ package com.tellyouiam.alittlebitaboutspring.library.apachepoi;
 
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DataFormat;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -46,6 +48,10 @@ public class ReadExcelFileToList {
 					String shortCode = "";
 					
 					//Get the row object
+					//data format
+					DataFormat fmt = workbook.createDataFormat();
+					CellStyle cellStyle = workbook.createCellStyle();
+					cellStyle.setDataFormat(fmt.getFormat("@"));
 					
 					//Every row has columns, get the column iterator and iterate over them
 					Iterator<Cell> cellIterator = cells.cellIterator();

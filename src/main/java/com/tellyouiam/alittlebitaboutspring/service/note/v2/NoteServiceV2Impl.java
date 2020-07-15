@@ -51,20 +51,24 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 @Service
 public class NoteServiceV2Impl implements NoteServiceV2 {
 	
+	private Map.Entry<Integer, List<String>> colAccumulatorMapper (Integer index) {
+		return null;
+	}
+	
 	public Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException {
 		//InputStream inputStream = new BufferedInputStream(ownerFile.getInputStream());
 		List<String> csvData = getCsvData(ownerFile);
 		StringBuilder streamBuilder = new StringBuilder();
 		
 		if (!isEmpty(csvData)) {
-			Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
-			Predicate<String> isFooterRow = row -> (row.matches("(.+)([\\d]+)\\sRecords(.+)"));
+			Predicate<String> isNotEmptyRowCsv = row -> (!row.matches("^(,+)$"));
+			Predicate<String> isNotFooterRow = row -> (!row.matches("(.+)([\\d]+)\\sRecords(.+)"));
 			
 			//filter non-data row.
 			csvData = csvData.stream()
 					.filter(StringUtils::isNotEmpty)
-					.filter(isEmptyRowCsv.negate())
-					.filter(isFooterRow.negate())
+					.filter(isNotEmptyRowCsv)
+					.filter(isNotFooterRow)
 					.collect(toList());
 			
 			//find line is header

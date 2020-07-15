@@ -16,4 +16,6 @@ public interface NoteService {
 	Object automateImportHorse(MultipartFile horseFile, List<MultipartFile> ownershipFiles, String dirName) throws CustomException;
 	
 	Map<Object, Object> automateImportOwnerShips(List<MultipartFile> ownershipFiles) throws CustomException;
+	
+	void reformatName(MultipartFile file, String dirname) throws CustomException, IOException;
 }

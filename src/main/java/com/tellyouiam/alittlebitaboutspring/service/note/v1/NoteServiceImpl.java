@@ -1535,6 +1535,113 @@
 			return result;
 		}
 		
+		@Override
+		public void reformatName(MultipartFile file, String dirName) throws CustomException, IOException {
+			String nameHeader = String.format("%s,%s,%s,%s\n", "RawDisplayName", "Extracted DisplayName", "Extracted " + "FirstName", "Extracted LastName");
+			
+			StringBuilder nameBuilder = new StringBuilder(nameHeader);
+			StringBuilder normalNameBuilder = new StringBuilder("\n***********NORMAL NAME***********\n");
+			StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
+			
+			try {
+				List<String> csvData = getCsvData(file);
+				if (!isEmpty(csvData)) {
+					String[] header = readCsvLine(csvData.get(0));
+					
+					int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
+					int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name");
+					int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name", "DISPLAY_NAME");
+					//process file without header
+					csvData = csvData.stream().skip(1).collect(toList());
+					
+					for (String line : csvData) {
+						String[] r = readCsvLine(line);
+						
+						String firstName = getCsvCellValueAtIndex(r, firstNameIndex);
+						String lastName = getCsvCellValueAtIndex(r, lastNameIndex);
+						String displayName = getCsvCellValueAtIndex(r, displayNameIndex);
+						
+						//We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
+						//We wanna extract this name to firstName, lastName, displayName:
+						//Any thing before CT is displayName, after is firstName, if after CT contains comma
+						// delimiter (,) >> lastName
+						this.correctOwnershipNameWithoutCT(firstName, lastName, displayName,
+								normalNameBuilder, organizationNameBuilder);
+					}
+				}
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			nameBuilder.append(normalNameBuilder).append(organizationNameBuilder);
+			String path = getOutputFolder(dirName) + File.separator + "formatted-name.csv";
+			Files.write(Paths.get(path), nameBuilder.toString().getBytes());
+		}
+		
+		private void correctOwnershipNameWithoutCT(String firstName,
+		                                                          String lastName,
+		                                                          String displayName,
+		                                                          StringBuilder normalNameBuilder,
+		                                                          StringBuilder organizationNameBuilder) {
+			
+			String formattedDisplayName = null;
+			final List<String> organizationNames = Arrays.asList(
+					"Company",
+					"Racing",
+					"Pty Ltd",
+					"Racing Pty Ltd",
+					"Breeding",
+					"stud",
+					"group",
+					"bred",
+					"breds",
+					"tbreds",
+					"Thoroughbred",
+					"Thoroughbreds",
+					"synd",
+					"syndicate",
+					"syndicates",
+					"syndication",
+					"syndications",
+					"Bloodstock",
+					"farm",
+					"Horse Transport",
+					"Club"
+			);
+			
+			boolean isOrganizationName =
+					organizationNames.stream().anyMatch(name -> displayName.toLowerCase().contains(name.toLowerCase()));
+			
+			//We have displayName like "Edmonds Racing CT: Toby Edmonds, Logbasex"
+			//We wanna extract this name to firstName, lastName, displayName:
+			//Any thing before CT is displayName, after is firstName, if after CT contains comma delimiter (,) >> lastName
+			if (!isOrganizationName) {
+				if (StringUtils.isEmpty(firstName) && StringUtils.isEmpty(lastName)) {
+					
+					String[] firstAndLastNameArr = displayName.split("\\p{Z}");
+					if (firstAndLastNameArr.length > 1) {
+						lastName = Arrays.stream(firstAndLastNameArr).reduce((first, second) -> second)
+								.orElse("");
+						
+						String finalLastName = lastName;
+						firstName = Arrays.stream(firstAndLastNameArr)
+								.filter(i -> !i.equalsIgnoreCase(finalLastName))
+								.collect(joining(SPACE)).trim();
+						formattedDisplayName = lastName + ", " + firstName;
+					}
+					
+					String extractedName = String.format("%s,%s,%s,%s\n",
+							csvValue(displayName),
+							csvValue(formattedDisplayName),
+							csvValue(firstName),
+							csvValue(lastName)
+					);
+					normalNameBuilder.append(extractedName);
+				}
+			}
+		}
+		
 		//https://stackoverflow.com/questions/27880505/lambda-expression-in-iterable-implementation
 		private static Iterable<MatchResult> allMatches(final Pattern p, final CharSequence input) {
 			return () -> new Iterator<MatchResult>() {
