@@ -6,6 +6,7 @@ import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
@@ -17,6 +18,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.IntSummaryStatistics;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,10 +35,15 @@ import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst
 import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.CSV_LINE_END;
 import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.CSV_LINE_SEPARATOR;
 import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.QUOTE_CHAR;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.*;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.containsIgnoreCase;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.getCsvData;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.getMaxRowLength;
 import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isAustraliaFormatV2;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isCsvColHasOnlyHeader;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isCsvColHasRealData;
 import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isDMYFormat;
 import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isMDYFormat;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.stringContainsIgnoreCase;
 import static com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper.getOutputFolder;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
@@ -44,6 +51,7 @@ import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
+import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.springframework.util.CollectionUtils.isEmpty;
@@ -51,8 +59,14 @@ import static org.springframework.util.CollectionUtils.isEmpty;
 @Service
 public class NoteServiceV2Impl implements NoteServiceV2 {
 	
-	private Map.Entry<Integer, List<String>> colAccumulatorMapper (Integer index) {
-		return null;
+	private Map.Entry<Integer, List<String>> colAccumulatorMapper(int index, List<String> csvData) {
+		List<String> dataByColIndex = csvData.stream().map(line -> this.getCellValueByLineIndex(line, index)).collect(toList());
+		return new AbstractMap.SimpleImmutableEntry<>(index, dataByColIndex);
+	}
+	
+	private String getCellValueByLineIndex(String line, int index) {
+		String[] rowArr = OnboardHelper.splitCsvLineByComma(line);
+		return getCsvCellValueAtIndex(rowArr, index);
 	}
 	
 	public Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException {
@@ -60,7 +74,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		List<String> csvData = getCsvData(ownerFile);
 		StringBuilder streamBuilder = new StringBuilder();
 		
-		if (!isEmpty(csvData)) {
+		if (isNotEmpty(csvData)) {
 			Predicate<String> isNotEmptyRowCsv = row -> (!row.matches("^(,+)$"));
 			Predicate<String> isNotFooterRow = row -> (!row.matches("(.+)([\\d]+)\\sRecords(.+)"));
 			
@@ -84,27 +98,20 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
 					.orElseThrow(IllegalAccessError::new).length;
 			
-			Function<Integer, Map.Entry<Integer, List<String>>> colAccumulatorMapper = index -> {
-				//value of cell in row based on its index in row.
-				//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
-				Function<String, String> valueRowIndexMapper = line -> {
-					String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
-					return getCsvCellValueAtIndex(rowArr, index);
-				};
-				
-				return new AbstractMap.SimpleImmutableEntry<>(
-						index, finalCsvData.stream().map(valueRowIndexMapper).collect(toList())
-				);
-			};
-			
 			//col has owner data is col has header and has at least two different cell value.
 			Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry ->
 					(colEntry.getValue().stream().distinct().count() > 2 || isNotEmpty(colEntry.getValue().get(0)));
 			
 			List<Map.Entry<Integer, List<String>>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
-					.map(colAccumulatorMapper)
+					.map(index -> this.colAccumulatorMapper(index, finalCsvData))
 					.filter(colHasOwnerData)
+					.sorted(Map.Entry.comparingByKey())
 					.collect(toList());
+			
+			final List<Integer> colIndexList =
+					columnEntries.stream().sorted(Map.Entry.comparingByKey()).map(Map.Entry::getKey).collect(toList());
+			
+			IntSummaryStatistics statistics = colIndexList.stream().mapToInt(i -> i).summaryStatistics();
 			
 			//process for case header and data in separate col in csv.
 			Map<Integer, List<String>> formattedDataMap = new LinkedHashMap<>();
