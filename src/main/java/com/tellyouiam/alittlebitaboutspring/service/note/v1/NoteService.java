@@ -18,4 +18,6 @@ public interface NoteService {
 	Map<Object, Object> automateImportOwnerShips(List<MultipartFile> ownershipFiles) throws CustomException;
 	
 	void reformatName(MultipartFile file, String dirname) throws CustomException, IOException;
+	
+	Map<Object, Object> reformatOwnership(MultipartFile file, String dirName);
 }

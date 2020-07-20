@@ -453,16 +453,11 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			return new AbstractMap.SimpleImmutableEntry<>(index, mergeColData);
 		};
 		
-		//col has owner data is col has at least two different cell value.
-		Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry -> isCsvColHasRealData(colEntry.getValue());
-		
 		int rowLength = getMaxRowLength(firstCsvData);
-		Map<Integer, List<String>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
-				.map(colAccumulatorMapper)
-				.filter(colHasOwnerData)
-				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 		
-		return columnEntries;
+		return Stream.iterate(0, n -> n + 1).limit(rowLength)
+				.map(colAccumulatorMapper)
+				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 	}
 	
 	public void mergeHorseFile(MultipartFile first, MultipartFile second, String dirName) throws IOException {

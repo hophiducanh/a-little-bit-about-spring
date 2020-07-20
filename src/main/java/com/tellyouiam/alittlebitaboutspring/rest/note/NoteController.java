@@ -167,4 +167,12 @@ public class NoteController {
 		}
 		return ResponseEntity.ok(dirName);
 	}
+	
+	@PostMapping(value = "/ownership/reformat")
+	public final ResponseEntity reformatOwnership(@RequestPart MultipartFile file,
+	                                              @RequestParam String dirName) {
+		
+		Object result = noteService.reformatOwnership(file, dirName);
+		return new ResponseEntity<>(result, HttpStatus.OK);
+	}
 }
