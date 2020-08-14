@@ -262,14 +262,14 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		if (!isEmpty(csvData)) {
 			Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
 			Predicate<String> isFooterRow = row -> (row.matches("(.+)([\\d]+)\\sRecords(.+)"));
-			Predicate<String> nonDataRow = row -> (row.matches("^,([^,]+),(.+)((\\w|\\d)+)(.+)$"));
+			Predicate<String> dataRow = row -> (row.matches("^,([^,]+),(.+)$"));
 			
 			//filter non-data row.
 			csvData = csvData.stream()
 					.filter(StringUtils::isNotEmpty)
 					.filter(isEmptyRowCsv.negate())
 					.filter(isFooterRow.negate())
-					.filter(nonDataRow)
+					.filter(dataRow)
 					.collect(toList());
 			
 			List<String> finalCsvData = csvData;
@@ -277,25 +277,12 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
 					.orElseThrow(IllegalAccessError::new).length;
 			
-			Function<Integer, Map.Entry<Integer, List<String>>> colAccumulatorMapper = index -> {
-				//value of cell in row based on its index in row.
-				//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
-				Function<String, String> valueRowIndexMapper = line -> {
-					String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
-					return getCsvCellValueAtIndex(rowArr, index);
-				};
-				
-				return new AbstractMap.SimpleImmutableEntry<>(
-						index, finalCsvData.stream().map(valueRowIndexMapper).collect(toList())
-				);
-			};
-			
 			//col has owner data is col has header and has at least two different cell value.
 			Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry ->
 					(colEntry.getValue().stream().distinct().count() > 2 || isNotEmpty(colEntry.getValue().get(0)));
 			
 			List<Map.Entry<Integer, List<String>>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
-					.map(colAccumulatorMapper)
+					.map(index -> this.colAccumulatorMapper(index, finalCsvData))
 					.filter(colHasOwnerData)
 					.collect(toList());
 			

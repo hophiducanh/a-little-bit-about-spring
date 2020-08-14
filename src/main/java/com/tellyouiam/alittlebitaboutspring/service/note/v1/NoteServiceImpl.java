@@ -24,6 +24,7 @@
 	import java.nio.file.Files;
 	import java.nio.file.Paths;
 	import java.time.LocalDate;
+	import java.time.format.DateTimeFormatter;
 	import java.util.*;
 	import java.util.function.Predicate;
 	import java.util.regex.MatchResult;
@@ -41,14 +42,18 @@
 	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isRecognizedAsValidDate;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.*;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvRow;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.convertStringBuilderToList;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.csvValue;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
 	import static java.util.Collections.max;
+	import static java.util.Collections.min;
+	import static java.util.Collections.sort;
 	import static java.util.stream.Collectors.joining;
 	import static java.util.stream.Collectors.toList;
 	import static java.util.stream.Collectors.toMap;
 	import static org.apache.commons.lang3.StringUtils.EMPTY;
 	import static org.apache.commons.lang3.StringUtils.SPACE;
+	import static org.apache.commons.lang3.StringUtils.isAllEmpty;
 	import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 	import static org.apache.commons.lang3.StringUtils.substring;
 	import static org.apache.commons.lang3.StringUtils.substringAfterLast;
@@ -607,10 +612,10 @@
 					int brandIndex = checkColumnIndex(header, "Brand");
 	
 					String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-							"ExternalId", "Name", "Foaled", "Sire", "Dam", "Color",
-							"Sex", "Avatar", "AddedDate", "ActiveStatus",
-							"CurrentLocation", "CurrentStatus",
-							"Type", "Category", "BonusScheme", "NickName", "Country", "Microchip", "Brand"
+							"ExternalId", "Name", "Foaled", "Sire", "Dam", "Colour",
+							"Sex", "Avatar", "Added Date", "Status",
+							"Property", "Current Status",
+							"Type", "Category", "Bonus Scheme", "NickName", "Country", "Microchip", "Brand"
 					);
 	
 					builder.append(rowHeader);
@@ -688,59 +693,59 @@
 	
 					// Address case addedDate, activeStatus and current location in horse file are empty.
 					// We will face with an error if we keep this data intact.
-//					if (isAllEmpty(addedDateBuilder, activeStatusBuilder, currentLocationBuilder)) {
-//						logger.warn("All of AddedDate && ActiveStatus && CurrentLocation can't be empty. At least addedDate required.");
-//
-//						List<String> formattedData = convertStringBuilderToList(builder);
-//						StringBuilder dataBuilder = new StringBuilder();
-//
-//						String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-//						if (!isEmpty(formattedData)) {
-//							String[] formattedHeader = readCsvLine(formattedData.get(0));
-//
-//							//Get addedDate index from header
-//							int addedDateOrdinal = checkColumnIndex(formattedHeader, "AddedDate");
-//
-//							//Append a header at first line of StringBuilder data to write to file.
-//							dataBuilder.append(formattedData.get(0)).append("\n");
-//
-//							//process data ignore header
-//							for (String line : formattedData.stream().skip(1).collect(toList())) {
-//
-//								String[] row = readCsvLine(line);
-//
-//								for (int i = 0; i < row.length; i++) {
-//
-//									//replace empty addedDate with current date.
-//									if (i == addedDateOrdinal) {
-//										row[addedDateOrdinal] = currentDate;
-//										dataBuilder.append(row[i]).append(",");
-//										continue;
-//									}
-//									dataBuilder.append(row[i]).append(",");
-//								}
-//								dataBuilder.append("\n");
-//							}
-//						}
-//
-//						if (dataBuilder.toString().contains(currentDate)) {
-//							logger.info("******************** Successfully generated addedDate with dd/MM/yyyy format : {}", currentDate);
-//						} else {
-//							logger.error("******************** Error created when trying to attach generated addedDate to output file.");
-//						}
-//
-//						try {
-//							File file = new File(path);
-//
-//							FileOutputStream os = new FileOutputStream(file);
-//							os.write(dataBuilder.toString().getBytes());
-//							os.flush();
-//							os.close();
-//						} catch (IOException e) {
-//							e.printStackTrace();
-//						}
-//						return dataBuilder;
-//					}
+					if (isAllEmpty(addedDateBuilder, activeStatusBuilder, currentLocationBuilder)) {
+						logger.warn("All of AddedDate && ActiveStatus && CurrentLocation can't be empty. At least addedDate required.");
+
+						List<String> formattedData = convertStringBuilderToList(builder);
+						StringBuilder dataBuilder = new StringBuilder();
+
+						String currentDate = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+						if (!isEmpty(formattedData)) {
+							String[] formattedHeader = readCsvLine(formattedData.get(0));
+
+							//Get addedDate index from header
+							int addedDateOrdinal = checkColumnIndex(formattedHeader, "AddedDate");
+
+							//Append a header at first line of StringBuilder data to write to file.
+							dataBuilder.append(formattedData.get(0)).append("\n");
+
+							//process data ignore header
+							for (String line : formattedData.stream().skip(1).collect(toList())) {
+
+								String[] row = readCsvLine(line);
+
+								for (int i = 0; i < row.length; i++) {
+
+									//replace empty addedDate with current date.
+									if (i == addedDateOrdinal) {
+										row[addedDateOrdinal] = currentDate;
+										dataBuilder.append(row[i]).append(",");
+										continue;
+									}
+									dataBuilder.append(row[i]).append(",");
+								}
+								dataBuilder.append("\n");
+							}
+						}
+
+						if (dataBuilder.toString().contains(currentDate)) {
+							logger.info("******************** Successfully generated addedDate with dd/MM/yyyy format : {}", currentDate);
+						} else {
+							logger.error("******************** Error created when trying to attach generated addedDate to output file.");
+						}
+
+						try {
+							File file = new File(path);
+
+							FileOutputStream os = new FileOutputStream(file);
+							os.write(dataBuilder.toString().getBytes());
+							os.flush();
+							os.close();
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+						return dataBuilder;
+					}
 				}
 	
 				try {
@@ -1136,9 +1141,42 @@
 								leftIndexes.add(start);
 								rightIndexes.add(end);
 							}
-		
+	
+							//Manhattan Muse (AUS)/Dream Ahead (USA) 18 ( Dream Ahead (USA) - Manhattan Muse (AUS))
+							//We need extract Manhattan Muse (AUS)/Dream Ahead (USA) 18.
 							int startSireDamInfoIndex = max(leftIndexes);
 							int endSireDamInfoIndex = max(rightIndexes);
+							int secondLeftBracketIndex = startSireDamInfoIndex;
+							if (leftIndexes.size() > 1) {
+								secondLeftBracketIndex = leftIndexes.stream().sorted().skip(1).findFirst().get();
+							}
+							int secondRightBracketIndex = endSireDamInfoIndex;
+							if (rightIndexes.size() > 1) {
+								secondRightBracketIndex = rightIndexes.stream().sorted(Comparator.reverseOrder()).skip(1).findFirst().get();
+							}
+							int thirdLeftBracketIndex = secondLeftBracketIndex;
+							if (leftIndexes.size() > 2) {
+								thirdLeftBracketIndex = leftIndexes.stream().sorted().skip(2).findFirst().get();
+							}
+							int thirdRightBracketIndex = secondRightBracketIndex;
+							if (rightIndexes.size() > 2) {
+								thirdRightBracketIndex = rightIndexes.stream().sorted(Comparator.reverseOrder()).skip(2).findFirst().get();
+							}
+							if (leftIndexes.size() > 0 && substring(line, min(leftIndexes), min(rightIndexes)).contains("-")) {
+								startSireDamInfoIndex = min(leftIndexes);
+								endSireDamInfoIndex = max(rightIndexes);
+							}
+							
+							if (leftIndexes.size() > 1 &&substring(line, secondLeftBracketIndex, secondRightBracketIndex).contains("-")) {
+								startSireDamInfoIndex = secondLeftBracketIndex;
+								endSireDamInfoIndex = secondRightBracketIndex;
+							}
+							
+							if (leftIndexes.size() > 2 && substring(line, thirdLeftBracketIndex, thirdRightBracketIndex).contains("-")) {
+								startSireDamInfoIndex = thirdLeftBracketIndex;
+								endSireDamInfoIndex = thirdRightBracketIndex;
+							}
+							
 							String sireDamPart = substring(line, startSireDamInfoIndex, endSireDamInfoIndex);
 							String namePart = substringBeforeLast(line, sireDamPart);
 							String additionalInfoPart = substringAfterLast(line, sireDamPart);
@@ -1188,27 +1226,27 @@
 			
 					//remove unnecessary line like:
 					// ,,With Share Ownership Information ,,,,,,,,,,,,,,,,,,,,
-//					Matcher unnecessaryDataMatcher = Pattern.compile(REMOVE_UNNECESSARY_DATA).matcher(allLines);
-//					if (unnecessaryDataMatcher.find()) {
-//						allLines = allLines.replaceAll(REMOVE_UNNECESSARY_DATA, "");
-//					} else {
-//						logger.warn("Data seemingly weird. Please check!");
-//					}
-//
-//					unnecessaryDataMatcher.reset();
-//					StringBuilder ignoredData = new StringBuilder();
-//					int gossipDataCount = 0;
-//					while (unnecessaryDataMatcher.find()) {
-//						gossipDataCount++;
-//						ignoredData.append(unnecessaryDataMatcher.group());
-//					}
-//
-//					logger.info("******************************IGNORED DATA**********************************\n {}",
-//							ignoredData);
-//					//normally unnecessary lines to ignored between 5 and 10.;
-//					if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
-//						throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
-//					}
+					Matcher unnecessaryDataMatcher = Pattern.compile(REMOVE_UNNECESSARY_DATA).matcher(allLines);
+					if (unnecessaryDataMatcher.find()) {
+						allLines = allLines.replaceAll(REMOVE_UNNECESSARY_DATA, "");
+					} else {
+						logger.warn("Data seemingly weird. Please check!");
+					}
+
+					unnecessaryDataMatcher.reset();
+					StringBuilder ignoredData = new StringBuilder();
+					int gossipDataCount = 0;
+					while (unnecessaryDataMatcher.find()) {
+						gossipDataCount++;
+						ignoredData.append(unnecessaryDataMatcher.group());
+					}
+
+					logger.info("******************************IGNORED DATA**********************************\n {}",
+							ignoredData);
+					//normally unnecessary lines to ignored between 5 and 10.;
+					if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
+						throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
+					}
 			
 					String[][] data = NoteHelper.get2DArrayFromString(allLines);
 					
@@ -1263,7 +1301,11 @@
 					//Append Header
 					StringBuilder gstString = new StringBuilder();
 					for (String[] row : data) {
-						gstString.append(row[gstIndex]);
+						try {
+							gstString.append(row[gstIndex]);
+						} catch (Exception e) {
+							e.printStackTrace();
+						}
 					}
 			
 					//TODO Pattern match
