@@ -4,7 +4,9 @@ import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.Horse;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.OpeningBalance;
+import com.tellyouiam.alittlebitaboutspring.entity.csvformat.TaxCodes;
 import com.tellyouiam.alittlebitaboutspring.filter.EmptyLineFilter;
+import com.tellyouiam.alittlebitaboutspring.filter.ValidLineFilter;
 import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -21,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.getMultiMapSingleStringValue;
 
@@ -148,6 +151,38 @@ public class CsvServiceImpl implements CsvService {
 			Files.write(Paths.get("/home/logbasex/Desktop/data/POB-479-Wylie Dalziel Racing/submit/opening-balance.csv"), builder.toString().getBytes());
 		} catch (IOException e) {
 			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	@Override
+	public Object importTaxCode(MultipartFile file) throws IOException {
+		String csvHeader = new StringJoiner(",")
+				.add("Tax Code")
+				.add("Description")
+				.add("Rate")
+				.toString();
+		
+		StringBuilder builder = new StringBuilder(csvHeader).append("\n");
+		Reader reader = new InputStreamReader(file.getInputStream());
+		List<TaxCodes> csvToBean = new CsvToBeanBuilder<TaxCodes>(reader)
+				.withSkipLines(1)
+				.withFilter(line -> new ValidLineFilter().allowLine(line))
+				.withType(TaxCodes.class)
+				.withIgnoreLeadingWhiteSpace(true)
+				.build()
+				.parse();
+		
+		for (TaxCodes taxCode : csvToBean) {
+			String name = taxCode.getName();
+			String description = taxCode.getDescription();
+			Double rate = taxCode.getRate();
+			String row = String.format("%s,%s,%s%n",
+					StringHelper.csvValue(name),
+					StringHelper.csvValue(description),
+					StringHelper.csvValue(rate));
+			builder.append(row);
+			Files.write(Paths.get("C:\\Users\\conta\\OneDrive\\Desktop\\tax-codes.csv"), builder.toString().getBytes());
 		}
 		return null;
 	}

@@ -36,3 +36,4 @@ src/main/java/com/tellyouiam/alittlebitaboutspring/config/
 #src/main/resources/application.properties
 
 application.properties
+!.idea

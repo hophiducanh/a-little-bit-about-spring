@@ -982,7 +982,7 @@
 					"HorseId", "HorseName",
 					"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
 					"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-					"Country", "GST", "Shares", "FromDate", "ExportedDate", "Debtor"
+					"Country", "GST", "Debtor", "Shares", "FromDate", "ExportedDate"
 			);
 		
 			String nameHeader = String.format("%s,%s,%s,%s\n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
@@ -1555,10 +1555,10 @@
 									csvValue(postCode),
 									csvValue(country),
 									csvValue(gst),
+									csvValue(debtor),
 									csvValue(share),
 									csvValue(addedDate),
-									csvValue(exportedDate),
-									csvValue(debtor)
+									csvValue(exportedDate)
 							);
 							
 							if (StringUtils.isEmpty(

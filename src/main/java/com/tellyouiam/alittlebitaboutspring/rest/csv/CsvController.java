@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+
 @RestController
 public class CsvController {
 	
@@ -29,6 +31,18 @@ public class CsvController {
 	@PostMapping("/opening-balance")
 	public final ResponseEntity<Object> automateImportHorse(@RequestPart(required = false) MultipartFile file) {
 		Object result = csvService.formatOpeningBalanceFile(file);
+		
+		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
+	}
+	
+	@PostMapping("/tax")
+	public final ResponseEntity<Object> importTaxCodes(@RequestPart(required = false) MultipartFile file) {
+		Object result = null;
+		try {
+			result = csvService.importTaxCode(file);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 		
 		return new ResponseEntity<Object>(result, new HttpHeaders(), HttpStatus.OK);
 	}
