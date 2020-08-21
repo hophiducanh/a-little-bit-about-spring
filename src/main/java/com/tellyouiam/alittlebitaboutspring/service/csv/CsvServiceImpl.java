@@ -1,7 +1,11 @@
 package com.tellyouiam.alittlebitaboutspring.service.csv;
 
+import com.opencsv.CSVParser;
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.bean.ColumnPositionMappingStrategy;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
+import com.opencsv.bean.CsvToBeanFilter;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.Horse;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.OpeningBalance;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.TaxCodes;
@@ -165,11 +169,27 @@ public class CsvServiceImpl implements CsvService {
 		
 		StringBuilder builder = new StringBuilder(csvHeader).append("\n");
 		Reader reader = new InputStreamReader(file.getInputStream());
+		
 		List<TaxCodes> csvToBean = new CsvToBeanBuilder<TaxCodes>(reader)
 				.withSkipLines(1)
-				.withFilter(line -> new ValidLineFilter().allowLine(line))
+				.withFilter(new CsvToBeanFilter() {
+					/*
+					 * This filter ignores empty lines from the input
+					 */
+					@Override
+					public boolean allowLine(String[] strings) {
+						for (String one : strings) {
+							if (one != null && one.length() > 0) {
+								return true;
+							}
+						}
+						return false;
+					}
+				})
+//				.withFilter(line -> !line[0].contains("{}"))
 				.withType(TaxCodes.class)
 				.withIgnoreLeadingWhiteSpace(true)
+				.withThrowExceptions(false)
 				.build()
 				.parse();
 		
@@ -184,6 +204,6 @@ public class CsvServiceImpl implements CsvService {
 			builder.append(row);
 			Files.write(Paths.get("C:\\Users\\conta\\OneDrive\\Desktop\\tax-codes.csv"), builder.toString().getBytes());
 		}
-		return null;
+		return builder;
 	}
 }

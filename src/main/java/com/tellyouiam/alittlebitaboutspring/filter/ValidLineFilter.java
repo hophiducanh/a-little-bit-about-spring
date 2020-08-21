@@ -5,6 +5,7 @@ import com.opencsv.bean.CsvToBeanFilter;
 public class ValidLineFilter implements CsvToBeanFilter {
 	@Override
 	public boolean allowLine(String[] line) {
-		return line.length > 2;
+//		return !String.join(",", line).contains("{}");
+		return true;
 	}
 }
