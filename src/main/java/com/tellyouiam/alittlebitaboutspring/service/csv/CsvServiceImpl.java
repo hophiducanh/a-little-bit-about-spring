@@ -1,16 +1,22 @@
 package com.tellyouiam.alittlebitaboutspring.service.csv;
 
-import com.opencsv.CSVParser;
-import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVWriter;
 import com.opencsv.bean.ColumnPositionMappingStrategy;
+import com.opencsv.bean.CsvBindByName;
+import com.opencsv.bean.CsvBindByPosition;
 import com.opencsv.bean.CsvToBean;
 import com.opencsv.bean.CsvToBeanBuilder;
 import com.opencsv.bean.CsvToBeanFilter;
+import com.opencsv.bean.StatefulBeanToCsv;
+import com.opencsv.bean.StatefulBeanToCsvBuilder;
+import com.opencsv.exceptions.CsvDataTypeMismatchException;
+import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
+import com.tellyouiam.alittlebitaboutspring.converter.CustomMappingStrategy;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.Horse;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.OpeningBalance;
+import com.tellyouiam.alittlebitaboutspring.entity.csvformat.TaxCodeExport;
 import com.tellyouiam.alittlebitaboutspring.entity.csvformat.TaxCodes;
 import com.tellyouiam.alittlebitaboutspring.filter.EmptyLineFilter;
-import com.tellyouiam.alittlebitaboutspring.filter.ValidLineFilter;
 import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import org.apache.commons.collections4.CollectionUtils;
 import org.slf4j.Logger;
@@ -23,13 +29,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.getMultiMapSingleStringValue;
+import static java.nio.charset.StandardCharsets.*;
 
 @Service
 public class CsvServiceImpl implements CsvService {
@@ -205,5 +217,48 @@ public class CsvServiceImpl implements CsvService {
 			Files.write(Paths.get("C:\\Users\\conta\\OneDrive\\Desktop\\tax-codes.csv"), builder.toString().getBytes());
 		}
 		return builder;
+	}
+	
+	private String buildHeader(Class<TaxCodeExport> clazz) {
+		return Arrays.stream(clazz.getDeclaredFields())
+				.filter(f -> f.getAnnotation(CsvBindByPosition.class) != null && f.getAnnotation(CsvBindByName.class) != null)
+				.sorted(Comparator.comparing(f -> f.getAnnotation(CsvBindByPosition.class).position()))
+				.map(f -> f.getAnnotation(CsvBindByName.class).column())
+				.collect(Collectors.joining(",")) + "\n";
+	}
+	
+	@Override
+	public void exportTaxCode() throws IOException, CsvDataTypeMismatchException, CsvRequiredFieldEmptyException {
+		try (
+				Writer writer = Files.newBufferedWriter(Paths.get("C:\\Users\\conta\\OneDrive\\Desktop\\tax-codes.csv"));
+		) {
+//			ColumnPositionMappingStrategy<TaxCodes> mappingStrategy = new ColumnPositionMappingStrategy<>();
+//			mappingStrategy.setType(TaxCodes.class);
+//
+//			// Arrange column name as provided in below array.
+//			String[] columns = new String[]{ "Name", "description"};
+//			mappingStrategy.setColumnMapping(columns);
+			
+//			final CustomMappingStrategy<TaxCodes> mappingStrategy = new CustomMappingStrategy<>();
+//			mappingStrategy.setType(TaxCodes.class);
+			
+			StatefulBeanToCsv<TaxCodeExport> beanToCsv = new StatefulBeanToCsvBuilder<TaxCodeExport>(writer)
+					.withQuotechar(CSVWriter.NO_QUOTE_CHARACTER)
+					.withMappingStrategy(new ColumnPositionMappingStrategy<TaxCodeExport>() {
+						@Override
+						public String[] generateHeader(TaxCodeExport taxCodes) {
+							return new String[]{"Name", "Description", "Rate"};
+						}
+					})
+//					.withMappingStrategy(mappingStrategy)
+					.build();
+			
+			List<TaxCodeExport> myUsers = new ArrayList<>();
+			myUsers.add(new TaxCodeExport("Sundar Pichai", "sundar.pichai@gmail.com", "-1"));
+			myUsers.add(new TaxCodeExport("Satya Nadella", "satya.nadella@outlook.com", "2"));
+			
+			beanToCsv.write(myUsers);
+			writer.flush();
+		}
 	}
 }

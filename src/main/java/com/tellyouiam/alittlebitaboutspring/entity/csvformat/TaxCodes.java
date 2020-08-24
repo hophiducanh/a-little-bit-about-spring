@@ -15,6 +15,19 @@ public class TaxCodes {
 	@CsvBindByName(column = "Rate")
 	private Double rate;
 	
+	public TaxCodes(){}
+	
+	public TaxCodes(String name, String description) {
+		this.name = name;
+		this.description = description;
+	}
+	
+	public TaxCodes(String name, String description, Double rate) {
+		this.name = name;
+		this.description = description;
+		this.rate = rate;
+	}
+	
 	public String getName() {
 		return name;
 	}

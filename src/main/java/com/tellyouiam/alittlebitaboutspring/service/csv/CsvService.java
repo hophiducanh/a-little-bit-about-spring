@@ -1,5 +1,7 @@
 package com.tellyouiam.alittlebitaboutspring.service.csv;
 
+import com.opencsv.exceptions.CsvDataTypeMismatchException;
+import com.opencsv.exceptions.CsvRequiredFieldEmptyException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,4 +15,6 @@ public interface CsvService {
 	Object formatOpeningBalanceFile(MultipartFile file);
 	
 	Object importTaxCode(MultipartFile file) throws IOException;
+	
+	void exportTaxCode() throws IOException, CsvDataTypeMismatchException, CsvRequiredFieldEmptyException;
 }
