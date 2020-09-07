@@ -262,14 +262,14 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		if (!isEmpty(csvData)) {
 			Predicate<String> isEmptyRowCsv = row -> (row.matches("^(,+)$"));
 			Predicate<String> isFooterRow = row -> (row.matches("(.+)([\\d]+)\\sRecords(.+)"));
-			Predicate<String> dataRow = row -> (row.matches("^,([^,]+),(.+)$"));
+//			Predicate<String> dataRow = row -> (row.matches("^,([^,]+),(.+)$"));
 			
 			//filter non-data row.
 			csvData = csvData.stream()
 					.filter(StringUtils::isNotEmpty)
 					.filter(isEmptyRowCsv.negate())
 					.filter(isFooterRow.negate())
-					.filter(dataRow)
+//					.filter(dataRow)
 					.collect(toList());
 			
 			List<String> finalCsvData = csvData;
@@ -346,7 +346,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			Map<String, List<String>> standardHeaderMap = new LinkedHashMap<>();
 			
 			standardHeaderMap.put("External Id, ExternalId", singletonList("ExternalId"));
-			standardHeaderMap.put("Name", singletonList("Name"));
+			standardHeaderMap.put("Name, Horse", singletonList("Name"));
 			standardHeaderMap.put("Foaled, DOB", singletonList("Foaled"));
 			standardHeaderMap.put("Sire", singletonList("Sire"));
 			standardHeaderMap.put("Dam", singletonList("Dam"));
@@ -423,30 +423,26 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		return null;
 	}
 	
-	private Map<Integer, List<String>> dataAccumulator(final List<String> firstCsvData,
-	                                                   final List<String> secondCsvData) {
-		Function<Integer, Map.Entry<Integer, List<String>>> colAccumulatorMapper = index -> {
-			//value of cell in row based on its index in row.
-			//split csv by the comma using java algorithm is damn fast. Faster a thousand times than regex.
-			Function<String, String> valueRowIndexMapper = line -> {
-				String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
-				return getCsvCellValueAtIndex(rowArr, index);
-			};
-			List<String> firstColData = firstCsvData.stream().map(valueRowIndexMapper).collect(toList());
-			List<String> secondColData = secondCsvData.stream().map(valueRowIndexMapper).collect(toList());
-			
-			//merge two columns has same title. Get second col if the first one is empty (Only header)
-			List<String> mergeColData = isCsvColHasOnlyHeader(firstColData) ? secondColData : firstColData;
-			return new AbstractMap.SimpleImmutableEntry<>(index, mergeColData);
-		};
-		
+	private Map<Integer, List<String>> dataAccumulator(final List<String> firstCsvData, final List<String> secondCsvData) {
 		int rowLength = getMaxRowLength(firstCsvData);
 		
 		return Stream.iterate(0, n -> n + 1).limit(rowLength)
-				.map(colAccumulatorMapper)
+				.map(i -> this.colDataAccumulator(i, firstCsvData, secondCsvData))
 				.collect(toMap(Map.Entry::getKey, Map.Entry::getValue));
 	}
 	
+	private Map.Entry<Integer, List<String>> colDataAccumulator(int index, List<String> firstCsvData,
+	                                                            List<String> secondCsvData) {
+		List<String> firstColData = firstCsvData.stream().map(line -> this.getCellValueByLineIndex(line, index)).collect(toList());
+		List<String> secondColData = secondCsvData.stream().map(line -> this.getCellValueByLineIndex(line, index)).collect(toList());
+		
+		//merge two columns has same title. Get second col if the first one is empty (Only header)
+//		List<String> mergeColData = isCsvColHasOnlyHeader(firstColData) ? secondColData : firstColData;
+		List<String> mergeColData = (!isCsvColHasOnlyHeader(firstColData) && firstColData.containsAll(secondColData)) ? firstColData : secondColData;
+		return new AbstractMap.SimpleImmutableEntry<>(index, mergeColData);
+	}
+	
+	//=VLOOKUP(B9,Sheet1!$B$1:$M$566,12,FALSE)
 	public void mergeHorseFile(MultipartFile first, MultipartFile second, String dirName) throws IOException {
 		List<String> firstCsvData = getCsvData(first);
 		List<String> secondCsvData = getCsvData(second);

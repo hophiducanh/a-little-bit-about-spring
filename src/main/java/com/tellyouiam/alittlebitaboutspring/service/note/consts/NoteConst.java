@@ -15,7 +15,7 @@ public class NoteConst {
 	public static final String CSV_LINE_END = "\n";
 	public static final String QUOTE_CHAR = "\"";
 	
-	public static final String REMOVE_BANK_LINES_PATTERN = "(?m)^[,]*$\n";
+	public static final String REMOVE_BANK_LINES_PATTERN = "(?m)^(\"?)[,]*$\n";
 	public static final String REMOVE_LINE_BREAK_PATTERN = "\nCT\\b";
 	public static final String REMOVE_INVALID_SHARES_PATTERN = "\\bInt.Party\\b";
 	public static final String CORRECT_HORSE_NAME_PATTERN = "^([^,]*)(?=\\s\\(.*).*$";

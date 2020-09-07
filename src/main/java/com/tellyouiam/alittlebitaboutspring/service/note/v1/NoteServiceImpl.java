@@ -380,6 +380,17 @@
 							return getCsvCellValueAtIndex(rowArr, addressIndex);
 						}).distinct().filter(StringUtils::isNotEmpty).collect(Collectors.joining(";"));
 						
+						List<String> addressList = new ArrayList<>(Arrays.asList(address.split(";")));
+						
+						TreeSet<String> seen = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+						addressList.removeIf(s -> !seen.add(s));
+						address = String.join(";", addressList);
+						
+//						for (String addr : new ArrayList<>(Arrays.asList(address.split(";")))) {
+//							for (String addr1 : new ArrayList<>(Arrays.asList(address.split(";")))) {
+//								if (addr.replace())
+//							}
+//						}
 						email = preparedData.subList(i, i + max).stream().map(line -> {
 							String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
 							return getCsvCellValueAtIndex(rowArr, emailIndex);
@@ -1046,24 +1057,24 @@
 					
 					Map<String, String> horseDataMap = new LinkedHashMap<>();
 					
-					while (departedDateMatcher.find()) {
-						String horseName = departedDateMatcher.group(1).trim();
-						String horseDepartedDate = departedDateMatcher.group(3).trim();
-						
-						if (StringUtils.isEmpty(horseName))
-							continue;
-						
-						if (StringUtils.isEmpty(horseDepartedDate))
-							logger.info("Horse without departed date: {}", horseName);
-						
-						if (!isDMYFormat(horseDepartedDate)) {
-							throw new CustomException(new ErrorInfo("The departed date was not recognized as a valid Australia format: {}", horseDepartedDate));
-						}
-						
-						//process for case: 25/08/19 (usually 25/08/2019)
-						String horseDate = LocalDate.parse(horseDepartedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
-						horseDataMap.put(horseName, horseDate);
-					}
+//					while (departedDateMatcher.find()) {
+//						String horseName = departedDateMatcher.group(1).trim();
+//						String horseDepartedDate = departedDateMatcher.group(3).trim();
+//
+//						if (StringUtils.isEmpty(horseName))
+//							continue;
+//
+//						if (StringUtils.isEmpty(horseDepartedDate))
+//							logger.info("Horse without departed date: {}", horseName);
+//
+//						if (!isDMYFormat(horseDepartedDate)) {
+//							throw new CustomException(new ErrorInfo("The departed date was not recognized as a valid Australia format: {}", horseDepartedDate));
+//						}
+//
+//						//process for case: 25/08/19 (usually 25/08/2019)
+//						String horseDate = LocalDate.parse(horseDepartedDate, AUSTRALIA_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT);
+//						horseDataMap.put(horseName, horseDate);
+//					}
 					
 					result.put("horseDataMap", horseDataMap);
 					
@@ -1184,7 +1195,7 @@
 							if (!additionalInfoPart.contains("yo")) {
 								logger.warn("Wired data");
 							}
-							line = namePart;
+							line = namePart.trim();
 							correctHorseNameArr.add(line);
 						} else if (tryingShareColumnPosition.find()) {
 							
@@ -1245,7 +1256,7 @@
 							ignoredData);
 					//normally unnecessary lines to ignored between 5 and 10.;
 					if (gossipDataCount > IGNORED_NON_DATA_LINE_THRESHOLD) {
-						throw new CustomException(new ErrorInfo("CSV data seems a little weird. Please check!"));
+						logger.error("CSV data seems a little weird. Please check!");
 					}
 			
 					String[][] data = NoteHelper.get2DArrayFromString(allLines);
