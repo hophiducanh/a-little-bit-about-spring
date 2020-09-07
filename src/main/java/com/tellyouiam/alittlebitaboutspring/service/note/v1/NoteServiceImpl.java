@@ -6,6 +6,7 @@
 	import com.tellyouiam.alittlebitaboutspring.utils.string.CsvHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
 	import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
+	import me.xdrop.fuzzywuzzy.FuzzySearch;
 	import org.apache.commons.lang3.ArrayUtils;
 	import org.apache.commons.lang3.StringUtils;
 	import org.apache.commons.lang3.math.NumberUtils;
@@ -327,11 +328,11 @@
 							email5, email6, email7, email8, displayName, displayName1, displayName2, displayName3, displayName4,
 							displayName5, displayName6, displayName7, displayName8, emailCount);
 					
-					phoneCount = getEmailCount(phone, phone1, phone2, phone3, phone4,
+					phoneCount = getPhoneCount(phone, phone1, phone2, phone3, phone4,
 							phone5, phone6, phone7, phone8, displayName, displayName1, displayName2, displayName3, displayName4,
 							displayName5, displayName6, displayName7, displayName8, phoneCount);
 					
-					mobileCount = getEmailCount(mobile, mobile1, mobile2, mobile3, mobile4,
+					mobileCount = getPhoneCount(mobile, mobile1, mobile2, mobile3, mobile4,
 							mobile5, mobile6, mobile7, mobile8, displayName, displayName1, displayName2, displayName3, displayName4,
 							displayName5, displayName6, displayName7, displayName8, mobileCount);
 					
@@ -386,11 +387,35 @@
 						addressList.removeIf(s -> !seen.add(s));
 						address = String.join(";", addressList);
 						
-//						for (String addr : new ArrayList<>(Arrays.asList(address.split(";")))) {
-//							for (String addr1 : new ArrayList<>(Arrays.asList(address.split(";")))) {
-//								if (addr.replace())
-//							}
-//						}
+						List<String> newAddressList = new ArrayList<>(Arrays.asList(address.split(";")));
+						Set<String> finalAddressList = new HashSet<>();
+						
+						for (String addr : newAddressList) {
+							
+							if (finalAddressList.stream().anyMatch(u -> FuzzySearch.tokenSetRatio(addr, u) >= 95)) {
+								continue;
+							} else {
+								finalAddressList.add(addr);
+							}
+							
+							for (String addr1 : newAddressList) {
+								if (FuzzySearch.tokenSetRatio(addr, addr1) >= 95 && !addr.equals(addr1)) {
+									String longer = addr.length() > addr1.length() ? addr : addr1;
+									
+									String available = finalAddressList.stream().filter(u -> FuzzySearch.tokenSetRatio(longer, u) >= 95 && u.length() <= longer.length())
+											.findAny().orElse(null);
+									if (available != null) {
+										finalAddressList.remove(available);
+										finalAddressList.add(longer);
+									} else {
+										finalAddressList.add(longer);
+									}
+								}
+								
+							}
+						}
+						address = String.join(";", finalAddressList);
+						
 						email = preparedData.subList(i, i + max).stream().map(line -> {
 							String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
 							return getCsvCellValueAtIndex(rowArr, emailIndex);
@@ -474,6 +499,12 @@
 			return Stream.of(name, name1).distinct().filter(StringUtils::isNotEmpty).count() == 1;
 		}
 		
+		private boolean fuzzyMatchingEmail(String email, String email1) {
+			if (!email.contains("@") || !email1.contains("@")) return false;
+			email = email.substring(0, email.lastIndexOf('@')).replaceAll("[-+.^:,]", "");
+			email1 = email1.substring(0, email1.lastIndexOf('@')).replaceAll("[-+.^:,]", "");
+			return FuzzySearch.tokenSetRatio(email, email1) == 100;
+		}
 		private int getEmailCount(String email,
 		                          String email1,
 		                          String email2,
@@ -494,21 +525,21 @@
 		                          String displayName8,
 		                          int emailCount) {
 			if (isNotEmpty(email)) {
-				if (email.equals(email1) && isNotDupDisplayName(displayName, displayName1)) {
+				if (fuzzyMatchingEmail(email, email1) && isNotDupDisplayName(displayName, displayName1)) {
 					++ emailCount;
-					if (email.equals(email2) && isNotDupDisplayName(displayName, displayName2)) {
+					if (fuzzyMatchingEmail(email, email2) && isNotDupDisplayName(displayName, displayName2)) {
 						++ emailCount;
-						if (email.equals(email3) && isNotDupDisplayName(displayName, displayName3)) {
+						if (fuzzyMatchingEmail(email, email3) && isNotDupDisplayName(displayName, displayName3)) {
 							++ emailCount;
-							if (email.equals(email4) && isNotDupDisplayName(displayName, displayName4)) {
+							if (fuzzyMatchingEmail(email, email4) && isNotDupDisplayName(displayName, displayName4)) {
 								++ emailCount;
-								if (email.equals(email5) && isNotDupDisplayName(displayName, displayName5)) {
+								if (fuzzyMatchingEmail(email, email5) && isNotDupDisplayName(displayName, displayName5)) {
 									++ emailCount;
-									if (email.equals(email6) && isNotDupDisplayName(displayName, displayName6)) {
+									if (fuzzyMatchingEmail(email, email6) && isNotDupDisplayName(displayName, displayName6)) {
 										++ emailCount;
-										if (email.equals(email7) && isNotDupDisplayName(displayName, displayName7)) {
+										if (fuzzyMatchingEmail(email, email7) && isNotDupDisplayName(displayName, displayName7)) {
 											++ emailCount;
-											if (email.equals(email8) && isNotDupDisplayName(displayName, displayName8)) {
+											if (fuzzyMatchingEmail(email, email8) && isNotDupDisplayName(displayName, displayName8)) {
 												++ emailCount;
 											}
 										}
@@ -530,30 +561,64 @@
 		
 		private int getAddressCount(String address, String address1, String address2, String address3, String address4, String address5,
 		                            String address6, String address7, String address8, int addressCount) {
-			if (isNotEmpty(address)) {
-				address = formatAddress(address);
-				if (distance.apply(address, formatAddress(address1)) < 2) {
+//			if (isNotEmpty(address)) {
+//				address = formatAddress(address);
+//				if (distance.apply(address, formatAddress(address1)) < 2) {
+//					++ addressCount;
+//
+//					if (distance.apply(address, formatAddress(address2)) < 2) {
+//						++ addressCount;
+//
+//						if (distance.apply(address, formatAddress(address3)) < 2) {
+//							++ addressCount;
+//
+//							if (distance.apply(address, formatAddress(address4)) < 2) {
+//								++ addressCount;
+//
+//								if (distance.apply(address, formatAddress(address5)) < 2) {
+//									++ addressCount;
+//
+//									if (distance.apply(address, formatAddress(address6)) < 2) {
+//										++ addressCount;
+//
+//										if (distance.apply(address, formatAddress(address7)) < 2) {
+//											++ addressCount;
+//
+//											if (distance.apply(address, formatAddress(address8)) < 2) {
+//												++ addressCount;
+//											}
+//										}
+//									}
+//								}
+//							}
+//						}
+//					}
+//				}
+//			}
+			
+			if (isNotEmpty(address)){
+				if (FuzzySearch.tokenSetRatio(address, address1) >= 95) {
 					++ addressCount;
 					
-					if (distance.apply(address, formatAddress(address2)) < 2) {
+					if (FuzzySearch.tokenSetRatio(address, address2) >= 95) {
 						++ addressCount;
 						
-						if (distance.apply(address, formatAddress(address3)) < 2) {
+						if (FuzzySearch.tokenSetRatio(address, address3) >= 95) {
 							++ addressCount;
 							
-							if (distance.apply(address, formatAddress(address4)) < 2) {
+							if (FuzzySearch.tokenSetRatio(address, address4) >= 95) {
 								++ addressCount;
 								
-								if (distance.apply(address, formatAddress(address5)) < 2) {
+								if (FuzzySearch.tokenSetRatio(address, address5) >= 95) {
 									++ addressCount;
 									
-									if (distance.apply(address, formatAddress(address6)) < 2) {
+									if (FuzzySearch.tokenSetRatio(address, address6) >= 95) {
 										++ addressCount;
 										
-										if (distance.apply(address, formatAddress(address7)) < 2) {
+										if (FuzzySearch.tokenSetRatio(address, address7) >= 95) {
 											++ addressCount;
 											
-											if (distance.apply(address, formatAddress(address8)) < 2) {
+											if (FuzzySearch.tokenSetRatio(address, address8) >= 95) {
 												++ addressCount;
 											}
 										}
@@ -773,6 +838,54 @@
 				e.printStackTrace();
 			}
 			return null;
+		}
+		
+		private int getPhoneCount(String email,
+		                          String email1,
+		                          String email2,
+		                          String email3,
+		                          String email4,
+		                          String email5,
+		                          String email6,
+		                          String email7,
+		                          String email8,
+		                          String displayName,
+		                          String displayName1,
+		                          String displayName2,
+		                          String displayName3,
+		                          String displayName4,
+		                          String displayName5,
+		                          String displayName6,
+		                          String displayName7,
+		                          String displayName8,
+		                          int emailCount) {
+			if (isNotEmpty(email)) {
+				if (email.equals(email1) && isNotDupDisplayName(displayName, displayName1)) {
+					++ emailCount;
+					if (email.equals(email2) && isNotDupDisplayName(displayName, displayName2)) {
+						++ emailCount;
+						if (email.equals(email3) && isNotDupDisplayName(displayName, displayName3)) {
+							++ emailCount;
+							if (email.equals(email4) && isNotDupDisplayName(displayName, displayName4)) {
+								++ emailCount;
+								if (email.equals(email5) && isNotDupDisplayName(displayName, displayName5)) {
+									++ emailCount;
+									if (email.equals(email6) && isNotDupDisplayName(displayName, displayName6)) {
+										++ emailCount;
+										if (email.equals(email7) && isNotDupDisplayName(displayName, displayName7)) {
+											++ emailCount;
+											if (email.equals(email8) && isNotDupDisplayName(displayName, displayName8)) {
+												++ emailCount;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			return emailCount;
 		}
 	
 		@SuppressWarnings("unchecked")
