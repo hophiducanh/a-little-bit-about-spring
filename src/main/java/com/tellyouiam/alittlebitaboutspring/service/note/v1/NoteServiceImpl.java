@@ -22,8 +22,11 @@
 	import java.io.FileOutputStream;
 	import java.io.IOException;
 	import java.net.URISyntaxException;
+	import java.nio.charset.Charset;
+	import java.nio.charset.StandardCharsets;
 	import java.nio.file.Files;
 	import java.nio.file.Paths;
+	import java.nio.file.StandardOpenOption;
 	import java.time.LocalDate;
 	import java.time.format.DateTimeFormatter;
 	import java.util.*;
@@ -80,8 +83,6 @@
 				StringBuilder builder = new StringBuilder();
 				StringBuilder finalBuilder = new StringBuilder();
 				finalBuilder.append(HORSE_FILE_HEADER);
-				
-				String ownerErrorData = EMPTY;
 				
 				if (!isEmpty(csvData)) {
 					
@@ -204,8 +205,6 @@
 						
 						builder.append(rowBuilder);
 					}
-					
-					ownerErrorData = CsvHelper.validateInputFile(preparedData);
 				}
 				
 				int ownerIdIndex = 0;
@@ -238,6 +237,8 @@
 					String[] next8 = ((i + 8) < preparedData.size()) ? readCsvLine(preparedData.get(i + 8)) : null;
 					String[] next9 = ((i + 9) < preparedData.size()) ? readCsvLine(preparedData.get(i + 9)) : null;
 					String[] next10 = ((i + 10) < preparedData.size()) ? readCsvLine(preparedData.get(i + 10)) : null;
+					String[] next11 = ((i + 11) < preparedData.size()) ? readCsvLine(preparedData.get(i + 11)) : null;
+					String[] next12 = ((i + 12) < preparedData.size()) ? readCsvLine(preparedData.get(i + 12)) : null;
 					
 					String ownerId = readCsvRow(current, ownerIdIndex);
 					String email = readCsvRow(current, emailIndex);
@@ -270,6 +271,8 @@
 					String address8 = readCsvRow(next8, addressIndex);
 					String address9 = readCsvRow(next9, addressIndex);
 					String address10 = readCsvRow(next10, addressIndex);
+					String address11 = readCsvRow(next11, addressIndex);
+					String address12 = readCsvRow(next12, addressIndex);
 					
 					
 					String phone1 = readCsvRow(next1, phoneIndex);
@@ -282,6 +285,8 @@
 					String phone8 = readCsvRow(next8, phoneIndex);
 					String phone9 = readCsvRow(next9, phoneIndex);
 					String phone10 = readCsvRow(next10, phoneIndex);
+					String phone11 = readCsvRow(next11, phoneIndex);
+					String phone12 = readCsvRow(next12, phoneIndex);
 					
 					String mobile1 = readCsvRow(next1, mobileIndex);
 					String mobile2 = readCsvRow(next2, mobileIndex);
@@ -293,6 +298,8 @@
 					String mobile8 = readCsvRow(next8, mobileIndex);
 					String mobile9 = readCsvRow(next9, mobileIndex);
 					String mobile10 = readCsvRow(next10, mobileIndex);
+					String mobile11 = readCsvRow(next11, mobileIndex);
+					String mobile12 = readCsvRow(next12, mobileIndex);
 					
 					String displayName1 = readCsvRow(next1, displayNameIndex);
 					String displayName2 = readCsvRow(next2, displayNameIndex);
@@ -304,6 +311,8 @@
 					String displayName8 = readCsvRow(next8, displayNameIndex);
 					String displayName9 = readCsvRow(next9, displayNameIndex);
 					String displayName10 = readCsvRow(next10, displayNameIndex);
+					String displayName11 = readCsvRow(next11, displayNameIndex);
+					String displayName12 = readCsvRow(next12, displayNameIndex);
 					
 					String email1 = readCsvRow(next1, emailIndex);
 					String email2 = readCsvRow(next2, emailIndex);
@@ -315,32 +324,36 @@
 					String email8 = readCsvRow(next8, emailIndex);
 					String email9 = readCsvRow(next9, emailIndex);
 					String email10 = readCsvRow(next10, emailIndex);
+					String email11 = readCsvRow(next11, emailIndex);
+					String email12 = readCsvRow(next12, emailIndex);
 					
 					int emailCount = 1;
 					int phoneCount = 1;
 					int mobileCount = 1;
 					int displayNameCount = 1;
 					int addressCount = 1;
-					int max = 0;
+					int max;
 					
 					//count email of only one displayName
-					emailCount = getEmailCount(email, email1, email2, email3, email4,
-							email5, email6, email7, email8, displayName, displayName1, displayName2, displayName3, displayName4,
-							displayName5, displayName6, displayName7, displayName8, emailCount);
+					emailCount = getEmailCount(email, email1, email2, email3, email4, email5, email6, email7, email8, email9,
+							email10, email11, email12, displayName, displayName1, displayName2, displayName3, displayName4,
+							displayName5, displayName6, displayName7, displayName8, displayName9, displayName10, displayName11, displayName12, emailCount);
 					
-					phoneCount = getPhoneCount(phone, phone1, phone2, phone3, phone4,
-							phone5, phone6, phone7, phone8, displayName, displayName1, displayName2, displayName3, displayName4,
-							displayName5, displayName6, displayName7, displayName8, phoneCount);
+					phoneCount = getPhoneCount(phone, phone1, phone2, phone3, phone4, phone5, phone6, phone7, phone8, phone9,
+							phone10, phone11, phone12, displayName, displayName1, displayName2, displayName3, displayName4,
+							displayName5, displayName6, displayName7, displayName8, displayName9, displayName10, displayName11, displayName12, phoneCount);
 					
-					mobileCount = getPhoneCount(mobile, mobile1, mobile2, mobile3, mobile4,
-							mobile5, mobile6, mobile7, mobile8, displayName, displayName1, displayName2, displayName3, displayName4,
-							displayName5, displayName6, displayName7, displayName8, mobileCount);
+					mobileCount = getPhoneCount(mobile, mobile1, mobile2, mobile3, mobile4, mobile5, mobile6, mobile7, mobile8,
+							mobile9, mobile10, mobile11, mobile12, displayName, displayName1, displayName2, displayName3, displayName4,
+							displayName5, displayName6, displayName7, displayName8, displayName9, displayName10, displayName11, displayName12, mobileCount);
 					
 					displayNameCount = getCount(displayName, displayName1, displayName2, displayName3, displayName4,
 							displayName5, displayName6, displayName7, displayName8, displayNameCount);
 					
-					addressCount = getAddressCount(address, address1, address2, address3, address4,
-							address5, address6, address7, address8, addressCount);
+					addressCount = getAddressCount(address, address1, address2, address3, address4, address5, address6, address7,
+							address8, address9, address10, address11, address12, addressCount, emailCount, phoneCount, mobileCount,
+							displayName, displayName1, displayName2, displayName3, displayName4, displayName5, displayName6, displayName7,
+							displayName8, displayName9, displayName10, displayName11, displayName12);
 					
 					max = Stream.of(emailCount, phoneCount, mobileCount, displayNameCount, addressCount).max(Integer::compareTo).orElse(0);
 					
@@ -376,10 +389,7 @@
 					}
 					
 					if (i + max <= preparedData.size()) {
-						address = preparedData.subList(i, i + max).stream().map(line -> {
-							String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
-							return getCsvCellValueAtIndex(rowArr, addressIndex);
-						}).distinct().filter(StringUtils::isNotEmpty).collect(Collectors.joining(";"));
+						address = mergeDataCell(preparedData, addressIndex, i, max);
 						
 						List<String> addressList = new ArrayList<>(Arrays.asList(address.split(";")));
 						
@@ -416,14 +426,15 @@
 						}
 						address = String.join(";", finalAddressList);
 						
-						email = preparedData.subList(i, i + max).stream().map(line -> {
-							String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
-							return getCsvCellValueAtIndex(rowArr, emailIndex);
-						}).distinct().filter(StringUtils::isNotEmpty).collect(Collectors.joining(";"));
+						email = this.mergeDataCell(preparedData, emailIndex, i, max);
+						phone = this.mergeDataCell(preparedData, phoneIndex, i, max);
+						mobile = this.mergeDataCell(preparedData, mobileIndex, i, max);
+						fax = this.mergeDataCell(preparedData, faxIndex, i, max);
 					}
 					
 					i = i + max - 1;
 					
+//					if (displayName.isEmpty()) continue;
 					String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 							csvValue(ownerId),
 							csvValue(email.contains("logbasex") ? EMPTY : email),
@@ -457,6 +468,13 @@
 				e.printStackTrace();
 			}
 			return null;
+		}
+		
+		private String mergeDataCell(List<String> preparedData, int emailIndex, int i, int max) {
+			return preparedData.subList(i, i + max).stream().map(line -> {
+				String[] rowArr = customSplitSpecific(line).toArray(new String[0]);
+				return getCsvCellValueAtIndex(rowArr, emailIndex);
+			}).distinct().filter(StringUtils::isNotEmpty).collect(Collectors.joining(";"));
 		}
 		
 		private boolean isALlEmpty (String... params) {
@@ -503,7 +521,7 @@
 			if (!email.contains("@") || !email1.contains("@")) return false;
 			email = email.substring(0, email.lastIndexOf('@')).replaceAll("[-+.^:,]", "");
 			email1 = email1.substring(0, email1.lastIndexOf('@')).replaceAll("[-+.^:,]", "");
-			return FuzzySearch.tokenSetRatio(email, email1) == 100;
+			return (email.contains(email1) || email1.contains(email));
 		}
 		private int getEmailCount(String email,
 		                          String email1,
@@ -514,6 +532,10 @@
 		                          String email6,
 		                          String email7,
 		                          String email8,
+		                          String email9,
+		                          String email10,
+		                          String email11,
+		                          String email12,
 		                          String displayName,
 		                          String displayName1,
 		                          String displayName2,
@@ -523,6 +545,10 @@
 		                          String displayName6,
 		                          String displayName7,
 		                          String displayName8,
+		                          String displayName9,
+		                          String displayName10,
+		                          String displayName11,
+		                          String displayName12,
 		                          int emailCount) {
 			if (isNotEmpty(email)) {
 				if (fuzzyMatchingEmail(email, email1) && isNotDupDisplayName(displayName, displayName1)) {
@@ -541,6 +567,18 @@
 											++ emailCount;
 											if (fuzzyMatchingEmail(email, email8) && isNotDupDisplayName(displayName, displayName8)) {
 												++ emailCount;
+												if (fuzzyMatchingEmail(email, email9) && isNotDupDisplayName(displayName, displayName9)) {
+													++ emailCount;
+													if (fuzzyMatchingEmail(email, email10) && isNotDupDisplayName(displayName, displayName10)) {
+														++ emailCount;
+														if (fuzzyMatchingEmail(email, email11) && isNotDupDisplayName(displayName, displayName11)) {
+															++ emailCount;
+															if (fuzzyMatchingEmail(email, email12) && isNotDupDisplayName(displayName, displayName12)) {
+																++ emailCount;
+															}
+														}
+													}
+												}
 											}
 										}
 									}
@@ -560,7 +598,10 @@
 		}
 		
 		private int getAddressCount(String address, String address1, String address2, String address3, String address4, String address5,
-		                            String address6, String address7, String address8, int addressCount) {
+		                            String address6, String address7, String address8, String address9, String address10, String address11, String address12,
+		                            int addressCount, int emailCount, int phoneCount, int mobileCount, String displayName,
+		                            String displayName1, String displayName2, String displayName3, String displayName4, String displayName5, String displayName6,
+		                            String displayName7, String displayName8, String displayName9, String displayName10, String displayName11, String displayName12) {
 //			if (isNotEmpty(address)) {
 //				address = formatAddress(address);
 //				if (distance.apply(address, formatAddress(address1)) < 2) {
@@ -596,30 +637,46 @@
 //				}
 //			}
 			
-			if (isNotEmpty(address)){
-				if (FuzzySearch.tokenSetRatio(address, address1) >= 95) {
+			if (isNotEmpty(address) && isNotEmpty(displayName)){
+				if (isSameAddessSameName(address, address1, displayName, displayName1) || this.isOnlyAddressAndDisplayName(address1, emailCount, phoneCount, mobileCount, displayName1)) {
 					++ addressCount;
 					
-					if (FuzzySearch.tokenSetRatio(address, address2) >= 95) {
+					if (isSameAddessSameName(address, address2, displayName, displayName2) || this.isOnlyAddressAndDisplayName(address2, emailCount, phoneCount, mobileCount, displayName2)) {
 						++ addressCount;
 						
-						if (FuzzySearch.tokenSetRatio(address, address3) >= 95) {
+						if (isSameAddessSameName(address, address3, displayName, displayName3)  || this.isOnlyAddressAndDisplayName(address3, emailCount, phoneCount, mobileCount, displayName3)) {
 							++ addressCount;
 							
-							if (FuzzySearch.tokenSetRatio(address, address4) >= 95) {
+							if (isSameAddessSameName(address, address4, displayName, displayName4)  || this.isOnlyAddressAndDisplayName(address4, emailCount, phoneCount, mobileCount, displayName4)) {
 								++ addressCount;
 								
-								if (FuzzySearch.tokenSetRatio(address, address5) >= 95) {
+								if (isSameAddessSameName(address, address5, displayName, displayName5)  || this.isOnlyAddressAndDisplayName(address5, emailCount, phoneCount, mobileCount, displayName5)) {
 									++ addressCount;
 									
-									if (FuzzySearch.tokenSetRatio(address, address6) >= 95) {
+									if (isSameAddessSameName(address, address6, displayName, displayName6)  || this.isOnlyAddressAndDisplayName(address6, emailCount, phoneCount, mobileCount, displayName6)) {
 										++ addressCount;
 										
-										if (FuzzySearch.tokenSetRatio(address, address7) >= 95) {
+										if (isSameAddessSameName(address, address7, displayName, displayName7)  || this.isOnlyAddressAndDisplayName(address7, emailCount, phoneCount, mobileCount, displayName7)) {
 											++ addressCount;
 											
-											if (FuzzySearch.tokenSetRatio(address, address8) >= 95) {
+											if (isSameAddessSameName(address, address8, displayName, displayName8)  || this.isOnlyAddressAndDisplayName(address8, emailCount, phoneCount, mobileCount, displayName8)) {
 												++ addressCount;
+												
+												if (isSameAddessSameName(address, address9, displayName, displayName9)  || this.isOnlyAddressAndDisplayName(address9, emailCount, phoneCount, mobileCount, displayName9)) {
+													++ addressCount;
+													
+													if (isSameAddessSameName(address, address10, displayName, displayName10)  || this.isOnlyAddressAndDisplayName(address10, emailCount, phoneCount, mobileCount, displayName10)) {
+														++ addressCount;
+														
+														if (isSameAddessSameName(address, address11, displayName, displayName11)  || this.isOnlyAddressAndDisplayName(address11, emailCount, phoneCount, mobileCount, displayName11)) {
+															++ addressCount;
+															
+															if (isSameAddessSameName(address, address12, displayName, displayName12)  || this.isOnlyAddressAndDisplayName(address12, emailCount, phoneCount, mobileCount, displayName12)) {
+																++ addressCount;
+															}
+														}
+													}
+												}
 											}
 										}
 									}
@@ -630,6 +687,15 @@
 				}
 			}
 			return addressCount;
+		}
+		
+		private boolean isSameAddessSameName(String address, String address1, String displayName, String displayName1) {
+			return FuzzySearch.tokenSetRatio(address, address1) >= 95 && (displayName1.isEmpty() || displayName1.equals(displayName));
+		}
+		
+		private boolean isOnlyAddressAndDisplayName(String address1, int emailCount, int phoneCount, int mobileCount,
+		                                            String displayName1) {
+			return emailCount == 1 &&  phoneCount == 1 && mobileCount == 1 && !address1.isEmpty() && displayName1.isEmpty();
 		}
 		
 		private Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {
@@ -840,15 +906,19 @@
 			return null;
 		}
 		
-		private int getPhoneCount(String email,
-		                          String email1,
-		                          String email2,
-		                          String email3,
-		                          String email4,
-		                          String email5,
-		                          String email6,
-		                          String email7,
-		                          String email8,
+		private int getPhoneCount(String phone,
+		                          String phone1,
+		                          String phone2,
+		                          String phone3,
+		                          String phone4,
+		                          String phone5,
+		                          String phone6,
+		                          String phone7,
+		                          String phone8,
+		                          String phone9,
+		                          String phone10,
+		                          String phone11,
+		                          String phone12,
 		                          String displayName,
 		                          String displayName1,
 		                          String displayName2,
@@ -858,24 +928,40 @@
 		                          String displayName6,
 		                          String displayName7,
 		                          String displayName8,
-		                          int emailCount) {
-			if (isNotEmpty(email)) {
-				if (email.equals(email1) && isNotDupDisplayName(displayName, displayName1)) {
-					++ emailCount;
-					if (email.equals(email2) && isNotDupDisplayName(displayName, displayName2)) {
-						++ emailCount;
-						if (email.equals(email3) && isNotDupDisplayName(displayName, displayName3)) {
-							++ emailCount;
-							if (email.equals(email4) && isNotDupDisplayName(displayName, displayName4)) {
-								++ emailCount;
-								if (email.equals(email5) && isNotDupDisplayName(displayName, displayName5)) {
-									++ emailCount;
-									if (email.equals(email6) && isNotDupDisplayName(displayName, displayName6)) {
-										++ emailCount;
-										if (email.equals(email7) && isNotDupDisplayName(displayName, displayName7)) {
-											++ emailCount;
-											if (email.equals(email8) && isNotDupDisplayName(displayName, displayName8)) {
-												++ emailCount;
+		                          String displayName9,
+		                          String displayName10,
+		                          String displayName11,
+		                          String displayName12,
+		                          int phoneCount) {
+			if (isNotEmpty(phone)) {
+				if (isPhoneEquals(phone, phone1) && isNotDupDisplayName(displayName, displayName1)) {
+					++ phoneCount;
+					if (isPhoneEquals(phone, phone2) && isNotDupDisplayName(displayName, displayName2)) {
+						++ phoneCount;
+						if (isPhoneEquals(phone, phone3) && isNotDupDisplayName(displayName, displayName3)) {
+							++ phoneCount;
+							if (isPhoneEquals(phone, phone4) && isNotDupDisplayName(displayName, displayName4)) {
+								++ phoneCount;
+								if (isPhoneEquals(phone, phone5) && isNotDupDisplayName(displayName, displayName5)) {
+									++ phoneCount;
+									if (isPhoneEquals(phone, phone6) && isNotDupDisplayName(displayName, displayName6)) {
+										++ phoneCount;
+										if (isPhoneEquals(phone, phone7) && isNotDupDisplayName(displayName, displayName7)) {
+											++ phoneCount;
+											if (isPhoneEquals(phone, phone8) && isNotDupDisplayName(displayName, displayName8)) {
+												++ phoneCount;
+												if (isPhoneEquals(phone, phone9) && isNotDupDisplayName(displayName, displayName9)) {
+													++ phoneCount;
+													if (isPhoneEquals(phone, phone10) && isNotDupDisplayName(displayName, displayName10)) {
+														++ phoneCount;
+														if (isPhoneEquals(phone, phone11) && isNotDupDisplayName(displayName, displayName11)) {
+															++ phoneCount;
+															if (isPhoneEquals(phone, phone12) && isNotDupDisplayName(displayName, displayName12)) {
+																++ phoneCount;
+															}
+														}
+													}
+												}
 											}
 										}
 									}
@@ -885,9 +971,13 @@
 					}
 				}
 			}
-			return emailCount;
+			return phoneCount;
 		}
-	
+		
+		private boolean isPhoneEquals(String phone, String phone1) {
+			return phone.trim().replaceAll(Pattern.quote("[-+)(s]+"), "").equals(phone1.trim().replaceAll(Pattern.quote("[-+)(s]+"), ""));
+		}
+		
 		@SuppressWarnings("unchecked")
 		public Object automateImportHorse(MultipartFile horseFile, List<MultipartFile> ownershipFiles, String dirName) {
 			if (isEmpty(ownershipFiles)) {
@@ -1109,15 +1199,15 @@
 					"Country", "GST", "Debtor", "Shares", "FromDate", "ExportedDate"
 			);
 		
-			String nameHeader = String.format("%s,%s,%s,%s\n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
+			String nameHeader = String.format("%s,%s,%s,%s%n", "RawDisplayName", "Extracted DisplayName", "Extracted FirstName", "Extracted LastName");
 			
 			Map<Object, Object> result = new HashMap<>();
 			List<String> exportedDateList = new ArrayList<>();
 			
 			StringBuilder dataBuilder = new StringBuilder(ownershipHeader);
-			StringBuilder nameBuilder = new StringBuilder(nameHeader);
-			StringBuilder normalNameBuilder = new StringBuilder("\n***********NORMAL NAME***********\n");
-			StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
+//			StringBuilder nameBuilder = new StringBuilder(nameHeader);
+//			StringBuilder normalNameBuilder = new StringBuilder("\n***********NORMAL NAME***********\n");
+//			StringBuilder organizationNameBuilder = new StringBuilder("\n***********ORGANIZATION NAME***********\n");
 			
 			for (MultipartFile ownershipFile: ownershipFiles) {
 				try {
@@ -1698,15 +1788,15 @@
 				}
 			}
 			
-			result.put("extractedName", nameBuilder.append(normalNameBuilder).append(organizationNameBuilder));
+//			result.put("extractedName", nameBuilder.append(normalNameBuilder).append(organizationNameBuilder));
 			result.put("csvData", dataBuilder);
 			result.put("exportedDate", exportedDateList);
 			return result;
 		}
 		
 		@Override
-		public void reformatName(MultipartFile file, String dirName) throws CustomException, IOException {
-			String nameHeader = String.format("%s,%s,%s,%s\n", "RawDisplayName", "Extracted DisplayName", "Extracted " + "FirstName", "Extracted LastName");
+		public void reformatName(MultipartFile file, String dirName) throws IOException {
+			String nameHeader = String.format("%s,%s,%s,%s%n", "RawDisplayName", "Extracted DisplayName", "Extracted " + "FirstName", "Extracted LastName");
 			
 			StringBuilder nameBuilder = new StringBuilder(nameHeader);
 			StringBuilder normalNameBuilder = new StringBuilder("\n***********NORMAL NAME***********\n");
@@ -1942,7 +2032,7 @@
 						formattedDisplayName = lastName + ", " + firstName;
 					}
 					
-					String extractedName = String.format("%s,%s,%s,%s\n",
+					String extractedName = String.format("%s,%s,%s,%s%n",
 							csvValue(displayName),
 							csvValue(formattedDisplayName),
 							csvValue(firstName),
@@ -2052,7 +2142,7 @@
 								.collect(joining(SPACE)).trim();
 					}
 				
-					String extractedName = String.format("%s,%s,%s,%s\n",
+					String extractedName = String.format("%s,%s,%s,%s%n",
 							csvValue(displayName),
 							csvValue(formattedDisplayName),
 							csvValue(firstName),
