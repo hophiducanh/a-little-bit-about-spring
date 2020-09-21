@@ -1887,7 +1887,7 @@
 					int horseNameIndex = checkColumnIndex(header, "Horse Name", "Horse", "Horses");
 					int ownerIdIndex = checkColumnIndex(header, "Owner Id");
 					int commsEmailIndex = checkColumnIndex(header, "CommsEmail", "Email");
-					int financeEmailIndex = checkColumnIndex(header, "Finance Email", "FinanceEmail");
+					int financeEmailIndex = checkColumnIndex(header, "Finance Email", "FinanceEmail","Finance_Email");
 					int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
 					int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name");
 					int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name");
@@ -1896,15 +1896,15 @@
 					int phoneIndex = checkColumnIndex(header, "Phone");
 					int faxIndex = checkColumnIndex(header, "Fax");
 					int addressIndex = checkColumnIndex(header, "Address");
-					int cityIndex = checkColumnIndex(header, "City");
+					int cityIndex = checkColumnIndex(header, "City","Suburb");
 					int stateIndex = checkColumnIndex(header, "State");
 					int postCodeIndex = checkColumnIndex(header, "PostCode");
 					int countryIndex = checkColumnIndex(header, "Country");
 					int realGstIndex = checkColumnIndex(header, "GST", "GST Reg.");
 					int debtorIndex = checkColumnIndex(header, "Debtor");
-					int shareIndex = checkColumnIndex(header, "Shares", "Share", "Ownership", "Share %");
+					int shareIndex = checkColumnIndex(header, "Shares", "Share", "Ownership", "Share %","percentage");
 					//fromDate
-					int fromDateIndex = checkColumnIndex(header, "Purchased Date", "Date");
+					int fromDateIndex = checkColumnIndex(header, "Purchased Date", "Date","fromDate");
 					
 					//process file without header
 					csvData = csvData.stream().skip(1).collect(toList());

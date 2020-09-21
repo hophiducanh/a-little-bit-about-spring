@@ -353,10 +353,10 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			standardHeaderMap.put("Colour, Color", singletonList("Colour"));
 			standardHeaderMap.put("Sex", singletonList("Sex"));
 			standardHeaderMap.put("Avatar", singletonList("Avatar"));
-			standardHeaderMap.put("Added Date", singletonList("Added Date"));
-			standardHeaderMap.put("Active Status, ActiveStatus", singletonList("Status"));
-			standardHeaderMap.put("Current Location", singletonList("Property"));
-			standardHeaderMap.put("Current Status, CurrentStatus", singletonList("Current Status"));
+			standardHeaderMap.put("Added Date, addedDate", singletonList("Added Date"));
+			standardHeaderMap.put("Active Status, ActiveStatus, active_status", singletonList("Status"));
+			standardHeaderMap.put("Current Location, location", singletonList("Property"));
+			standardHeaderMap.put("Current Status, CurrentStatus, status", singletonList("Current Status"));
 			standardHeaderMap.put("Type", singletonList("Type"));
 			standardHeaderMap.put("Category", singletonList("Category"));
 			standardHeaderMap.put("Bonus Scheme, BonusScheme, Schemes", singletonList("Bonus Scheme"));
