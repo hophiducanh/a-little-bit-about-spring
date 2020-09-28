@@ -786,6 +786,7 @@
 	
 						String sire = getCsvCellValueAtIndex(r, sireIndex);
 						String dam = getCsvCellValueAtIndex(r, damIndex);
+						if (sire.isEmpty() && dam.isEmpty()) continue;
 						String color = getCsvCellValueAtIndex(r, colorIndex);
 						String sex = getCsvCellValueAtIndex(r, sexIndex);
 	
@@ -809,7 +810,7 @@
 						String microchip = getCsvCellValueAtIndex(r, microchipIndex);
 						String brand = getCsvCellValueAtIndex(r, brandIndex);
 	
-						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s\n",
 								csvValue(externalId),
 								csvValue(name),
 								csvValue(foaled),
@@ -1844,7 +1845,7 @@
 					"HorseId", "HorseName",
 					"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
 					"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
-					"Country", "GST", "Shares", "FromDate", "ExportedDate", "Debtor"
+					"Country", "GST", "Debtor", "Shares", "FromDate", "ToDate"
 			);
 			
 			StringBuilder dataBuilder = new StringBuilder(ownershipHeader);
@@ -1962,10 +1963,10 @@
 								csvValue(postCode),
 								csvValue(country),
 								csvValue(gst),
+								csvValue(debtor),
 								csvValue(share),
 								csvValue(addedDate),
-								csvValue(""),
-								csvValue(debtor));
+								csvValue(""));
 						
 						dataBuilder.append(rowBuilder);
 					}
@@ -2192,5 +2193,9 @@
 			arr = Arrays.copyOf(arr, N + 1);
 			arr[N] = element;
 			return arr;
+		}
+		
+		public static void main(String[] args) {
+			System.out.println(System.getProperty("line.separator"));
 		}
 	}
