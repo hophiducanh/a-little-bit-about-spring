@@ -1,5 +1,16 @@
 	package com.tellyouiam.alittlebitaboutspring.service.note.v1;
 	
+	import com.fasterxml.jackson.annotation.JsonFormat;
+	import com.fasterxml.jackson.annotation.JsonProperty;
+	import com.fasterxml.jackson.databind.MapperFeature;
+	import com.fasterxml.jackson.databind.ObjectMapper;
+	import com.fasterxml.jackson.databind.SerializationFeature;
+	import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+	import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+	import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
+	import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+	import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
+	import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 	import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.collection.MapHelper;
@@ -15,8 +26,16 @@
 	import org.apache.http.client.utils.URIBuilder;
 	import org.slf4j.Logger;
 	import org.slf4j.LoggerFactory;
+	import org.springframework.http.HttpEntity;
+	import org.springframework.http.HttpHeaders;
+	import org.springframework.http.HttpMethod;
+	import org.springframework.http.MediaType;
+	import org.springframework.http.ResponseEntity;
+	import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 	import org.springframework.stereotype.Service;
+	import org.springframework.web.client.RestTemplate;
 	import org.springframework.web.multipart.MultipartFile;
+	import org.springframework.web.util.UriComponentsBuilder;
 	
 	import java.io.File;
 	import java.io.FileOutputStream;
@@ -1981,6 +2000,16 @@
 			return result;
 		}
 		
+		@Override
+		public Object transformMultipartFile(MultipartFile multipartFile) throws IOException {
+			//https://stackoverflow.com/questions/24339990/how-to-convert-a-multipart-file-to-file/39572293
+			File convFile = new File(System.getProperty("java.io.tmpdir") + File.separator + "test.csv");
+			multipartFile.transferTo(convFile);
+			return convFile.getAbsolutePath();
+			
+			//another idea: write byte to file by get bytes from multipart file.
+		}
+		
 		private void correctOwnershipNameWithoutCT(String firstName,
 		                                                          String lastName,
 		                                                          String displayName,
@@ -2195,7 +2224,104 @@
 			return arr;
 		}
 		
+		public class EGiftResponse {
+			@JsonProperty(value = "StatusCode")
+			private Integer statusCode;
+			
+			@JsonProperty(value = "GiftID")
+			private Integer giftId;
+			
+			@JsonProperty(value = "Message")
+			private String message;
+			
+			@JsonProperty(value = "Expiry")
+			@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd")
+			@JsonDeserialize(using = LocalDateDeserializer.class)
+			@JsonSerialize(using = LocalDateSerializer.class)
+			private LocalDate expiryDate;
+			
+			public EGiftResponse() {
+			
+			}
+			
+			public EGiftResponse(Integer statusCode, Integer giftId, String message, LocalDate expiryDate) {
+				this.statusCode = statusCode;
+				this.giftId = giftId;
+				this.message = message;
+				this.expiryDate = expiryDate;
+			}
+			
+			public Integer getStatusCode() {
+				return statusCode;
+			}
+			
+			public void setStatusCode(Integer statusCode) {
+				this.statusCode = statusCode;
+			}
+			
+			public Integer getGiftId() {
+				return giftId;
+			}
+			
+			public void setGiftId(Integer giftId) {
+				this.giftId = giftId;
+			}
+			
+			public String getMessage() {
+				return message;
+			}
+			
+			public void setMessage(String message) {
+				this.message = message;
+			}
+			
+			public LocalDate getExpiryDate() {
+				return expiryDate;
+			}
+			
+			public void setExpiryDate(LocalDate expiryDate) {
+				this.expiryDate = expiryDate;
+			}
+		}
+		
 		public static void main(String[] args) {
 			System.out.println(System.getProperty("line.separator"));
+			
+			final String uri = "https://sandbox.express.giftpay.com/api/gift.svc/send";
+			UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(uri)
+					.queryParam("key", "920237C7-EF66-4859-9633-5BF055EE9AA8")
+					.queryParam("to", "contact.hoducanh@gmail.com")
+					.queryParam("value", "5")
+					.queryParam("clientref", 99)
+					.queryParam("message", "");
+			
+			RestTemplate restTemplate = new RestTemplate();
+			restTemplate.getMessageConverters()
+					.add(0, createMappingJacksonHttpMessageConverter());
+			
+			HttpHeaders headers = new HttpHeaders();
+			headers.setContentType(MediaType.APPLICATION_JSON);
+			
+			HttpEntity<String> entity = new HttpEntity<>(headers);
+			ResponseEntity<EGiftResponse> response = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,
+					entity, EGiftResponse.class);
+			
+			System.out.println(response.getBody());
+		}
+		
+		private static ObjectMapper createObjectMapper() {
+			ObjectMapper objectMapper = new ObjectMapper();
+//			objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+			objectMapper.registerModule(new JavaTimeModule());
+			objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+			
+			return objectMapper;
+		}
+		
+		private static MappingJackson2HttpMessageConverter createMappingJacksonHttpMessageConverter() {
+			
+			MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+			converter.setObjectMapper(createObjectMapper());
+			return converter;
 		}
 	}

@@ -20,4 +20,6 @@ public interface NoteService {
 	void reformatName(MultipartFile file, String dirname) throws CustomException, IOException;
 	
 	Map<Object, Object> reformatOwnership(MultipartFile file, String dirName);
+	
+	Object transformMultipartFile(MultipartFile file) throws IOException;
 }
