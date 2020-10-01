@@ -1,20 +1,9 @@
 	package com.tellyouiam.alittlebitaboutspring.service.note.v1;
 	
-	import com.fasterxml.jackson.annotation.JsonFormat;
-	import com.fasterxml.jackson.annotation.JsonProperty;
-	import com.fasterxml.jackson.databind.MapperFeature;
 	import com.fasterxml.jackson.databind.ObjectMapper;
-	import com.fasterxml.jackson.databind.SerializationFeature;
-	import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-	import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-	import com.fasterxml.jackson.datatype.jsr310.JSR310Module;
-	import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-	import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
-	import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
 	import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.collection.MapHelper;
-	import com.tellyouiam.alittlebitaboutspring.utils.string.CsvHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
 	import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 	import me.xdrop.fuzzywuzzy.FuzzySearch;
@@ -31,7 +20,6 @@
 	import org.springframework.http.HttpMethod;
 	import org.springframework.http.MediaType;
 	import org.springframework.http.ResponseEntity;
-	import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 	import org.springframework.stereotype.Service;
 	import org.springframework.web.client.RestTemplate;
 	import org.springframework.web.multipart.MultipartFile;
@@ -41,14 +29,23 @@
 	import java.io.FileOutputStream;
 	import java.io.IOException;
 	import java.net.URISyntaxException;
-	import java.nio.charset.Charset;
-	import java.nio.charset.StandardCharsets;
 	import java.nio.file.Files;
 	import java.nio.file.Paths;
-	import java.nio.file.StandardOpenOption;
 	import java.time.LocalDate;
 	import java.time.format.DateTimeFormatter;
-	import java.util.*;
+	import java.util.ArrayList;
+	import java.util.Arrays;
+	import java.util.Comparator;
+	import java.util.HashMap;
+	import java.util.HashSet;
+	import java.util.Iterator;
+	import java.util.LinkedHashMap;
+	import java.util.List;
+	import java.util.Map;
+	import java.util.NoSuchElementException;
+	import java.util.Set;
+	import java.util.TreeMap;
+	import java.util.TreeSet;
 	import java.util.function.Predicate;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
@@ -63,14 +60,15 @@
 	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isAustraliaFormat;
 	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isDMYFormat;
 	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isRecognizedAsValidDate;
-	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.*;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getPostcode;
+	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvRow;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.convertStringBuilderToList;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.csvValue;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
 	import static java.util.Collections.max;
 	import static java.util.Collections.min;
-	import static java.util.Collections.sort;
 	import static java.util.stream.Collectors.joining;
 	import static java.util.stream.Collectors.toList;
 	import static java.util.stream.Collectors.toMap;
@@ -2224,67 +2222,8 @@
 			return arr;
 		}
 		
-		public class EGiftResponse {
-			@JsonProperty(value = "StatusCode")
-			private Integer statusCode;
-			
-			@JsonProperty(value = "GiftID")
-			private Integer giftId;
-			
-			@JsonProperty(value = "Message")
-			private String message;
-			
-			@JsonProperty(value = "Expiry")
-			@JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy/MM/dd")
-			@JsonDeserialize(using = LocalDateDeserializer.class)
-			@JsonSerialize(using = LocalDateSerializer.class)
-			private LocalDate expiryDate;
-			
-			public EGiftResponse() {
-			
-			}
-			
-			public EGiftResponse(Integer statusCode, Integer giftId, String message, LocalDate expiryDate) {
-				this.statusCode = statusCode;
-				this.giftId = giftId;
-				this.message = message;
-				this.expiryDate = expiryDate;
-			}
-			
-			public Integer getStatusCode() {
-				return statusCode;
-			}
-			
-			public void setStatusCode(Integer statusCode) {
-				this.statusCode = statusCode;
-			}
-			
-			public Integer getGiftId() {
-				return giftId;
-			}
-			
-			public void setGiftId(Integer giftId) {
-				this.giftId = giftId;
-			}
-			
-			public String getMessage() {
-				return message;
-			}
-			
-			public void setMessage(String message) {
-				this.message = message;
-			}
-			
-			public LocalDate getExpiryDate() {
-				return expiryDate;
-			}
-			
-			public void setExpiryDate(LocalDate expiryDate) {
-				this.expiryDate = expiryDate;
-			}
-		}
 		
-		public static void main(String[] args) {
+		public static void main(String[] args) throws IOException {
 			System.out.println(System.getProperty("line.separator"));
 			
 			final String uri = "https://sandbox.express.giftpay.com/api/gift.svc/send";
@@ -2292,36 +2231,41 @@
 					.queryParam("key", "920237C7-EF66-4859-9633-5BF055EE9AA8")
 					.queryParam("to", "contact.hoducanh@gmail.com")
 					.queryParam("value", "5")
-					.queryParam("clientref", 99)
+					.queryParam("clientref", 22)
 					.queryParam("message", "");
 			
 			RestTemplate restTemplate = new RestTemplate();
-			restTemplate.getMessageConverters()
-					.add(0, createMappingJacksonHttpMessageConverter());
+//			restTemplate.getMessageConverters().add(0, createMappingJacksonHttpMessageConverter());
 			
 			HttpHeaders headers = new HttpHeaders();
 			headers.setContentType(MediaType.APPLICATION_JSON);
-			
 			HttpEntity<String> entity = new HttpEntity<>(headers);
-			ResponseEntity<EGiftResponse> response = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,
-					entity, EGiftResponse.class);
+			ResponseEntity<String> response = restTemplate.exchange(builder.toUriString(), HttpMethod.GET,
+					entity, String.class);
 			
-			System.out.println(response.getBody());
-		}
-		
-		private static ObjectMapper createObjectMapper() {
 			ObjectMapper objectMapper = new ObjectMapper();
-//			objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
-			objectMapper.registerModule(new JavaTimeModule());
-			objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+			EGiftResponse eGiftResponse = objectMapper.readValue(response.getBody(), EGiftResponse.class);
+			System.out.println(eGiftResponse);
 			
-			return objectMapper;
+//			EGiftResponse eGiftResponse = response.getBody();
+//			LocalDate date = LocalDate.parse(eGiftResponse.getExpiryDate());
+//			System.out.println(date.toString());
+			System.out.println(eGiftResponse);
 		}
 		
-		private static MappingJackson2HttpMessageConverter createMappingJacksonHttpMessageConverter() {
-			
-			MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
-			converter.setObjectMapper(createObjectMapper());
-			return converter;
-		}
+//		private static ObjectMapper createObjectMapper() {
+//			ObjectMapper objectMapper = new ObjectMapper();
+//			objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
+//			objectMapper.registerModule(new JavaTimeModule());
+//			objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+//
+//			return objectMapper;
+//		}
+//
+//		private static MappingJackson2HttpMessageConverter createMappingJacksonHttpMessageConverter() {
+//
+//			MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+//			converter.setObjectMapper(createObjectMapper());
+//			return converter;
+//		}
 	}
