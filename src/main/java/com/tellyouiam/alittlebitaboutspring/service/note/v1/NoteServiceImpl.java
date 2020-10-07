@@ -2252,7 +2252,6 @@
 //			System.out.println(date.toString());
 			System.out.println(eGiftResponse);
 		}
-		
 //		private static ObjectMapper createObjectMapper() {
 //			ObjectMapper objectMapper = new ObjectMapper();
 //			objectMapper.configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true);
