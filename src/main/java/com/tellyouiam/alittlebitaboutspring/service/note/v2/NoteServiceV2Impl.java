@@ -9,8 +9,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.time.LocalDate;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -46,6 +50,7 @@ import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper
 import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.stringContainsIgnoreCase;
 import static com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper.getOutputFolder;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
@@ -53,6 +58,7 @@ import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
+import static org.apache.commons.lang3.StringUtils.isAllUpperCase;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
@@ -485,5 +491,59 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		streamBuilder.append(allLiner);
 		String path = getOutputFolder(dirName) + File.separator + "merge-horse-v2.csv";
 		FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
+	}
+	
+	public static void main(String[] args) throws FileNotFoundException {
+		BufferedReader reader = new BufferedReader(new FileReader(new File("C:\\Users\\conta\\OneDrive\\Desktop\\data\\08 Oct _ Data\\Ownerships.csv")));
+		List<String> data = reader.lines().filter(i -> !i.isEmpty()).collect(toList());
+		
+		List<Integer> horseIndexes = new ArrayList<>();
+		List<Integer> ownerIndexes = new ArrayList<>();
+		int count = 0;
+		for (int i = 7; i < data.size() + 1 ; i++) {
+			if (i >= data.size()) continue;
+			String[] line = readCsvLine(data.get(i));
+			String horseName = line[1];
+			if (i == 8) {
+				count = 0;
+				horseIndexes.add(i);
+				ownerIndexes.add(i + 6);
+			}
+			
+			
+			int index = i + 8 + 5;
+			int ownerIndex = index + 4; //"Owner"
+			int ownerNameIndex = i + 6;
+			
+			if (index >= data.size()) continue;
+			if (ownerIndex >= data.size()) continue;
+			if (ownerNameIndex >= data.size()) continue;
+			
+			String[] nextHorseLine = readCsvLine(data.get(index));
+			String[] ownerString = readCsvLine(data.get(ownerIndex));
+			String[] ownerName = readCsvLine(data.get(ownerNameIndex));
+			
+			if (isNotEmpty(nextHorseLine[1]) && isAllUpperCase(nextHorseLine[1]) && ownerString[1].equals("Owner")) {
+				horseIndexes.add(index);
+			}
+			for (int x = 1; x < 21; x++) {
+				int nextOwnerNameIndex = ownerNameIndex + 5 * x;
+				int nextHorseIndex = nextOwnerNameIndex + 7;
+				
+				if (nextOwnerNameIndex >= data.size()) continue;
+				if (nextHorseIndex >= data.size()) continue;
+				
+				String[] nextOwnerName = readCsvLine(data.get(nextOwnerNameIndex));
+				String[] nextHorse = readCsvLine(data.get(nextHorseIndex));
+				if (isNotEmpty(nextOwnerName[1]) && nextHorse[1].isEmpty()) {
+					ownerIndexes.add(nextOwnerNameIndex);
+				} else if (isNotEmpty(nextHorse[1])) {
+					horseIndexes.add(nextHorseIndex);
+					i = nextHorseIndex;
+				}
+			}
+		}
+		
+		System.out.println(horseIndexes);
 	}
 }

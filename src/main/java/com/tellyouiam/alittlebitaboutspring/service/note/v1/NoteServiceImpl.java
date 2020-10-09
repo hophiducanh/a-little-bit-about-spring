@@ -2225,7 +2225,9 @@
 		
 		public static void main(String[] args) throws IOException {
 			System.out.println(System.getProperty("line.separator"));
-			
+		
+			//account: logbasex
+			//password: logbasex1first
 			final String uri = "https://sandbox.express.giftpay.com/api/gift.svc/send";
 			UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(uri)
 					.queryParam("key", "920237C7-EF66-4859-9633-5BF055EE9AA8")
