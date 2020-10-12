@@ -1,10 +1,14 @@
 package com.tellyouiam.alittlebitaboutspring.service.note.v2;
 
+import com.google.common.base.Joiner;
+import com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +19,8 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -22,15 +28,21 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IntSummaryStatistics;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.StringJoiner;
+import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -51,6 +63,7 @@ import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper
 import static com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper.getOutputFolder;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
+import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.csvValue;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
@@ -493,57 +506,134 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		FileHelper.writeDataToFile(path, streamBuilder.toString().getBytes());
 	}
 	
-	public static void main(String[] args) throws FileNotFoundException {
+	public static void main(String[] args) throws IOException {
 		BufferedReader reader = new BufferedReader(new FileReader(new File("C:\\Users\\conta\\OneDrive\\Desktop\\data\\08 Oct _ Data\\Ownerships.csv")));
 		List<String> data = reader.lines().filter(i -> !i.isEmpty()).collect(toList());
 		
 		List<Integer> horseIndexes = new ArrayList<>();
 		List<Integer> ownerIndexes = new ArrayList<>();
-		int count = 0;
 		for (int i = 7; i < data.size() + 1 ; i++) {
 			if (i >= data.size()) continue;
-			String[] line = readCsvLine(data.get(i));
-			String horseName = line[1];
-			if (i == 8) {
-				count = 0;
+			if (i == 7) {
 				horseIndexes.add(i);
-				ownerIndexes.add(i + 6);
 			}
 			
 			
-			int index = i + 8 + 5;
-			int ownerIndex = index + 4; //"Owner"
-			int ownerNameIndex = i + 6;
-			
-			if (index >= data.size()) continue;
-			if (ownerIndex >= data.size()) continue;
-			if (ownerNameIndex >= data.size()) continue;
-			
-			String[] nextHorseLine = readCsvLine(data.get(index));
-			String[] ownerString = readCsvLine(data.get(ownerIndex));
-			String[] ownerName = readCsvLine(data.get(ownerNameIndex));
-			
-			if (isNotEmpty(nextHorseLine[1]) && isAllUpperCase(nextHorseLine[1]) && ownerString[1].equals("Owner")) {
-				horseIndexes.add(index);
-			}
 			for (int x = 1; x < 21; x++) {
-				int nextOwnerNameIndex = ownerNameIndex + 5 * x;
-				int nextHorseIndex = nextOwnerNameIndex + 7;
 				
-				if (nextOwnerNameIndex >= data.size()) continue;
-				if (nextHorseIndex >= data.size()) continue;
+				int index = i + 8 + 5 * x;
+				int ownerIndex = index + 4; //"Owner"
 				
-				String[] nextOwnerName = readCsvLine(data.get(nextOwnerNameIndex));
-				String[] nextHorse = readCsvLine(data.get(nextHorseIndex));
-				if (isNotEmpty(nextOwnerName[1]) && nextHorse[1].isEmpty()) {
-					ownerIndexes.add(nextOwnerNameIndex);
-				} else if (isNotEmpty(nextHorse[1])) {
-					horseIndexes.add(nextHorseIndex);
-					i = nextHorseIndex;
+				if (index >= data.size()) continue;
+				if (ownerIndex >= data.size()) continue;
+				
+				String[] nextHorseLine = readCsvLine(data.get(index));
+				String[] ownerString = readCsvLine(data.get(ownerIndex));
+				
+				if (isNotEmpty(nextHorseLine[1]) && (nextHorseLine[1]).matches("[A-Z0-9]+") && ownerString[1].equals("Owner")) {
+					horseIndexes.add(index);
+					i = index - 1;
+					break;
 				}
 			}
 		}
 		
-		System.out.println(horseIndexes);
+		Map<Integer, List<Integer>> ownerMap = new LinkedHashMap<>();
+		for (int u = 0; u < horseIndexes.size(); u++) {
+			for (int i = 6; i < data.size() + 1; i++) {
+				
+				if (i >= data.size()) continue;
+				if (u + 1 >= horseIndexes.size()) continue;
+				
+				if (horseIndexes.get(u) > i && i < horseIndexes.get(u + 1)) {
+					i = horseIndexes.get(u);
+					List<Integer> ownerIndexs = new ArrayList<>();
+					for (int x = 0; x < 20; x++) {
+						int nextOwnerIndex = horseIndexes.get(u) + 6 + 5 * x;
+						if (nextOwnerIndex >= data.size()) continue;
+						if (nextOwnerIndex < horseIndexes.get(u + 1)) {
+							String[] nextOwner = readCsvLine(data.get(nextOwnerIndex));
+							if (isNotEmpty(nextOwner[1]) && (nextOwner[1]).matches("[A-Z0-9]+")) {
+								ownerIndexs.add(nextOwnerIndex);
+							}
+						}
+					}
+					ownerMap.put(horseIndexes.get(u), ownerIndexs);
+				}
+			}
+		}
+	
+		List<Integer> phoneIndexes = ownerIndexes.stream().peek(i -> i = i + 2).collect(toList());
+		List<Integer> privatePhoneIndexes = ownerIndexes.stream().peek(i -> i = i + 3).collect(toList());
+		List<Integer> emailIndexes = ownerIndexes.stream().peek(i -> i = i + 4).collect(toList());
+		List<Integer> address1Indexes = ownerIndexes;
+		List<Integer> address2Indexes = ownerIndexes.stream().peek(i -> i = i + 1).collect(toList());
+		List<Integer> addedDateIndexes = address1Indexes;
+		List<Integer> shareIndexes = address2Indexes;
+		
+		String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+				"HorseId", "HorseName",
+				"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
+				"Type", "Mobile", "Phone", "Fax", "Address", "City", "State", "PostCode",
+				"Country", "GST", "Debtor", "Shares", "FromDate", "ToDate"
+		);
+		
+		StringBuilder dataBuilder = new StringBuilder(ownershipHeader);
+//		MapUtils.verbosePrint(System.out, "Owner Map", ownerMap);
+		ownerMap.forEach((k, v) -> {
+			String[] horseLine = readCsvLine(data.get(k));
+			String horseName = horseLine[6];
+			for (int i = 0; i < v.size(); i++) {
+				//mobile : 35
+				int displayNameLineIndex  = v.get(i);
+				int phoneLineIndex        = v.get(i) + 2;
+				int privatePhoneLineIndex = v.get(i) + 3;
+				int emailLineIndex        = v.get(i) + 4;
+				int address1LineIndex     = v.get(i);
+				int address2LineIndex     = v.get(i) + 1;
+				int addedDateLineIndex    = v.get(i);
+				int shareLineIndex        = v.get(i) + 1;
+				
+				String displayName = getCsvCellValueAtIndex(readCsvLine(data.get(displayNameLineIndex)), 6);
+				String phone = getCsvCellValueAtIndex(readCsvLine(data.get(phoneLineIndex)), 11);
+				String privatePhone = getCsvCellValueAtIndex(readCsvLine(data.get(privatePhoneLineIndex)), 11);
+				String mobile = getCsvCellValueAtIndex(readCsvLine(data.get(phoneLineIndex)), 35);
+				String privateMobile = getCsvCellValueAtIndex(readCsvLine(data.get(privatePhoneLineIndex)), 35);
+				String fax = getCsvCellValueAtIndex(readCsvLine(data.get(phoneLineIndex)), 22);
+				String privateFax = getCsvCellValueAtIndex(readCsvLine(data.get(privatePhoneLineIndex)), 22);
+				String email = getCsvCellValueAtIndex(readCsvLine(data.get(emailLineIndex)), 11);
+				String address1 = getCsvCellValueAtIndex(readCsvLine(data.get(address1LineIndex)), 18);
+				String address2 = getCsvCellValueAtIndex(readCsvLine(data.get(address2LineIndex)), 18);
+				String addedDate = getCsvCellValueAtIndex(readCsvLine(data.get(addedDateLineIndex)), 37);
+				String share = getCsvCellValueAtIndex(readCsvLine(data.get(shareLineIndex)), 39);
+				String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+						csvValue(""),
+						csvValue(horseName),
+						csvValue(""),
+						csvValue(email),
+						csvValue(""),
+						csvValue(""),
+						csvValue(""),
+						csvValue(displayName),
+						csvValue(""),
+						csvValue(Stream.of(mobile, privateMobile).filter(x -> !x.isEmpty()).collect(Collectors.joining(";"))),
+						csvValue(Stream.of(phone, privatePhone).filter(x -> !x.isEmpty()).collect(Collectors.joining(";"))),
+						csvValue(Stream.of(fax, privateFax).filter(x -> !x.isEmpty()).collect(Collectors.joining(";"))),
+						csvValue(address1 + " " + address2),
+						csvValue(""),
+						csvValue(""),
+						csvValue(""),
+						csvValue(""),
+						csvValue(""),
+						csvValue(""),
+						csvValue(share),
+						csvValue(addedDate),
+						csvValue(""));
+				dataBuilder.append(rowBuilder);
+			}
+		});
+		
+		String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\08 Oct _ Data\\submit\\formatted-ownership.csv";
+		Files.write(Paths.get(path), dataBuilder.toString().getBytes());
 	}
 }

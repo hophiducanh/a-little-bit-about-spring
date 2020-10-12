@@ -129,7 +129,7 @@
 					int financeEmailIndex = checkColumnIndex(header, "FinanceEmail");
 					int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
 					int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name");
-					int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name", "Display", "Who");
+					int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name", "Display", "Who", "OwnerName");
 					int typeIndex = checkColumnIndex(header, "Type");
 					int mobileIndex = checkColumnIndex(header, "Mobile", "Mobile Phone");
 					int phoneIndex = checkColumnIndex(header, "Phone");
@@ -751,10 +751,10 @@
 					String[] header = readCsvLine(csvData.get(0));
 	
 					int externalIdIndex = checkColumnIndex(header, "ExternalId");
-					int nameIndex = checkColumnIndex(header, "Horse Name", "Name", "Horse");
-					int foaledIndex = checkColumnIndex(header, "DOB", "foaled");
-					int sireIndex = checkColumnIndex(header, "Sire");
-					int damIndex = checkColumnIndex(header, "Dam");
+					int nameIndex = checkColumnIndex(header, "Horse Name", "Name", "Horse", "HorseName");
+					int foaledIndex = checkColumnIndex(header, "DOB", "foaled", "Foal Date");
+					int sireIndex = checkColumnIndex(header, "Sire", "Sire Name");
+					int damIndex = checkColumnIndex(header, "Dam", "Dam Name");
 					int colorIndex = checkColumnIndex(header, "Color", "Colour");
 					int sexIndex = checkColumnIndex(header, "Gender", "Sex");
 					int avatarIndex = checkColumnIndex(header, "Avatar");
