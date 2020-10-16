@@ -120,5 +120,14 @@ dependencies {
 
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.core/jackson-annotations
 //    compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.8.11'
+
+    // https://mvnrepository.com/artifact/fr.delthas/javaskype
+    compile group: 'fr.delthas', name: 'javaskype', version: '1.0.23'
+
+    // https://mvnrepository.com/artifact/com.samczsun/skype4j
+    compile group: 'com.samczsun', name: 'skype4j', version: '0.1.5'
+
+    // https://mvnrepository.com/artifact/com.clickntap/vimeo
+    compile group: 'com.clickntap', name: 'vimeo', version: '1.13'
 }
 

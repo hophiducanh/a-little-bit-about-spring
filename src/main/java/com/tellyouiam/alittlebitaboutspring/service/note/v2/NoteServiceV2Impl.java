@@ -365,12 +365,12 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			Map<String, List<String>> standardHeaderMap = new LinkedHashMap<>();
 			
 			standardHeaderMap.put("External Id, ExternalId", singletonList("ExternalId"));
-			standardHeaderMap.put("Name, Horse", singletonList("Name"));
+			standardHeaderMap.put("Name, Horse, Horse Name, HorseName",singletonList("Name"));
 			standardHeaderMap.put("Foaled, DOB", singletonList("Foaled"));
 			standardHeaderMap.put("Sire", singletonList("Sire"));
 			standardHeaderMap.put("Dam", singletonList("Dam"));
 			standardHeaderMap.put("Colour, Color", singletonList("Colour"));
-			standardHeaderMap.put("Sex", singletonList("Sex"));
+			standardHeaderMap.put("Sex, Gender", singletonList("Sex"));
 			standardHeaderMap.put("Avatar", singletonList("Avatar"));
 			standardHeaderMap.put("Added Date, addedDate", singletonList("Added Date"));
 			standardHeaderMap.put("Active Status, ActiveStatus, active_status", singletonList("Status"));
