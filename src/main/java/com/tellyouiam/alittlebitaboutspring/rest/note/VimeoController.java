@@ -3,6 +3,7 @@ package com.tellyouiam.alittlebitaboutspring.rest.note;
 import com.clickntap.vimeo.Vimeo;
 import com.clickntap.vimeo.VimeoException;
 import com.clickntap.vimeo.VimeoResponse;
+import org.json.JSONObject;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -38,10 +39,13 @@ public class VimeoController {
 		String privacyView = "anybody"; //see Vimeo API Documentation
 		String privacyEmbed = "unlisted"; //see Vimeo API Documentation
 		boolean reviewLink = false;
-		VimeoResponse response = vimeo.updateVideoMetadata(videoEndPoint, name, desc, license, privacyView, privacyEmbed, reviewLink);
+		vimeo.updateVideoMetadata(videoEndPoint, name, desc, license, privacyView, privacyEmbed, reviewLink);
 		//add video privacy domain
-		vimeo.addVideoPrivacyDomain(videoEndPoint, "endota.fruitful.io");
+		VimeoResponse response = vimeo.addVideoPrivacyDomain(videoEndPoint, "endota.fruitful.io");
+		vimeo.addVideoPrivacyDomain(videoEndPoint, "logbasex.wordpress.com");
 //		vimeo.removeVideo(videoEndPoint);
-		System.out.println(response.getJson());
+		String json = vimeo.get(videoEndPoint)
+				.getJson().toString();
+		System.out.println(json);
 	}
 }
