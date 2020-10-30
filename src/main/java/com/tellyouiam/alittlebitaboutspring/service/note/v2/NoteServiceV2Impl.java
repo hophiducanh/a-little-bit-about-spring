@@ -104,13 +104,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 					.filter(isNotFooterRow)
 					.collect(toList());
 			
-			//find line is header
-			Predicate<String> isLineContainHeader = line -> Stream.of("Name", "Address", "Phone", "Mobile")
-					.anyMatch(headerElement -> containsIgnoreCase(line, headerElement));
-			
-			String headerLine = csvData.stream().filter(isLineContainHeader).findFirst().orElse(EMPTY);
-			int headerLineNum = csvData.indexOf(headerLine);
-			csvData = csvData.stream().skip(headerLineNum).collect(toList());
+			csvData = this.filterLinePrecedeHeader(csvData);
 			
 			List<String> finalCsvData = csvData;
 			String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
@@ -273,6 +267,17 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		return null;
 	}
 	
+	private List<String> filterLinePrecedeHeader(List<String> csvData) {
+		//find line is header
+		Predicate<String> isLineContainHeader = line -> Stream.of("Name", "Address", "Phone", "Mobile", "Sire", "Dam")
+				.anyMatch(headerElement -> containsIgnoreCase(line, headerElement));
+		
+		String headerLine = csvData.stream().filter(isLineContainHeader).findFirst().orElse(EMPTY);
+		int headerLineNum = csvData.indexOf(headerLine);
+		csvData = csvData.stream().skip(headerLineNum).collect(toList());
+		return csvData;
+	}
+	
 	@Override
 	public Object formatHorseV2(MultipartFile horseFile, String dirName) throws IOException {
 		List<String> csvData = getCsvData(horseFile);
@@ -291,8 +296,10 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 //					.filter(dataRow)
 					.collect(toList());
 			
+			csvData = this.filterLinePrecedeHeader(csvData);
+			
 			List<String> finalCsvData = csvData;
-			String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
+			String[][] data = csvData.stream().map(OnboardHelper::splitCsvLineByComma).toArray(String[][]::new);
 			int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
 					.orElseThrow(IllegalAccessError::new).length;
 			
@@ -372,7 +379,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			standardHeaderMap.put("Colour, Color", singletonList("Colour"));
 			standardHeaderMap.put("Sex, Gender", singletonList("Sex"));
 			standardHeaderMap.put("Avatar", singletonList("Avatar"));
-			standardHeaderMap.put("Added Date, addedDate", singletonList("Added Date"));
+			standardHeaderMap.put("Added Date, addedDate, Status Date", singletonList("Added Date"));
 			standardHeaderMap.put("Active Status, ActiveStatus, active_status", singletonList("Status"));
 			standardHeaderMap.put("Current Location, location", singletonList("Property"));
 			standardHeaderMap.put("Current Status, CurrentStatus, status", singletonList("Current Status"));
