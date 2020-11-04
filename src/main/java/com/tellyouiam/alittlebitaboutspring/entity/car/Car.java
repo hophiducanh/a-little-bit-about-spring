@@ -1,5 +1,7 @@
 package com.tellyouiam.alittlebitaboutspring.entity.car;
 
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -20,6 +22,7 @@ import javax.persistence.StoredProcedureParameter;
 		@StoredProcedureParameter(mode = ParameterMode.IN, name = "model_in", type = String.class),
 		@StoredProcedureParameter(mode = ParameterMode.OUT, name = "count_out", type = Integer.class) })
 @Entity
+@ApiModel(value = "Car model")
 public class Car {
 	//TODO
 	//https://www.baeldung.com/hibernate-identifiers
@@ -27,6 +30,7 @@ public class Car {
 	@Id
 	@Column
 	@GeneratedValue(strategy = GenerationType.IDENTITY) //default type is AUTO
+	@ApiModelProperty(notes = "The database generated Car Id")
 	private Long id;
 	
 	// An interesting feature introduced in Hibernate 5 is the UUIDGenerator.

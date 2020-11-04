@@ -16,6 +16,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 @EnableSwagger2
 public class Swagger2Config {
 	
+	//https://www.vojtechruzicka.com/documenting-spring-boot-rest-api-swagger-springfox/
 	@Bean
 	public Docket api() {
 		return new Docket(DocumentationType.SWAGGER_2)
