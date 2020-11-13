@@ -1,5 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.service.note.v1;
 
+import com.stackify.apm.Trace;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,4 +23,6 @@ public interface NoteService {
 	Map<Object, Object> reformatOwnership(MultipartFile file, String dirName);
 	
 	Object transformMultipartFile(MultipartFile file) throws IOException;
+	
+	String test();
 }

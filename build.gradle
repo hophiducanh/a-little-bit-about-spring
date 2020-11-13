@@ -21,6 +21,8 @@ repositories {
     mavenCentral()
 }
 
+//jvmArgs = ["-javaagent:/usr/local/stackify/stackify-java-apm/stackify-java-apm.jar"]
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
@@ -138,6 +140,16 @@ dependencies {
 
     // https://mvnrepository.com/artifact/io.springfox/springfox-bean-validators
     compile group: 'io.springfox', name: 'springfox-bean-validators', version: '2.9.2'
+
+    compile group: 'com.stackify', name: 'stackify-java-apm-annot', version: '1.0.6'
+    compile group: 'com.stackify', name: 'stackify-log-logback', version: '4.0.0'
+
+    // https://mvnrepository.com/artifact/org.apache.velocity/velocity
+    compile group: 'org.apache.velocity', name: 'velocity', version: '1.7'
+
+    //https://stackoverflow.com/questions/8820240/how-to-format-numbers-in-velocity-templates
+    // https://mvnrepository.com/artifact/org.apache.velocity/velocity-tools
+    compile group: 'org.apache.velocity', name: 'velocity-tools', version: '2.0'
 
 //    compile group: 'org.springframework.data', name: 'spring-data-rest-hal-browser', version: '3.0.8.RELEASE'
 

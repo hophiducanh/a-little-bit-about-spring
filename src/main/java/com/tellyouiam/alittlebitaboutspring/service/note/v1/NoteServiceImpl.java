@@ -1,6 +1,7 @@
 	package com.tellyouiam.alittlebitaboutspring.service.note.v1;
 	
 	import com.fasterxml.jackson.databind.ObjectMapper;
+	import com.stackify.apm.Trace;
 	import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.collection.MapHelper;
@@ -82,8 +83,20 @@
 	import static org.springframework.util.CollectionUtils.isEmpty;
 	
 	@Service
+	@Trace(start = true)
 	public class NoteServiceImpl implements NoteService {
-	
+		
+		@Override
+		@Trace(trackedFunction = true, trackedFunctionName = "hoho")
+		public String test() {
+			return "test";
+		}
+		
+		@Trace
+		public String test1() {
+			return "good";
+		}
+		
 		private static final Logger logger = LoggerFactory.getLogger(NoteServiceImpl.class);
 	
 		private static final String HORSE_FILE_HEADER = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",

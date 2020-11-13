@@ -1,5 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.rest.car;
 
+import com.stackify.apm.Trace;
 import com.tellyouiam.alittlebitaboutspring.dto.car.CarRequest;
 import com.tellyouiam.alittlebitaboutspring.entity.car.Car;
 import com.tellyouiam.alittlebitaboutspring.service.car.CarService;
@@ -24,6 +25,7 @@ public class CarController {
 	private CarService carService;
 	
 	@GetMapping(path = "/modelcount")
+	@Trace
 	public long getTotalCarsByModel(@RequestParam("model") String model) {
 		return carService.getTotalCarsByModel(model);
 	}

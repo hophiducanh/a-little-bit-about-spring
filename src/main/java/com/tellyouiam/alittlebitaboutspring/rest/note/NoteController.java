@@ -1,5 +1,6 @@
 package com.tellyouiam.alittlebitaboutspring.rest.note;
 
+import com.stackify.apm.Trace;
 import com.tellyouiam.alittlebitaboutspring.entity.note.Note;
 import com.tellyouiam.alittlebitaboutspring.service.note.v1.NoteService;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
@@ -134,9 +135,10 @@ public class NoteController {
 	
 	//https://stackoverflow.com/questions/38811606/what-is-the-default-request-method-type-for-the-request-mapping
 	//if not specify mapping method >> all mapping method are accepted.
-	@RequestMapping(value = "/test")
+	@RequestMapping(value = "/test", method = RequestMethod.GET)
+	@Trace
 	public final ResponseEntity<Object> diffRequestMappingAndGetMapping() {
-		String result = "Difference request mapping get method and getmapping";
+		String result = noteService.test();
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
 	

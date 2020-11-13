@@ -31,7 +31,7 @@ public class VimeoController { //https://developer.vimeo.com/api/reference/video
 //     check skype for token
 //		boolean upgradeTo1080 = true;
 //		File file = new File("C:\\Users\\conta\\OneDrive\\Desktop\\Big_Buck_Bunny_720_10s_10MB.mp4");
-		String videoEndPoint = "/videos/472472699";
+//		String videoEndPoint = "/videos/472472699";
 //		String videoEndPoint = vimeo.addVideo(file, upgradeTo1080);
 //		System.out.println(videoEndPoint);
 //
@@ -55,19 +55,23 @@ public class VimeoController { //https://developer.vimeo.com/api/reference/video
 //		System.out.println(vimeo.delete(videoEndPoint));
 
 //		---------------------------MY ACCOUNT-----------------------------
-		Vimeo vimeo = new Vimeo("9d49485793bfcfc65b36f978d1dbbdc7");
-		URL url = new URL("https://prismhorse.s3.amazonaws.com/media/517cce7ebfa94b799874093c38c7a622.mp4");
-		File file = new File("prism-horse.jpg");
-		InputStream inputStream = url.openStream();
-		FileUtils.copyURLToFile(url, file);
+		Vimeo vimeo = new Vimeo("f579a10063678c653a66b36610682675");
+//		URL url = new URL("https://prismhorse.s3.amazonaws.com/media/517cce7ebfa94b799874093c38c7a622.mp4");
+//		File file = new File("prism-horse.jpg");
+//		InputStream inputStream = url.openStream();
+//		FileUtils.copyURLToFile(url, file);
 //		vimeo.addVideo(file, true);
+		String videoEndPoint = "/videos/473372101";
 		String name = "Big Bug Bunny";
 		String desc = "The bunny lost in the darkness.";
 		String license = null; //see Vimeo API Documentation
-		String privacyView = "anybody"; //see Vimeo API Documentation
-		String privacyEmbed = "public"; //see Vimeo API Documentation
+		String privacyView = "unlisted"; //see Vimeo API Documentation
+		String privacyEmbed = "whitelist"; //see Vimeo API Documentation
 		boolean reviewLink = false;
 		VimeoResponse response = vimeo.updateVideoMetadata(videoEndPoint, name, desc, license, privacyView, privacyEmbed, reviewLink);
 		System.out.println(response.getStatusCode());
+		VimeoResponse response1 = vimeo.addVideoPrivacyDomain(videoEndPoint, "logbasex.wordpress.com");
+		System.out.println(response1);
+//		vimeo.removeVideo(videoEndPoint);
 	}
 }
