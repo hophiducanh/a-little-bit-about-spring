@@ -133,8 +133,8 @@ public class NoteHelper {
 		int index;
 		for (String element : arr) {
 			for (String value : valuesToCheck) {
-				String formattedElement = element.replace("\"", "").trim();
-				if (formattedElement.equalsIgnoreCase(value)) {
+				String formattedElement = element.replace("\"", "").trim().toLowerCase();
+				if (formattedElement.equalsIgnoreCase(value.toLowerCase())) {
 					index = Arrays.asList(arr).indexOf(element);
 					return index;
 				}

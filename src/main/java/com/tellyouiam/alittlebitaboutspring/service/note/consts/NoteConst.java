@@ -40,7 +40,7 @@ public class NoteConst {
 	public static final int IGNORED_NON_DATA_LINE_THRESHOLD = 9;
 	
 	public static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
-	public static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
+	public static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Documents/prism-data/";
 	public static final String CT_IN_DISPLAY_NAME_PATTERN = "\\bCT:";
 	
 	public static final String HORSE_RECORDS_PATTERN = "([\\d]+)\\sRecords"; //like: 162 records

@@ -171,15 +171,15 @@ public class NoteController {
 	}
 	
 	@PostMapping(value = "/ownership/reformat")
-	public final ResponseEntity reformatOwnership(@RequestPart MultipartFile file,
-	                                              @RequestParam String dirName) {
+	public final ResponseEntity<Object> reformatOwnership(@RequestPart List<MultipartFile> files,
+	                                                      @RequestParam String dirName) {
 		
-		Object result = noteService.reformatOwnership(file, dirName);
+		Object result = noteService.reformatOwnership(files, dirName);
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
 	
 	@PostMapping(value = "/transform-multipart-file")
-	public final ResponseEntity transformMultipartFile(@RequestPart MultipartFile file) {
+	public final ResponseEntity<Object> transformMultipartFile(@RequestPart MultipartFile file) {
 		
 		Object result = null;
 		try {

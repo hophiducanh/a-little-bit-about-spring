@@ -8,6 +8,7 @@
 	import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
 	import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 	import me.xdrop.fuzzywuzzy.FuzzySearch;
+	import org.apache.commons.io.FilenameUtils;
 	import org.apache.commons.lang3.ArrayUtils;
 	import org.apache.commons.lang3.StringUtils;
 	import org.apache.commons.lang3.math.NumberUtils;
@@ -32,6 +33,7 @@
 	import java.net.URISyntaxException;
 	import java.nio.file.Files;
 	import java.nio.file.Paths;
+	import java.text.DecimalFormat;
 	import java.time.LocalDate;
 	import java.time.format.DateTimeFormatter;
 	import java.util.ArrayList;
@@ -141,7 +143,7 @@
 					int emailIndex = checkColumnIndex(header, "Email");
 					int financeEmailIndex = checkColumnIndex(header, "FinanceEmail");
 					int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
-					int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name");
+					int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name", "SurName");
 					int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name", "Display", "Who", "OwnerName");
 					int typeIndex = checkColumnIndex(header, "Type");
 					int mobileIndex = checkColumnIndex(header, "Mobile", "Mobile Phone");
@@ -1870,7 +1872,7 @@
 		}
 		
 		@Override
-		public Map<Object, Object> reformatOwnership(MultipartFile file, String dirName) {
+		public Map<Object, Object> reformatOwnership(List<MultipartFile> files, String dirName) {
 			String ownershipHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 					"HorseId", "HorseName",
 					"OwnerID", "CommsEmail", "FinanceEmail", "FirstName", "LastName", "DisplayName",
@@ -1881,132 +1883,151 @@
 			StringBuilder dataBuilder = new StringBuilder(ownershipHeader);
 			Map<Object, Object> result = new HashMap<>();
 			
-			try {
-				List<String> csvData = getCsvData(file);
-				if (!isEmpty(csvData)) {
-					
-					// ---------- cols of file ownership ---------------------------
-					// HORSE KEY (ID or NAME), can leave blank if key is horse name
-					// HORSE NAME
-					// OWNER_KEY (ID or EMAIL), can leave blank if ID is EMAIL
-					// EMAIL
-					// FINANCE EMAIL
-					// FIRST NAME
-					// LAST NAME
-					// DISPLAY NAME
-					// TYPE
-					// MOBILE
-					// PHONE
-					// FAX
-					// ADDRESS
-					// SUBURB (CITY)
-					// STATE
-					// POSTCODE
-					// COUNRTY
-					// GST = "true/false" or ot "T/F" or "Y/N"
-					// DEBTOR
-					// -------------------------
-					// BALANCE (SHARE PERCENTAGE)
-					// FROM_DATE
-					// TO_DATE
-					// EXPORTED_DATE
-					// -------------------------------------------------------------
-					
-					String[] header = readCsvLine(csvData.get(0));
-					
-					int horseIdIndex = checkColumnIndex(header, "Horse Id");
-					int horseNameIndex = checkColumnIndex(header, "Horse Name", "Horse", "Horses");
-					int ownerIdIndex = checkColumnIndex(header, "Owner Id");
-					int commsEmailIndex = checkColumnIndex(header, "CommsEmail", "Email");
-					int financeEmailIndex = checkColumnIndex(header, "Finance Email", "FinanceEmail","Finance_Email");
-					int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
-					int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name");
-					int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name");
-					int typeIndex = checkColumnIndex(header, "Type");
-					int mobileIndex = checkColumnIndex(header, "Mobile", "Mobile Phone");
-					int phoneIndex = checkColumnIndex(header, "Phone");
-					int faxIndex = checkColumnIndex(header, "Fax");
-					int addressIndex = checkColumnIndex(header, "Address");
-					int cityIndex = checkColumnIndex(header, "City","Suburb");
-					int stateIndex = checkColumnIndex(header, "State");
-					int postCodeIndex = checkColumnIndex(header, "PostCode");
-					int countryIndex = checkColumnIndex(header, "Country");
-					int realGstIndex = checkColumnIndex(header, "GST", "GST Reg.");
-					int debtorIndex = checkColumnIndex(header, "Debtor");
-					int shareIndex = checkColumnIndex(header, "Shares", "Share", "Ownership", "Share %","percentage");
-					//fromDate
-					int fromDateIndex = checkColumnIndex(header, "Purchased Date", "Date","fromDate");
-					
-					//process file without header
-					csvData = csvData.stream().skip(1).collect(toList());
-					
-					boolean isAustraliaFormat = isAustraliaFormat(csvData, fromDateIndex, "ownership");
-					
-					for (String line : csvData) {
-						String[] r = readCsvLine(line);
+			for (MultipartFile file : files) {
+				
+				try {
+					List<String> csvData = getCsvData(file);
+					if (!isEmpty(csvData)) {
 						
-						String horseId = getCsvCellValueAtIndex(r, horseIdIndex);
-						String horseName = getCsvCellValueAtIndex(r, horseNameIndex);
-						String ownerId = getCsvCellValueAtIndex(r, ownerIdIndex);
-						String commsEmail = getCsvCellValueAtIndex(r, commsEmailIndex);
-						String financeEmail = getCsvCellValueAtIndex(r, financeEmailIndex);
-						String firstName = getCsvCellValueAtIndex(r, firstNameIndex);
-						String lastName = getCsvCellValueAtIndex(r, lastNameIndex);
-						String displayName = getCsvCellValueAtIndex(r, displayNameIndex);
-						String type = getCsvCellValueAtIndex(r, typeIndex);
-						String mobile = getCsvCellValueAtIndex(r, mobileIndex);
-						String phone = getCsvCellValueAtIndex(r, phoneIndex);
-						String fax = getCsvCellValueAtIndex(r, faxIndex);
-						String address = getCsvCellValueAtIndex(r, addressIndex);
-						String city = getCsvCellValueAtIndex(r, cityIndex);
-						String state = getCsvCellValueAtIndex(r, stateIndex);
-						String postCode = getPostcode(getCsvCellValueAtIndex(r, postCodeIndex));
-						String country = getCsvCellValueAtIndex(r, countryIndex);
-						String gst = getCsvCellValueAtIndex(r, realGstIndex);
-						String share = getCsvCellValueAtIndex(r, shareIndex);
-						share = share.replaceAll(REMOVE_INVALID_SHARES_PATTERN, "0.00%");
-						String debtor = getCsvCellValueAtIndex(r, debtorIndex);
+						// ---------- cols of file ownership ---------------------------
+						// HORSE KEY (ID or NAME), can leave blank if key is horse name
+						// HORSE NAME
+						// OWNER_KEY (ID or EMAIL), can leave blank if ID is EMAIL
+						// EMAIL
+						// FINANCE EMAIL
+						// FIRST NAME
+						// LAST NAME
+						// DISPLAY NAME
+						// TYPE
+						// MOBILE
+						// PHONE
+						// FAX
+						// ADDRESS
+						// SUBURB (CITY)
+						// STATE
+						// POSTCODE
+						// COUNRTY
+						// GST = "true/false" or ot "T/F" or "Y/N"
+						// DEBTOR
+						// -------------------------
+						// BALANCE (SHARE PERCENTAGE)
+						// FROM_DATE
+						// TO_DATE
+						// EXPORTED_DATE
+						// -------------------------------------------------------------
 						
-						String rawAddedDate = getCsvCellValueAtIndex(r, fromDateIndex);
-						//remove all whitespace include unicode character
-						rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
+						String[] header = readCsvLine(csvData.get(0));
 						
-						//convert addedDate read from CSV to Australia date time format.
-						String addedDate = (!isAustraliaFormat && isNotEmpty(rawAddedDate)) ? LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT).format(AUSTRALIA_FORMAL_DATE_FORMAT) : rawAddedDate;
+						int horseIdIndex = checkColumnIndex(header, "Horse Id");
+						int horseNameIndex = checkColumnIndex(header, "Horse Name", "Horse", "Horses");
+						int ownerIdIndex = checkColumnIndex(header, "Owner Id");
+						int commsEmailIndex = checkColumnIndex(header, "CommsEmail", "Email");
+						int financeEmailIndex = checkColumnIndex(header, "Finance Email", "FinanceEmail", "Finance_Email", "EMAIL ADDRESS");
+						int firstNameIndex = checkColumnIndex(header, "FirstName", "First Name");
+						int lastNameIndex = checkColumnIndex(header, "LastName", "Last Name", "SurName");
+						int displayNameIndex = checkColumnIndex(header, "DisplayName", "Name", "Display Name");
+						int typeIndex = checkColumnIndex(header, "Type");
+						int mobileIndex = checkColumnIndex(header, "Mobile", "Mobile Phone", "MOBILE #");
+						int phoneIndex = checkColumnIndex(header, "Phone");
+						int faxIndex = checkColumnIndex(header, "Fax");
+						int addressIndex = checkColumnIndex(header, "Address");
+						int cityIndex = checkColumnIndex(header, "City", "Suburb");
+						int stateIndex = checkColumnIndex(header, "State");
+						int postCodeIndex = checkColumnIndex(header, "PostCode", "P/CODE");
+						int countryIndex = checkColumnIndex(header, "Country");
+						int realGstIndex = checkColumnIndex(header, "GST", "GST Reg.");
+						int debtorIndex = checkColumnIndex(header, "Debtor");
+						int shareIndex = checkColumnIndex(header, "Shares", "Share", "Ownership", "Share %", "percentage", "%");
+						//fromDate
+						int fromDateIndex = checkColumnIndex(header, "Purchased Date", "Date", "fromDate");
 						
-						String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
-								csvValue(horseId),
-								csvValue(horseName),
-								csvValue(ownerId),
-								csvValue(commsEmail),
-								csvValue(financeEmail),
-								csvValue(firstName),
-								csvValue(lastName),
-								csvValue(displayName),
-								csvValue(type),
-								csvValue(mobile),
-								csvValue(phone),
-								csvValue(fax),
-								csvValue(address),
-								csvValue(city),
-								csvValue(state),
-								csvValue(postCode),
-								csvValue(country),
-								csvValue(gst),
-								csvValue(debtor),
-								csvValue(share),
-								csvValue(addedDate),
-								csvValue(""));
+						//process file without header
+						csvData = csvData.stream()
+								.skip(1)
+								.collect(toList());
 						
-						dataBuilder.append(rowBuilder);
+						boolean isAustraliaFormat = isAustraliaFormat(csvData, fromDateIndex, "ownership");
+						
+						for (String line : csvData) {
+							String[] r = readCsvLine(line);
+							
+							String horseId = getCsvCellValueAtIndex(r, horseIdIndex);
+							String horseName = getCsvCellValueAtIndex(r, horseNameIndex);
+							if (horseName.equals("")) {
+								horseName = FilenameUtils.getBaseName(file.getOriginalFilename());
+							}
+							String ownerId = getCsvCellValueAtIndex(r, ownerIdIndex);
+							String commsEmail = getCsvCellValueAtIndex(r, commsEmailIndex);
+							String financeEmail = getCsvCellValueAtIndex(r, financeEmailIndex);
+							String firstName = getCsvCellValueAtIndex(r, firstNameIndex);
+							String lastName = getCsvCellValueAtIndex(r, lastNameIndex);
+							String displayName = getCsvCellValueAtIndex(r, displayNameIndex);
+							String type = getCsvCellValueAtIndex(r, typeIndex);
+							String mobile = getCsvCellValueAtIndex(r, mobileIndex);
+							if (mobile.matches("[-]")) {
+								mobile = "";
+							}
+							String phone = getCsvCellValueAtIndex(r, phoneIndex);
+							if (phone.matches("[-]")) {
+								phone = "";
+							}
+							String fax = getCsvCellValueAtIndex(r, faxIndex);
+							String address = getCsvCellValueAtIndex(r, addressIndex);
+							String city = getCsvCellValueAtIndex(r, cityIndex);
+							String state = getCsvCellValueAtIndex(r, stateIndex);
+							String postCode = getPostcode(getCsvCellValueAtIndex(r, postCodeIndex));
+							String country = getCsvCellValueAtIndex(r, countryIndex);
+							String gst = getCsvCellValueAtIndex(r, realGstIndex);
+							String share = getCsvCellValueAtIndex(r, shareIndex);
+							share = share.replaceAll(REMOVE_INVALID_SHARES_PATTERN, "0.00%");
+							
+//							DecimalFormat decimalFormat = new DecimalFormat("###.##");
+//							Double shareD = Double.valueOf(share);
+//							share = decimalFormat.format(shareD) + "%";
+							
+							String debtor = getCsvCellValueAtIndex(r, debtorIndex);
+							
+							String rawAddedDate = getCsvCellValueAtIndex(r, fromDateIndex);
+							//remove all whitespace include unicode character
+							rawAddedDate = rawAddedDate.split("\\p{Z}")[0];
+							
+							//convert addedDate read from CSV to Australia date time format.
+							String addedDate = (!isAustraliaFormat && isNotEmpty(rawAddedDate)) ? LocalDate.parse(rawAddedDate, AMERICAN_CUSTOM_DATE_FORMAT)
+									.format(AUSTRALIA_FORMAL_DATE_FORMAT) : rawAddedDate;
+							
+							String rowBuilder = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
+									csvValue(horseId),
+									csvValue(horseName),
+									csvValue(ownerId),
+									csvValue(commsEmail),
+									csvValue(financeEmail),
+									csvValue(firstName),
+									csvValue(lastName),
+									csvValue(displayName),
+									csvValue(type),
+									csvValue(mobile),
+									csvValue(phone),
+									csvValue(fax),
+									csvValue(address),
+									csvValue(city),
+									csvValue(state),
+									csvValue(postCode),
+									csvValue(country),
+									csvValue(gst),
+									csvValue(debtor),
+									csvValue(share),
+									csvValue(addedDate),
+									csvValue(""));
+							
+							dataBuilder.append(rowBuilder);
+						}
 					}
-					
-					String path = getOutputFolder(dirName) + File.separator + "formatted-ownership.csv";
-					Files.write(Paths.get(path), dataBuilder.toString().getBytes());
+				} catch (IOException e) {
+					e.printStackTrace();
 				}
-			} catch (IOException e) {
-				e.printStackTrace();
 			}
+			String path = getOutputFolder(dirName) + File.separator + "formatted-ownership.csv";
+			FileHelper.writeDataToFile(path, dataBuilder.toString().getBytes());
 			result.put("exportedDate", "16/07/2020");
 			return result;
 		}
