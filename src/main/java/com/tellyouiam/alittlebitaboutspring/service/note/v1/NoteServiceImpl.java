@@ -2,9 +2,12 @@
 	
 	import com.fasterxml.jackson.databind.ObjectMapper;
 	import com.stackify.apm.Trace;
+	import com.tellyouiam.alittlebitaboutspring.dto.treatment.ImportTreatmentHistoryDTO;
 	import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
 	import com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.collection.MapHelper;
+	import com.tellyouiam.alittlebitaboutspring.utils.csv.OpenCsvHelper;
+	import com.tellyouiam.alittlebitaboutspring.utils.datetime.DateTimeHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
 	import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 	import me.xdrop.fuzzywuzzy.FuzzySearch;
@@ -13,6 +16,7 @@
 	import org.apache.commons.lang3.StringUtils;
 	import org.apache.commons.lang3.math.NumberUtils;
 	import org.apache.commons.text.similarity.LevenshteinDistance;
+	import org.apache.commons.validator.GenericValidator;
 	import org.apache.http.NameValuePair;
 	import org.apache.http.client.utils.URIBuilder;
 	import org.slf4j.Logger;
@@ -27,13 +31,11 @@
 	import org.springframework.web.multipart.MultipartFile;
 	import org.springframework.web.util.UriComponentsBuilder;
 	
-	import java.io.File;
-	import java.io.FileOutputStream;
-	import java.io.IOException;
+	import java.io.*;
 	import java.net.URISyntaxException;
+	import java.nio.charset.StandardCharsets;
 	import java.nio.file.Files;
 	import java.nio.file.Paths;
-	import java.text.DecimalFormat;
 	import java.time.LocalDate;
 	import java.time.format.DateTimeFormatter;
 	import java.util.ArrayList;
@@ -92,6 +94,49 @@
 		@Trace(trackedFunction = true, trackedFunctionName = "hoho")
 		public String test() {
 			return "test";
+		}
+		
+		@Override
+		public void importProcedure(MultipartFile file, String dirName) {
+			try {
+				List<ImportTreatmentHistoryDTO> historyDTOS =
+						OpenCsvHelper.mapCsvRecordToBeans(ImportTreatmentHistoryDTO.class,
+								new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
+				historyDTOS = historyDTOS.stream().filter(i -> StringUtils.isNotEmpty(i.getHorseName())).collect(toList());
+				
+				String header = String.format("%s,%s,%s,%s,%s\n", "Horse Name", "Specific", "Comment", "Due Date",
+						"Completed Date");
+				StringBuilder builder = new StringBuilder(header);
+				
+				String dueDateStr = null;
+				for (int i = 0; i < historyDTOS.size(); i++) {
+					
+					ImportTreatmentHistoryDTO dto = historyDTOS.get(i);
+					if (GenericValidator.isDate(dto.getHorseName(), "dd-MMM-yy", true)) {
+						dueDateStr = DateTimeHelper.formatDateString(dto.getHorseName(), "dd-MMM-yy", "dd/MM/yyyy");
+						continue;
+					}
+					
+					boolean isDate = GenericValidator.isDate(historyDTOS.get(i).getHorseName(), "dd-MMM-yy", true);
+
+					if (!isDate) {
+						String horseName = csvValue(dto.getHorseName());
+						String specific = csvValue(dto.getSpecific());
+						String comment = csvValue(dto.getComment());
+						String dueDate = dueDateStr;
+						String completedDate = dueDateStr;
+						
+						builder.append(String.format("%s,%s,%s,%s,%s\n", horseName, specific, comment, dueDate, completedDate));
+					}
+					
+				}
+				
+				String path = getOutputFolder(dirName) + File.separator + "formatted-procedure.csv";
+				FileHelper.writeDataToFile(path, builder.toString().getBytes());
+				
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
 		
 		@Trace

@@ -189,4 +189,10 @@ public class NoteController {
 		}
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
+	
+	@PostMapping(value = "/procedure")
+	public final ResponseEntity<Object> importProcedure(@RequestPart MultipartFile file, @RequestParam String dirName) {
+		noteService.importProcedure(file, dirName);
+		return new ResponseEntity<>(null, HttpStatus.OK);
+	}
 }
