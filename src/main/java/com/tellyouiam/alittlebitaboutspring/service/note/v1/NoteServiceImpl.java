@@ -109,26 +109,27 @@
 				StringBuilder builder = new StringBuilder(header);
 				
 				String dueDateStr = null;
-				for (int i = 0; i < historyDTOS.size(); i++) {
+				for (ImportTreatmentHistoryDTO dto : historyDTOS) {
 					
-					ImportTreatmentHistoryDTO dto = historyDTOS.get(i);
-					if (GenericValidator.isDate(dto.getHorseName(), "dd-MMM-yy", true)) {
+					boolean isDate = GenericValidator.isDate(dto.getHorseName(), "dd-MMM-yy", true);
+					boolean isDateX = GenericValidator.isDate(dto.getHorseName(), "d-MMM-yy", true);
+					
+					if (isDate) {
 						dueDateStr = DateTimeHelper.formatDateString(dto.getHorseName(), "dd-MMM-yy", "dd/MM/yyyy");
+						continue;
+					} else if (isDateX) {
+						dueDateStr = DateTimeHelper.formatDateString(dto.getHorseName(), "d-MMM-yy", "dd/MM/yyyy");
 						continue;
 					}
 					
-					boolean isDate = GenericValidator.isDate(historyDTOS.get(i).getHorseName(), "dd-MMM-yy", true);
-
-					if (!isDate) {
-						String horseName = csvValue(dto.getHorseName());
-						String specific = csvValue(dto.getSpecific());
-						String comment = csvValue(dto.getComment());
-						String dueDate = dueDateStr;
-						String completedDate = dueDateStr;
-						
-						builder.append(String.format("%s,%s,%s,%s,%s\n", horseName, specific, comment, dueDate, completedDate));
-					}
+					String horseName = csvValue(dto.getHorseName());
+					String specific = csvValue(dto.getSpecific());
+					String comment = csvValue(dto.getComment());
+					String dueDate = dueDateStr;
+					String completedDate = dueDateStr;
 					
+					builder.append(String.format("%s,%s,%s,%s,%s\n", horseName, specific, comment, dueDate,
+							completedDate));
 				}
 				
 				String path = getOutputFolder(dirName) + File.separator + "formatted-procedure.csv";
@@ -2309,10 +2310,10 @@
 			//password: logbasex1first
 			final String uri = "https://sandbox.express.giftpay.com/api/gift.svc/send";
 			UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(uri)
-					.queryParam("key", "920237C7-EF66-4859-9633-5BF055EE9AA8")
-					.queryParam("to", "contact.hoducanh@gmail.com")
-					.queryParam("value", "5")
-					.queryParam("clientref", 22)
+					.queryParam("key", "098B34BA-1925-49A3-8BE2-F3586FD4A4CD")
+					.queryParam("to", "anh.ho@fruitful.io")
+					.queryParam("value", "10")
+					.queryParam("clientref", 315)
 					.queryParam("message", "");
 			
 			RestTemplate restTemplate = new RestTemplate();
