@@ -28,11 +28,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.*;
 import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AMERICAN_CUSTOM_DATE_FORMAT;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AUSTRALIA_CUSTOM_DATE_FORMAT;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.CSV_HORSE_COUNT_PATTERN;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.UNIX_OUTPUT_FILE_PATH;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.WINDOW_OUTPUT_FILE_PATH;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.isValidEmail;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toList;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
@@ -46,7 +50,7 @@ public class NoteHelper {
 	
 	public static List<String> getCsvData(MultipartFile multipart) throws IOException {
 		InputStream is = multipart.getInputStream();
-		BufferedReader br = new BufferedReader(new InputStreamReader(is));
+		BufferedReader br = new BufferedReader(new InputStreamReader(is, UTF_8));
 		return getCsvData(br, false);
 	}
 	

@@ -2,15 +2,22 @@ package com.tellyouiam.alittlebitaboutspring.rest.note;
 
 import com.stackify.apm.Trace;
 import com.tellyouiam.alittlebitaboutspring.entity.note.Note;
-import com.tellyouiam.alittlebitaboutspring.service.note.v1.NoteService;
 import com.tellyouiam.alittlebitaboutspring.exception.CustomException;
+import com.tellyouiam.alittlebitaboutspring.repository.note.NoteRepository;
+import com.tellyouiam.alittlebitaboutspring.service.note.v1.NoteService;
 import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.tellyouiam.alittlebitaboutspring.repository.note.NoteRepository;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.validation.Valid;
@@ -120,8 +127,8 @@ public class NoteController {
 			StringBuilder extractedNameData = (StringBuilder) result.get("extractedName");
 			StringBuilder csvData = (StringBuilder) result.get("csvData");
 			
-			String extractedNamePath = FileHelper.getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
-			Files.write(Paths.get(extractedNamePath), Collections.singleton(extractedNameData));
+//			String extractedNamePath = FileHelper.getOutputFolder(dirName) + File.separator + "extracted-name-ownership.csv";
+//			Files.write(Paths.get(extractedNamePath), Collections.singleton(extractedNameData));
 			
 			String formattedPath = FileHelper.getOutputFolder(dirName) + File.separator + "formatted-ownership.csv";
 			Files.write(Paths.get(formattedPath), Collections.singleton(csvData));

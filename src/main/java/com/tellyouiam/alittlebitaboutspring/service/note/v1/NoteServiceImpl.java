@@ -40,6 +40,7 @@
 	import java.time.format.DateTimeFormatter;
 	import java.util.ArrayList;
 	import java.util.Arrays;
+	import java.util.Collections;
 	import java.util.Comparator;
 	import java.util.HashMap;
 	import java.util.HashSet;
@@ -819,8 +820,8 @@
 					int colorIndex = checkColumnIndex(header, "Color", "Colour");
 					int sexIndex = checkColumnIndex(header, "Gender", "Sex");
 					int avatarIndex = checkColumnIndex(header, "Avatar");
-					int addedDateIndex = checkColumnIndex(header, "AddedDate");
-					int activeStatusIndex = checkColumnIndex(header, "Active Status", "ActiveStatus");
+					int addedDateIndex = checkColumnIndex(header, "AddedDate", "Status Date");
+					int activeStatusIndex = checkColumnIndex(header, "Active Satus", "ActiveStatus");
 					int horseLocationIndex = checkColumnIndex(header, "Property");
 					int horseStatusIndex = checkColumnIndex(header, "Current Status", "CurrentStatus");
 					int typeIndex = checkColumnIndex(header, "Type");
@@ -864,7 +865,7 @@
 	
 						String sire = getCsvCellValueAtIndex(r, sireIndex);
 						String dam = getCsvCellValueAtIndex(r, damIndex);
-						if (sire.isEmpty() && dam.isEmpty()) continue;
+//						if (sire.isEmpty() && dam.isEmpty()) continue;
 						String color = getCsvCellValueAtIndex(r, colorIndex);
 						String sex = getCsvCellValueAtIndex(r, sexIndex);
 	
@@ -1261,7 +1262,7 @@
 				}
 	
 				String path = getOutputFolder(dirName) + File.separator + "formatted-horse.csv";
-				Files.write(Paths.get(path), builder.toString().getBytes());
+				Files.write(Paths.get(path), Collections.singletonList(builder), StandardCharsets.UTF_8);
 	
 			} catch (IOException e) {
 				e.printStackTrace();
