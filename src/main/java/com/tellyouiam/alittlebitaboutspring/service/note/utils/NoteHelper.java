@@ -6,6 +6,12 @@ import com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.text.StringEscapeUtils;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
+import org.apache.poi.openxml4j.opc.OPCPackage;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.multipart.MultipartFile;
@@ -52,6 +58,29 @@ public class NoteHelper {
 		InputStream is = multipart.getInputStream();
 		BufferedReader br = new BufferedReader(new InputStreamReader(is, UTF_8));
 		return getCsvData(br, false);
+	}
+	
+	public static List<String> getCsvDataFromXlsFile(MultipartFile file) {
+		DataFormatter formatter = new DataFormatter();
+		List<String> list = new ArrayList<>();
+		
+		try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+			
+			Sheet sheet = workbook.getSheetAt(0);
+			for (Row row : sheet) {
+				StringBuilder builder = new StringBuilder();
+				for(int i=0; i < row.getLastCellNum(); i++) {
+					// If the cell is missing from the file, generate a blank one
+					Cell cell = row.getCell(i, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
+					String value = formatter.formatCellValue(cell);
+					builder.append(StringEscapeUtils.escapeCsv(value)).append(",");
+				}
+				list.add(builder.toString());
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return list;
 	}
 	
 	public static List<String> getCsvData(BufferedReader bufReader, boolean ignoreHeader) throws IOException {

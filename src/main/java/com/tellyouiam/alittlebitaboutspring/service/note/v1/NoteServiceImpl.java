@@ -60,12 +60,7 @@
 	import java.util.stream.Stream;
 	
 	import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.*;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.checkColumnIndex;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.getCsvData;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.getOutputFolder;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isAustraliaFormat;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isDMYFormat;
-	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isRecognizedAsValidDate;
+	import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.*;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getPostcode;
 	import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
@@ -157,7 +152,8 @@
 		@Override
 		public Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException {
 			try {
-				List<String> csvData = getCsvData(ownerFile);
+				List<String> csvData = getCsvDataFromXlsFile(ownerFile);
+				List<String> csvData1 = getCsvData(ownerFile);
 				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
 				StringBuilder finalBuilder = new StringBuilder();
@@ -830,7 +826,7 @@
 					int nickNameIndex = checkColumnIndex(header, "Nick Name", "NickName");
 					int countryIndex = checkColumnIndex(header, "Country");
 					int microchipIndex = checkColumnIndex(header, "Microchip");
-					int brandIndex = checkColumnIndex(header, "Brand");
+					int brandIndex = checkColumnIndex(header, "Brand", "Off Side");
 	
 					String rowHeader = String.format("%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s%n",
 							"ExternalId", "Name", "Foaled", "Sire", "Dam", "Colour",
@@ -1329,7 +1325,7 @@
 						}
 					}
 					//exportedDateList.add(exportedDate);
-					exportedDateList.add("17/06/2020");
+					exportedDateList.add(exportedDate);
 					
 					// Line has departedDate likely to extract:
 					//Azurite (IRE) ( Azamour (IRE) - High Lite (GB)) 9yo Bay Gelding     Michael Hickmott Bloodstock - In

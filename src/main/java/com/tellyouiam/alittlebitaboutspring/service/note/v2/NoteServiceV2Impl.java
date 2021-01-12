@@ -1,77 +1,38 @@
 package com.tellyouiam.alittlebitaboutspring.service.note.v2;
 
-import com.google.common.base.Joiner;
-import com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
-import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.text.StringEscapeUtils;
 import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.AbstractMap;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.IntSummaryStatistics;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.StringJoiner;
-import java.util.TreeSet;
+import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AMERICAN_CUSTOM_DATE_FORMAT;
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AUSTRALIA_FORMAL_DATE_FORMAT;
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.CSV_LINE_END;
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.CSV_LINE_SEPARATOR;
-import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.QUOTE_CHAR;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.containsIgnoreCase;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.getCsvData;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.getMaxRowLength;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isAustraliaFormatV2;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isCsvColHasOnlyHeader;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isCsvColHasRealData;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isDMYFormat;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.isMDYFormat;
-import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.stringContainsIgnoreCase;
+import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.*;
+import static com.tellyouiam.alittlebitaboutspring.service.note.utils.NoteHelper.*;
 import static com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper.getOutputFolder;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.getCsvCellValueAtIndex;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper.readCsvLine;
 import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.csvValue;
-import static com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper.customSplitSpecific;
 import static java.util.Collections.singletonList;
-import static java.util.stream.Collectors.joining;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toMap;
+import static java.util.stream.Collectors.*;
 import static org.apache.commons.collections4.CollectionUtils.isNotEmpty;
 import static org.apache.commons.lang3.StringUtils.EMPTY;
-import static org.apache.commons.lang3.StringUtils.isAllUpperCase;
 import static org.apache.commons.lang3.StringUtils.isNotEmpty;
 import static org.springframework.util.CollectionUtils.isEmpty;
 
@@ -80,122 +41,81 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 	
 	private Map.Entry<Integer, List<String>> colAccumulatorMapper(int index, List<String> csvData) {
 		List<String> dataByColIndex = csvData.stream().map(line -> this.getCellValueByLineIndex(line, index)).collect(toList());
-		return new AbstractMap.SimpleImmutableEntry<>(index, dataByColIndex);
+		return new SimpleImmutableEntry<>(index, dataByColIndex);
 	}
 	
 	private String getCellValueByLineIndex(String line, int index) {
 		String[] rowArr = OnboardHelper.splitCsvLineByComma(line);
+		if (index >= rowArr.length) return EMPTY;
 		return getCsvCellValueAtIndex(rowArr, index);
 	}
 	
 	public Object formatOwnerV2(MultipartFile ownerFile, String dirName) throws IOException {
 		//InputStream inputStream = new BufferedInputStream(ownerFile.getInputStream());
-		List<String> csvData = getCsvData(ownerFile);
+//		List<String> csvData = getCsvData(ownerFile);
+		List<String> csvData = getCsvDataFromXlsFile(ownerFile);
 		StringBuilder streamBuilder = new StringBuilder();
 		
 		if (isNotEmpty(csvData)) {
-			Predicate<String> isNotEmptyRowCsv = row -> (!row.matches("^(,+)$"));
-			Predicate<String> isNotFooterRow = row -> (!row.matches("(.+)([\\d]+)\\sRecords(.+)"));
 			
-			//filter non-data row.
 			csvData = csvData.stream()
 					.filter(StringUtils::isNotEmpty)
-					.filter(isNotEmptyRowCsv)
-					.filter(isNotFooterRow)
+					.filter(row -> (!row.matches("^[,+\\s.`'\"]+$"))) //filter non data rows
+					.filter(row -> (!row.matches("(.+)([\\d]+)\\sRecords(.+)"))) //filter footer rows
 					.collect(toList());
 			
-			csvData = this.filterLinePrecedeHeader(csvData);
+			csvData = this.ignoreLinePrecedeHeader(csvData);
 			
 			List<String> finalCsvData = csvData;
-			String[][] data = csvData.stream().map(OnboardHelper::readCsvLine).toArray(String[][]::new);
+			String[][] data = csvData.stream().map(OnboardHelper::splitCsvLineByComma).toArray(String[][]::new);
 			int rowLength = Arrays.stream(data).max(Comparator.comparingInt(ArrayUtils::getLength))
 					.orElseThrow(IllegalAccessError::new).length;
 			
-			//col has owner data is col has header and has at least two different cell value.
-			Predicate<Map.Entry<Integer, List<String>>> colHasOwnerData = colEntry ->
-					(colEntry.getValue().stream().distinct().count() > 2 || isNotEmpty(colEntry.getValue().get(0)));
-			
-			List<Map.Entry<Integer, List<String>>> columnEntries = Stream.iterate(0, n -> n + 1).limit(rowLength)
+			List<Map.Entry<Integer, List<String>>> columnDataGroupByIndex = Stream.iterate(0, n -> n + 1)
+					.limit(rowLength)
 					.map(index -> this.colAccumulatorMapper(index, finalCsvData))
-					.filter(colHasOwnerData)
+					//col has owner data is col has header (retain col has header although it doesn't contain data in order to merge data in the next col)
+					//or has at least two different cell value (include empty string).
+					.filter(colEntry -> colEntry.getValue().stream().distinct().count() > 2 || isNotEmpty(colEntry.getValue().get(0)))
 					.sorted(Map.Entry.comparingByKey())
 					.collect(toList());
 			
-			final List<Integer> colIndexList =
-					columnEntries.stream().sorted(Map.Entry.comparingByKey()).map(Map.Entry::getKey).collect(toList());
-			
-			IntSummaryStatistics statistics = colIndexList.stream().mapToInt(i -> i).summaryStatistics();
-			
-			//process for case header and data in separate col in csv.
-			Map<Integer, List<String>> formattedDataMap = new LinkedHashMap<>();
-			for (Map.Entry<Integer, List<String>> entry : columnEntries) {
-				Integer entryKey = entry.getKey();
-				List<String> entryValue = entry.getValue();
+			Map<Integer, List<String>> formattedDataMap = IntStream.range(0, columnDataGroupByIndex.size()).mapToObj(i -> {
+				//each Map.Entry include key is col index in file, and value is collection of all data cells present in that column.
+				Map.Entry<Integer, List<String>> dataCurrentColumn = columnDataGroupByIndex.get(i);
 				
-				if ((columnEntries.indexOf(entry) >= columnEntries.size() - 1) || (columnEntries.indexOf(entry) == 0)) {
-					formattedDataMap.put(entryKey, entryValue);
-					continue;
+				//handle index out of bound exception
+				if ((i >= columnDataGroupByIndex.size() - 1) || i == 0) {
+					return new SimpleImmutableEntry<>(dataCurrentColumn.getKey(), dataCurrentColumn.getValue());
 				}
 				
-				Map.Entry<Integer, List<String>> nextEntry = columnEntries.get(columnEntries.indexOf(entry) + 1);
-				Integer nextEntryKey = nextEntry.getKey();
-				List<String> nextEntryValue = nextEntry.getValue();
+				Map.Entry<Integer, List<String>> dataNextColumn = columnDataGroupByIndex.get(i + 1);
+				Map.Entry<Integer, List<String>> dataPreviousColumn = columnDataGroupByIndex.get(i - 1);
 				
-				Optional<Map.Entry<Integer, List<String>>> previousEntry =
-						Optional.ofNullable(columnEntries.get(columnEntries.indexOf(entry) - 1));
-				boolean isHavePreviousKey = previousEntry.isPresent() && (entryKey.equals(previousEntry.get().getKey() + 1));
-				boolean isConsecutive = entryKey.equals(nextEntryKey - 1);
+				boolean isNotHavePreviousKey = dataPreviousColumn != null && (!dataCurrentColumn.getKey().equals(dataPreviousColumn.getKey() + 1));
+				boolean isConsecutive = dataCurrentColumn.getKey().equals(dataNextColumn.getKey() - 1);
 				
 				//join two consecutive column in csv, one has header missing body, one has body missing header.
-				if (isConsecutive && !isHavePreviousKey
-						&& columnEntries.indexOf(entry) != 0
-						&& isNotEmpty(entryValue.get(0))
-						&& entryValue.stream().distinct().count() < 3
-						&& StringUtils.isEmpty(nextEntryValue.get(0))
-						&& nextEntryValue.stream().distinct().count() > 2) {
-					
-					List<String> mergedEntryValue = Stream.iterate(0, i -> i + 1).limit(entryValue.size())
-							.map(i -> entryValue.get(i).concat(nextEntryValue.get(i)).trim())
+				if (isConsecutive && isNotHavePreviousKey
+				    //current col has header and next col is not.
+				    && isNotEmpty(dataCurrentColumn.getValue().get(0)) && StringUtils.isEmpty(dataNextColumn.getValue().get(0))
+				) {
+					List<String> consecutiveColumnMergedData = Stream.iterate(0, j -> j + 1)
+							.limit(dataCurrentColumn.getValue().size())
+							.map(j -> dataCurrentColumn.getValue().get(j).concat(dataNextColumn.getValue().get(j)).trim())
 							.collect(toList());
 					
-					formattedDataMap.put(nextEntryKey, mergedEntryValue);
+					return new SimpleImmutableEntry<>(dataNextColumn.getKey(), consecutiveColumnMergedData);
 				} else {
-					formattedDataMap.putIfAbsent(entryKey, entryValue);
+					return new SimpleImmutableEntry<>(dataCurrentColumn.getKey(), dataCurrentColumn.getValue());
 				}
-			}
+			}).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (o1, o2) -> o1, LinkedHashMap::new));
 			
 			//first cell in column as header
 			Map<String, List<String>> csvDataHeaderAsKey = formattedDataMap.entrySet().stream()
 					.filter(e-> isNotEmpty(e.getValue().get(0)))
 					.collect(toMap(e -> e.getValue().get(0), Map.Entry::getValue));
 
-//				List<String> headerList = Arrays.asList("Address", "Suburb", "State", "PostCode", "Country");
-//				List<List<String>> splitAddressList = csvDataHeaderAsKey.get("Address").stream().skip(1).map(rawAddress -> {
-//					Map<String, String> splitAddress = OwnerSplitAddress.splitAddress(rawAddress);
-//					String address = Optional.ofNullable(splitAddress.get("address")).orElse("");
-//					String suburb = Optional.ofNullable(splitAddress.get("suburb")).orElse("");
-//					String state = Optional.ofNullable(splitAddress.get("state")).orElse("");
-//					String postcode = Optional.ofNullable(splitAddress.get("postcode")).orElse("");
-//					String country = Optional.ofNullable(splitAddress.get("country")).orElse("");
-//					return Arrays.asList(address, suburb, state, postcode, country);
-//				}).collect(toList());
-//
-//				//Add header
-//				splitAddressList.add(0, headerList);
-//
-//				List<List<String>> transposedAddressList = IntStream.range(0, splitAddressList.get(0).size())
-//						.mapToObj(i -> splitAddressList.stream().map(l -> l.get(i))
-//								.collect(toList())
-//						).collect(toList());
-//
-//				Map<String, List<String>> addressMap = transposedAddressList.stream()
-//						.collect(toMap(i -> i.get(0), u -> u));
-//
-//				long distinctPostCode = csvDataHeaderAsKey.getOrDefault("PostCode", singletonList("")).stream().distinct().count();
-//				BinaryOperator<List<String>> mergeFunction = (newValue, oldValue) -> distinctPostCode == 1 ? oldValue : newValue;
-//				csvDataHeaderAsKey = Stream.of(csvDataHeaderAsKey, addressMap).flatMap(map -> map.entrySet().stream())
-//						.collect(toMap(Map.Entry::getKey, Map.Entry::getValue, mergeFunction));
-//
 			Map<String, List<String>> standardHeaderMap = new LinkedHashMap<>();
 			
 			standardHeaderMap.put("OwnerID", singletonList("OwnerID"));
@@ -216,47 +136,33 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			standardHeaderMap.put("GST", singletonList("GST"));
 			standardHeaderMap.put("Debtor", singletonList("Debtor"));
 			
-			int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
+			int maxElementsInCols = csvDataHeaderAsKey.values().stream().map(List::size)
 					.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
 			
 			Map<String, List<String>> ownerDataMap = standardHeaderMap.keySet().stream().map(standardHeader -> {
-				
-				Predicate<String> csvHeaderMatchStandardHeader = csvHeader ->
-						stringContainsIgnoreCase(standardHeader, csvHeader, ",");
-				
-				Optional<String> matchHeaderKey = csvDataHeaderAsKey.keySet().stream()
-						.filter(csvHeaderMatchStandardHeader).findFirst();
-				
-				String standardKey = standardHeaderMap.get(standardHeader).get(0);
 				List<String> filledColMissingData = Stream
-						.of(standardHeaderMap.get(standardHeader), Collections.nCopies(maxMapValueSize - 1, ""))
+						.of(standardHeaderMap.get(standardHeader), Collections.nCopies(maxElementsInCols - 1, ""))
 						.flatMap(Collection::stream).collect(toList());
-				return matchHeaderKey
-						.map(key -> new AbstractMap.SimpleImmutableEntry<>(standardKey, csvDataHeaderAsKey.get(key)))
-						.orElseGet(() -> new AbstractMap.SimpleImmutableEntry<>(standardKey, filledColMissingData));
+				
+				//if header present in standard header list -> return data.
+				//else create new list include standard header and filled with empty data cell.
+				return csvDataHeaderAsKey.keySet().stream()
+						.filter(csvHeader -> stringContainsIgnoreCase(standardHeader, csvHeader, ",")).findFirst()
+						.map(key -> new SimpleImmutableEntry<>(standardHeaderMap.get(standardHeader).get(0), csvDataHeaderAsKey.get(key)))
+						.orElseGet(() -> new SimpleImmutableEntry<>(standardHeaderMap.get(standardHeader).get(0), filledColMissingData));
 			}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (m, n) -> m, LinkedHashMap::new));
 			
 			//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
-			List<Iterator<String>> iteratorDataList = new ArrayList<>(ownerDataMap.values()).stream()
-					.map(List::iterator).collect(toList());
+//			List<Iterator<String>> iteratorDataList = new ArrayList<>(ownerDataMap.values()).stream()
+//					.map(List::iterator).collect(toList());
 			
-			//filter line only contains " (quotes) and ,(comma)
-			Predicate<StringJoiner> validDataLine = line -> isNotEmpty(
-					line.toString().chars().distinct()
-							.mapToObj(c -> String.valueOf((char) c))
-							.collect(joining())
-							.replace("\"", "")
-							.replace(",", "")
-			);
-			
-			String allLiner = IntStream.range(0, maxMapValueSize)
-					.mapToObj(
-							n -> iteratorDataList.stream().filter(Iterator::hasNext)
-									.map(Iterator::next).collect(toList())
-					).map(l -> l.stream()
+			String allLiner = IntStream.range(0, maxElementsInCols)
+					.mapToObj(n -> ownerDataMap.values().stream().map(i -> i.get(n)).collect(Collectors.toList()))
+					.map(l -> l.stream()
 							.map(StringHelper::csvValue)
-							.collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge)
-					).filter(validDataLine)
+							.collect(() -> new StringJoiner(","), StringJoiner::add, StringJoiner::merge))
+					//ignore line only contains " (quotes) and ,(comma)
+					.filter(line -> isNotEmpty(line.toString().replace("\"", "").replace(",", "")))
 					.collect(() -> new StringJoiner(StringUtils.LF), StringJoiner::merge, StringJoiner::merge).toString();
 			
 			streamBuilder.append(allLiner);
@@ -267,7 +173,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		return null;
 	}
 	
-	private List<String> filterLinePrecedeHeader(List<String> csvData) {
+	private List<String> ignoreLinePrecedeHeader(List<String> csvData) {
 		//find line is header
 		Predicate<String> isLineContainHeader = line -> Stream.of("Name", "Address", "Phone", "Mobile", "Sire", "Dam")
 				.anyMatch(headerElement -> containsIgnoreCase(line, headerElement));
@@ -296,7 +202,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 //					.filter(dataRow)
 					.collect(toList());
 			
-			csvData = this.filterLinePrecedeHeader(csvData);
+			csvData = this.ignoreLinePrecedeHeader(csvData);
 			
 			List<String> finalCsvData = csvData;
 			String[][] data = csvData.stream().map(OnboardHelper::splitCsvLineByComma).toArray(String[][]::new);
@@ -389,7 +295,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 			standardHeaderMap.put("Nick Name, NickName", singletonList("Nickname"));
 			standardHeaderMap.put("Country", singletonList("Country"));
 			standardHeaderMap.put("Microchip", singletonList("Microchip"));
-			standardHeaderMap.put("Brand", singletonList("Brand"));
+			standardHeaderMap.put("Brand, Off Side", singletonList("Brand"));
 			
 			int maxMapValueSize = csvDataHeaderAsKey.values().stream().map(List::size)
 					.max(Comparator.comparingInt(i -> i)).orElseThrow(IllegalArgumentException::new);
@@ -409,9 +315,9 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 				return matchHeaderKey
 						.map(key -> {
 							csvDataHeaderAsKey.get(key).set(0, standardKey);
-							return new AbstractMap.SimpleImmutableEntry<>(standardKey, csvDataHeaderAsKey.get(key));
+							return new SimpleImmutableEntry<>(standardKey, csvDataHeaderAsKey.get(key));
 						})
-						.orElseGet(() -> new AbstractMap.SimpleImmutableEntry<>(standardKey, filledColMissingData));
+						.orElseGet(() -> new SimpleImmutableEntry<>(standardKey, filledColMissingData));
 			}).collect(toMap(Map.Entry::getKey, Map.Entry::getValue, (m, n) -> m, LinkedHashMap::new));
 			
 			//https://stackoverflow.com/questions/2941997/how-to-transpose-listlist
@@ -465,7 +371,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		//merge two columns has same title. Get second col if the first one is empty (Only header)
 //		List<String> mergeColData = isCsvColHasOnlyHeader(firstColData) ? secondColData : firstColData;
 		List<String> mergeColData = (!isCsvColHasOnlyHeader(firstColData) && firstColData.containsAll(secondColData)) ? firstColData : secondColData;
-		return new AbstractMap.SimpleImmutableEntry<>(index, mergeColData);
+		return new SimpleImmutableEntry<>(index, mergeColData);
 	}
 	
 	//=VLOOKUP(B9,Sheet1!$B$1:$M$566,12,FALSE)

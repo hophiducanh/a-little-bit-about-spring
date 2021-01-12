@@ -5,6 +5,8 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.commons.lang3.StringUtils.EMPTY;
+
 public class OnboardHelper {
 	
 	private static final String NULL_VALUE_AS_STRING = "NULL";
@@ -31,7 +33,7 @@ public class OnboardHelper {
 	}
 	
 	public static String getCsvCellValueAtIndex(String[] r, int index) {
-		return index != -1 ? readCsvRow(r, index) : org.apache.commons.lang3.StringUtils.EMPTY;
+		return index != -1 ? readCsvRow(r, index) : EMPTY;
 	}
 
 	public static String readCsvRow(String[] r, int index) {
