@@ -25,9 +25,13 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // https://mvnrepository.com/artifact/com.h2database/h2
+    testCompile group: 'com.h2database', name: 'h2', version: '1.3.148'
+
 
 //    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 
+    //when we define the spring-boot-starter-web dependency in our classpath, Spring boot auto-configures Tomcat and Spring MVC
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
     implementation 'org.springframework.boot:spring-boot-starter-security'
@@ -36,6 +40,7 @@ dependencies {
     //developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+    compile group: 'org.apache.tomcat', name: 'tomcat-jdbc', version: '9.0.12'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
@@ -164,5 +169,31 @@ dependencies {
 
     // https://mvnrepository.com/artifact/commons-validator/commons-validator
     compile group: 'commons-validator', name: 'commons-validator', version: '1.7'
+
+    // To work with @Properties source
+    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-configuration-processor
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+
+    // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3
+    compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.930'
+
+    //https://search.maven.org/classic/#artifactdetails%7Cjavax.json.bind%7Cjavax.json.bind-api%7C1.0%7Cjar
+    compile 'javax.json.bind:javax.json.bind-api:1.0'
+
+    //https://search.maven.org/classic/#artifactdetails%7Corg.eclipse%7Cyasson%7C2.0.1%7Cjar
+    compile 'org.eclipse:yasson:1.0.1'
+    compile 'org.glassfish:javax.json:1.1.2'
+    compile 'org.apache.johnzon:johnzon-jsonb:1.1.4'
+    // https://mvnrepository.com/artifact/org.apache.geronimo.specs/geronimo-json_1.1_spec
+    compile group: 'org.apache.geronimo.specs', name: 'geronimo-json_1.1_spec', version: '1.0'
+    // https://mvnrepository.com/artifact/jakarta.json.bind/jakarta.json.bind-api
+    compile group: 'jakarta.json.bind', name: 'jakarta.json.bind-api', version: '2.0.0'
+
+    // https://mvnrepository.com/artifact/org.hibernate/hibernate-core
+    compile group: 'org.hibernate', name: 'hibernate-core', version: '5.4.10.Final'
+
+    // https://mvnrepository.com/artifact/javax.persistence/javax.persistence-api
+    compile group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
+
 }
 
