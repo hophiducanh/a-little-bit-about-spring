@@ -22,11 +22,11 @@ public class NoteControllerV2 {
 	private NoteServiceV2 noteServiceV2;
 	
 	@PostMapping(value = "/owner/v2")
-	public final ResponseEntity<Object> formatOwnerV2(@RequestPart MultipartFile ownerFile,
+ 	public final ResponseEntity<Object> formatOwnerV2(@RequestPart MultipartFile file,
 	                                                  @RequestParam String dirName) {
 		Object result = null;
 		try {
-			result = noteServiceV2.formatOwnerV2(ownerFile, dirName);
+			result = noteServiceV2.formatOwnerV2(file, dirName);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -35,11 +35,11 @@ public class NoteControllerV2 {
 	}
 	
 	@PostMapping(value = "/horse/v2")
-	public final ResponseEntity<Object> formatHorseV2(@RequestPart MultipartFile horseFile,
+	public final ResponseEntity<Object> formatHorseV2(@RequestPart MultipartFile file,
 	                                                  @RequestParam String dirName) {
 		Object result = null;
 		try {
-			result = noteServiceV2.formatHorseV2(horseFile, dirName);
+			result = noteServiceV2.formatHorseV2(file, dirName);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

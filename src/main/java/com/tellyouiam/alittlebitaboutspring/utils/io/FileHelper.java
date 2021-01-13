@@ -16,7 +16,7 @@ public class FileHelper {
 	private static final Logger logger = LoggerFactory.getLogger(FileHelper.class);
 	
 	private static final String WINDOW_OUTPUT_FILE_PATH = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\";
-	private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Desktop/data/";
+	private static final String UNIX_OUTPUT_FILE_PATH = "/home/logbasex/Documents/prism-data/";
 	
 	public static void writeDataToFile(String filepath, byte[] data) {
 		try {
