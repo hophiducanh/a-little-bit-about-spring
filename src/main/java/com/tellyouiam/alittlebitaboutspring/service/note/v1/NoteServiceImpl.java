@@ -1287,7 +1287,7 @@
 			
 			for (MultipartFile ownershipFile: ownershipFiles) {
 				try {
-					List<String> csvData = getCsvData(ownershipFile);
+					List<String> csvData = getCsvDataFromXlsFile(ownershipFile);
 					String allLines = String.join("\n", csvData);
 			
 					// get file exportedDate.
@@ -1859,7 +1859,7 @@
 						}
 					}
 			
-				} catch (IOException | CustomException e) {
+				} catch (CustomException e) {
 					e.printStackTrace();
 				}
 			}

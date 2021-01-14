@@ -33,6 +33,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AMERICAN_CUSTOM_DATE_FORMAT;
 import static com.tellyouiam.alittlebitaboutspring.service.note.consts.NoteConst.AUSTRALIA_CUSTOM_DATE_FORMAT;
@@ -67,13 +68,18 @@ public class NoteHelper {
 		try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
 			
 			Sheet sheet = workbook.getSheetAt(0);
+			int maxColsCount = StreamSupport.stream(sheet.spliterator(), false)
+					.map(Row::getLastCellNum)
+					.max(Comparator.comparingInt(i -> i))
+					.get();
+			
 			for (Row row : sheet) {
 				StringBuilder builder = new StringBuilder();
-				for(int i=0; i < row.getLastCellNum(); i++) {
+				for(int i = 0; i < maxColsCount; i++) {
 					// If the cell is missing from the file, generate a blank one
 					Cell cell = row.getCell(i, Row.MissingCellPolicy.RETURN_BLANK_AS_NULL);
 					String value = formatter.formatCellValue(cell);
-					builder.append(StringEscapeUtils.escapeCsv(value)).append(",");
+					builder.append(StringEscapeUtils.escapeCsv(value)).append(",")  ;
 				}
 				list.add(builder.toString());
 			}
