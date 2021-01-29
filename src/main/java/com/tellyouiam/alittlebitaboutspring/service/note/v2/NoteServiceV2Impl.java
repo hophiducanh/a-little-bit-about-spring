@@ -3,11 +3,19 @@ package com.tellyouiam.alittlebitaboutspring.service.note.v2;
 import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper;
 import com.tellyouiam.alittlebitaboutspring.utils.string.StringHelper;
+import lombok.Data;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.Past;
+import javax.validation.constraints.Size;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -338,7 +346,7 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 	}
 	
 	//format this file https://drive.google.com/drive/u/1/folders/1Sy3FR_Lej8grsCJexysjDSUMvyT0moSk
-	public static void main(String[] args) throws IOException {
+	public static void main1(String[] args) throws IOException {
 		BufferedReader reader = new BufferedReader(new FileReader(new File("C:\\Users\\conta\\OneDrive\\Desktop\\data\\08 Oct _ Data\\Ownerships.csv")));
 		List<String> data = reader.lines().filter(i -> !i.isEmpty()).collect(toList());
 		
@@ -467,5 +475,48 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		
 		String path = "C:\\Users\\conta\\OneDrive\\Desktop\\data\\08 Oct _ Data\\submit\\formatted-ownership.csv";
 		Files.write(Paths.get(path), dataBuilder.toString().getBytes());
+	}
+	
+	//https://www.baeldung.com/spring-validation-message-interpolation
+	//https://www.baeldung.com/javax-validation
+	public static void main(String[] args) {
+		@Data
+		class Customer {
+			private String name;
+			private List<@NotBlank(message="Address must not be blank") String> addresses;
+			private LocalDate dateOfBirth;
+			
+			public Optional<@Past LocalDate> getDateOfBirth() {
+				return Optional.of(dateOfBirth);
+			}
+			
+			@Size(
+					min = 10,
+					max = 14,
+					message = "The author email '${validatedValue}' must be between {min} and {max} characters long"
+			)
+			private String authorEmail;
+		}
+		
+		List<@NotEmpty String> list = Collections.singletonList("");
+		
+//		List<@NotBlank(message="Address must not be blank") String> addresses = new ArrayList<>();
+		Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+		Customer customer = new Customer();
+		customer.setName("John");
+		customer.setDateOfBirth(LocalDate.now());
+		customer.setAuthorEmail("me@me");
+		
+		customer.setAddresses(Collections.singletonList(" "));
+		Set<ConstraintViolation<Customer>> violations =
+				validator.validate(customer);
+		
+		//https://www.baeldung.com/javax-validation
+		System.out.println(">>>>>>>>>>>>>>>>>>> SIZE: " + violations.size());
+		violations.forEach(i -> System.out.println(i.getMessage()));
+		Customer rootBean = violations.iterator()
+				.next()
+				.getRootBean();
+		System.out.println(customer.toString());
 	}
 }
