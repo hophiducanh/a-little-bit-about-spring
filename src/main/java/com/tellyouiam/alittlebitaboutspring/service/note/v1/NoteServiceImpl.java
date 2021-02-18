@@ -31,6 +31,7 @@
 	import org.springframework.web.multipart.MultipartFile;
 	import org.springframework.web.util.UriComponentsBuilder;
 	
+	import javax.validation.constraints.NotBlank;
 	import java.io.*;
 	import java.net.URISyntaxException;
 	import java.nio.charset.StandardCharsets;
@@ -38,20 +39,7 @@
 	import java.nio.file.Paths;
 	import java.time.LocalDate;
 	import java.time.format.DateTimeFormatter;
-	import java.util.ArrayList;
-	import java.util.Arrays;
-	import java.util.Collections;
-	import java.util.Comparator;
-	import java.util.HashMap;
-	import java.util.HashSet;
-	import java.util.Iterator;
-	import java.util.LinkedHashMap;
-	import java.util.List;
-	import java.util.Map;
-	import java.util.NoSuchElementException;
-	import java.util.Set;
-	import java.util.TreeMap;
-	import java.util.TreeSet;
+	import java.util.*;
 	import java.util.function.Predicate;
 	import java.util.regex.MatchResult;
 	import java.util.regex.Matcher;
@@ -1287,7 +1275,10 @@
 			
 			for (MultipartFile ownershipFile: ownershipFiles) {
 				try {
-					List<String> csvData = getCsvDataFromXlsFile(ownershipFile);
+					List<String> csvData = Objects.equals(FilenameUtils.getExtension(ownershipFile.getOriginalFilename()), "xlsx")
+							? getCsvDataFromXlsFile(ownershipFile)
+							: getCsvData(ownershipFile);
+					
 					String allLines = String.join("\n", csvData);
 			
 					// get file exportedDate.
@@ -1859,7 +1850,7 @@
 						}
 					}
 			
-				} catch (CustomException e) {
+				} catch (CustomException | IOException e) {
 					e.printStackTrace();
 				}
 			}
@@ -1991,7 +1982,10 @@
 						
 						boolean isAustraliaFormat = isAustraliaFormat(csvData, fromDateIndex, "ownership");
 						
+						int i = 0;
 						for (String line : csvData) {
+							i++;
+							System.out.println(i);
 							String[] r = readCsvLine(line);
 							
 							String horseId = getCsvCellValueAtIndex(r, horseIdIndex);
@@ -2000,7 +1994,12 @@
 								horseName = FilenameUtils.getBaseName(file.getOriginalFilename());
 							}
 							String ownerId = getCsvCellValueAtIndex(r, ownerIdIndex);
-							String commsEmail = getCsvCellValueAtIndex(r, commsEmailIndex);
+							String commsEmail = null;
+							try {
+								commsEmail = getCsvCellValueAtIndex(r, commsEmailIndex);
+							} catch (Exception e) {
+								e.printStackTrace();
+							}
 							String financeEmail = getCsvCellValueAtIndex(r, financeEmailIndex);
 							String firstName = getCsvCellValueAtIndex(r, firstNameIndex);
 							String lastName = getCsvCellValueAtIndex(r, lastNameIndex);

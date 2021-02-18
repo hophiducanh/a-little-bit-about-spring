@@ -165,7 +165,10 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		standardHeaderMap.put("Debtor", singletonList("Debtor"));
 		
 		//-------------------------------------------------------
-		List<String> csvData = getCsvDataFromXlsFile(file);
+		List<String> csvData = null;
+		if (file.getOriginalFilename() != null) {
+			csvData = file.getOriginalFilename().endsWith(".csv") ? getCsvData(file) : getCsvDataFromXlsFile(file);
+		}
 		StringBuilder streamBuilder = new StringBuilder();
 		
 		if (isNotEmpty(csvData)) {
@@ -235,7 +238,11 @@ public class NoteServiceV2Impl implements NoteServiceV2 {
 		standardHeaderMap.put("Microchip",                                  singletonList("Microchip"));           //17
 		standardHeaderMap.put("Brand, Off Side",                            singletonList("Brand"));               //18
 		
-		List<String> csvData = getCsvDataFromXlsFile(file);
+		List<String> csvData = null;
+		if (file.getOriginalFilename() != null) {
+			csvData = file.getOriginalFilename().endsWith(".csv") ? getCsvData(file) : getCsvDataFromXlsFile(file);
+		}
+		
 		StringBuilder streamBuilder = new StringBuilder();
 		
 		if (!isEmpty(csvData)) {
