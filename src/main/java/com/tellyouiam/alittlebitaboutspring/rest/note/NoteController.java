@@ -9,6 +9,7 @@ import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -69,7 +70,7 @@ public class NoteController {
 		List<Note> notes = noteRepository.findByCode(null);
 		System.out.println(notes.size());
 		noteRepository.save(note);
-		return new ResponseEntity<Object>(note, new HttpHeaders(), HttpStatus.OK);
+		return new ResponseEntity<>(note, new HttpHeaders(), HttpStatus.OK);
 	}
 	
 	@DeleteMapping
@@ -194,6 +195,13 @@ public class NoteController {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+		return new ResponseEntity<>(result, HttpStatus.OK);
+	}
+	
+	@PostMapping(value = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public final ResponseEntity<Object> file(@RequestPart MultipartFile file) {
+		
+		Object result = file.getName();
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
 	

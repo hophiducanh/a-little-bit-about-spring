@@ -1,6 +1,8 @@
 package com.tellyouiam.alittlebitaboutspring.entity.note;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.Column;
@@ -21,10 +23,10 @@ import java.util.Date;
  * @since : 02/10/2019, Wed
  **/
 @Entity
-@Table(name = "notes")
+@Table(name = "note")
 @EntityListeners(AuditingEntityListener.class)
-//@JsonIgnoreProperties(value = {"createdAt", "updatedAt"},
-//	allowGetters = true)
+@JsonIgnoreProperties(value = {"createdAt", "updatedAt"},
+	allowGetters = true)
 public class Note implements Serializable {
 
 	@Id
@@ -40,14 +42,14 @@ public class Note implements Serializable {
 	@NotBlank
 	private String content;
 
-//	@Column(nullable = false, updatable = false)
+	@Column(name = "create_at", nullable = false, updatable = false)
 	@Temporal(TemporalType.TIMESTAMP)
 	@CreatedDate
 	private Date createdAt;
 
-	@Column(nullable = false)
+	@Column(name = "update_at", nullable = false)
 	@Temporal(TemporalType.TIMESTAMP)
-//	@LastModifiedDate
+	@LastModifiedDate
 	private Date updatedAt;
 	
 	@Column(name = "test_date")

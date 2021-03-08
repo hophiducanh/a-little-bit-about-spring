@@ -10,6 +10,7 @@
 	import com.tellyouiam.alittlebitaboutspring.utils.datetime.DateTimeHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
 	import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
+	import lombok.val;
 	import me.xdrop.fuzzywuzzy.FuzzySearch;
 	import org.apache.commons.io.FilenameUtils;
 	import org.apache.commons.lang3.ArrayUtils;
@@ -2299,7 +2300,7 @@
 		}
 		
 		
-		public static void main(String[] args) throws IOException {
+		public static void main1(String[] args) throws IOException {
 			System.out.println(System.getProperty("line.separator"));
 		
 			//account: logbasex
@@ -2345,4 +2346,23 @@
 //			converter.setObjectMapper(createObjectMapper());
 //			return converter;
 //		}
+		
+		public static void main(String[] args) throws IOException {
+			List<String> data = getCsvData(new BufferedReader(new FileReader("/home/logbasex/Documents/prism-data/POB-774/submit/formatted-ownership.csv")), true);
+			StringBuilder builder = new StringBuilder();
+			for (String line : data) {
+				List<String> arr = customSplitSpecific(line);
+				String horseName = arr.get(1);
+				horseName = horseName.replaceAll("\"", "");
+				List<String> names = Arrays.asList(horseName.split(","));
+				if (names.size() == 1) {
+					builder.append(line).append("\n");
+				} else if (names.size() > 1) {
+					for (int i = 0; i < names.size(); i++) {
+						builder.append(line.replace(horseName, names.get(i).trim())).append("\n");
+					}
+				}
+			}
+			Files.write(Paths.get("./ownership.csv"), Collections.singletonList(builder));
+		}
 	}

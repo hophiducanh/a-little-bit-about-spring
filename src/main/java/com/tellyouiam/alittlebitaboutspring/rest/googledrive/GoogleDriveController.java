@@ -77,21 +77,21 @@ public class GoogleDriveController {
 				.setDataStoreFactory(new FileDataStoreFactory(credentialsFolder.getFile())).build();
 	}
 	
-	@GetMapping(value = { "/" })
-	public String showHomePage() throws Exception {
-		boolean isUserAuthenticated = false;
-		
-		Credential credential = flow.loadCredential(USER_IDENTIFIER_KEY);
-		if (credential != null) {
-			boolean tokenValid = credential.refreshToken();
-			if (tokenValid) {
-				isUserAuthenticated = true;
-			}
-		}
-		
-		return isUserAuthenticated ? "dashboard.html" : "index.html";
-	}
-	
+//	@GetMapping(value = { "/" })
+//	public String showHomePage() throws Exception {
+//		boolean isUserAuthenticated = false;
+//
+//		Credential credential = flow.loadCredential(USER_IDENTIFIER_KEY);
+//		if (credential != null) {
+//			boolean tokenValid = credential.refreshToken();
+//			if (tokenValid) {
+//				isUserAuthenticated = true;
+//			}
+//		}
+//
+//		return isUserAuthenticated ? "dashboard.html" : "index.html";
+//	}
+//
 	@GetMapping(value = { "/googlesignin" })
 	public void doGoogleSignIn(HttpServletResponse response) throws Exception {
 		GoogleAuthorizationCodeRequestUrl url = flow.newAuthorizationUrl();

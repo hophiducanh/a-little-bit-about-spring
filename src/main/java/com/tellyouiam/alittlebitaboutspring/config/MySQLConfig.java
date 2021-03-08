@@ -56,6 +56,7 @@ public class MySQLConfig {
 		
 		//Specifies the action that is invoked to the database when the Hibernate
 		//SessionFactory is created or closed.
+		jpaProperties.put("spring.jpa.generate-ddl", env.getRequiredProperty("spring.jpa.generate-ddl"));
 		jpaProperties.put("spring.jpa.hibernate.ddl-auto",
 				env.getRequiredProperty("spring.jpa.hibernate.ddl-auto")
 		);
