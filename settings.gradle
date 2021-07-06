@@ -4,3 +4,6 @@ pluginManagement {
     }
 }
 rootProject.name = 'a-little-bit-about-spring'
+include 'spring-basic'
+include 'spring-sqs-delay-queue'
+

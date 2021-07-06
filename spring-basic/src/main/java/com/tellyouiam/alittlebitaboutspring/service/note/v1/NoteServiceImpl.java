@@ -10,7 +10,7 @@
 	import com.tellyouiam.alittlebitaboutspring.utils.datetime.DateTimeHelper;
 	import com.tellyouiam.alittlebitaboutspring.utils.error.ErrorInfo;
 	import com.tellyouiam.alittlebitaboutspring.utils.io.FileHelper;
-	import lombok.val;
+	import com.tellyouiam.alittlebitaboutspring.utils.string.OnboardHelper;
 	import me.xdrop.fuzzywuzzy.FuzzySearch;
 	import org.apache.commons.io.FilenameUtils;
 	import org.apache.commons.lang3.ArrayUtils;
@@ -32,7 +32,6 @@
 	import org.springframework.web.multipart.MultipartFile;
 	import org.springframework.web.util.UriComponentsBuilder;
 	
-	import javax.validation.constraints.NotBlank;
 	import java.io.*;
 	import java.net.URISyntaxException;
 	import java.nio.charset.StandardCharsets;
@@ -138,11 +137,23 @@
 		
 		private static final LevenshteinDistance distance = new LevenshteinDistance();
 		
+		private List<String> ignoreLinePrecedeHeader(List<String> csvData) {
+			//find line is header
+			Predicate<String> isLineContainHeader = line -> Stream.of("Name", "Address", "Phone", "Mobile", "Sire", "Dam")
+					.anyMatch(headerElement -> containsIgnoreCase(line, headerElement));
+			
+			String headerLine = csvData.stream().filter(isLineContainHeader).findFirst().orElse(EMPTY);
+			int headerLineNum = csvData.indexOf(headerLine);
+			csvData = csvData.stream().skip(headerLineNum).collect(toList());
+			return csvData;
+		}
+		
 		@Override
 		public Object automateImportOwner(MultipartFile ownerFile, String dirName) throws CustomException {
 			try {
-				List<String> csvData = getCsvDataFromXlsFile(ownerFile);
-				List<String> csvData1 = getCsvData(ownerFile);
+//				List<String> csvData = getCsvDataFromXlsFile(ownerFile);
+				List<String> csvData = getCsvData(ownerFile);
+				csvData = this.ignoreLinePrecedeHeader(csvData);
 				List<String> preparedData = new ArrayList<>();
 				StringBuilder builder = new StringBuilder();
 				StringBuilder finalBuilder = new StringBuilder();
@@ -197,43 +208,42 @@
 							.filter(StringUtils::isNotEmpty)
 							.filter(isEmptyRowCsv.negate())
 							.collect(toList());
-					
+					int i = 0;
 					for (String line : csvData) {
 						if (StringUtils.isEmpty(line)) continue;
-						
-						String[] r = readCsvLine(line);
+						i++;
+						String[] r = OnboardHelper.splitCsvLineByComma(line);
 						
 						//rows will be ignored like:
 						//,,,,
 						//162 Records,,,,
 						
-						StringBuilder ignoreRowBuilder = new StringBuilder();
-						for (String s : r) {
-							ignoreRowBuilder.append(s);
-						}
-						if (StringUtils.isEmpty(ignoreRowBuilder.toString())) continue;
-						
-						if (StringUtils.isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
-							logger.info("\n*******************Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
-							continue;
-						}
-						
+//						StringBuilder ignoreRowBuilder = new StringBuilder();
+//						for (String s : r) {
+//							ignoreRowBuilder.append(s);
+//						}
+//						if (StringUtils.isEmpty(ignoreRowBuilder.toString())) continue;
+//
+//						if (StringUtils.isEmpty(ignoreRowBuilder.toString().replaceAll(HORSE_RECORDS_PATTERN, ""))) {
+//							logger.info("\n*******************Ignored Horse Records Line: {}", ignoreRowBuilder.toString());
+//							continue;
+//						}
+						System.out.println(i);
 						String ownerId = getCsvCellValueAtIndex(r, ownerIdIndex);
-						String email = getCsvCellValueAtIndex(r, emailIndex);
-						email = email.replace(",", ";");
+						String email = EMPTY;
+						if (r.length > emailIndex) {
+							email = getCsvCellValueAtIndex(r, emailIndex);
+							email = email.replace(",", ";");
+						}
 						String financeEmail = getCsvCellValueAtIndex(r, financeEmailIndex);
 						String firstName = getCsvCellValueAtIndex(r, firstNameIndex);
 						String lastName = getCsvCellValueAtIndex(r, lastNameIndex);
 						String displayName = getCsvCellValueAtIndex(r, displayNameIndex);
 						String type = getCsvCellValueAtIndex(r, typeIndex);
-						
 						String mobile = getCsvCellValueAtIndex(r, mobileIndex);
-						
 						String phone = getCsvCellValueAtIndex(r, phoneIndex);
-						
 						String fax = getCsvCellValueAtIndex(r, faxIndex);
 						String address = getCsvCellValueAtIndex(r, addressIndex);
-						
 						String city = getCsvCellValueAtIndex(r, cityIndex);
 						String state = getCsvCellValueAtIndex(r, stateIndex);
 						String postCode = getPostcode(getCsvCellValueAtIndex(r, postCodeIndex));
@@ -702,40 +712,40 @@
 //			}
 			
 			if (isNotEmpty(address) && isNotEmpty(displayName)){
-				if (isSameAddessSameName(address, address1, displayName, displayName1) || this.isOnlyAddressAndDisplayName(address1, emailCount, phoneCount, mobileCount, displayName1)) {
+				if (isSameAddressSameName(address, address1, displayName, displayName1) || this.isOnlyAddressAndDisplayName(address1, emailCount, phoneCount, mobileCount, displayName1)) {
 					++ addressCount;
 					
-					if (isSameAddessSameName(address, address2, displayName, displayName2) || this.isOnlyAddressAndDisplayName(address2, emailCount, phoneCount, mobileCount, displayName2)) {
+					if (isSameAddressSameName(address, address2, displayName, displayName2) || this.isOnlyAddressAndDisplayName(address2, emailCount, phoneCount, mobileCount, displayName2)) {
 						++ addressCount;
 						
-						if (isSameAddessSameName(address, address3, displayName, displayName3)  || this.isOnlyAddressAndDisplayName(address3, emailCount, phoneCount, mobileCount, displayName3)) {
+						if (isSameAddressSameName(address, address3, displayName, displayName3)  || this.isOnlyAddressAndDisplayName(address3, emailCount, phoneCount, mobileCount, displayName3)) {
 							++ addressCount;
 							
-							if (isSameAddessSameName(address, address4, displayName, displayName4)  || this.isOnlyAddressAndDisplayName(address4, emailCount, phoneCount, mobileCount, displayName4)) {
+							if (isSameAddressSameName(address, address4, displayName, displayName4)  || this.isOnlyAddressAndDisplayName(address4, emailCount, phoneCount, mobileCount, displayName4)) {
 								++ addressCount;
 								
-								if (isSameAddessSameName(address, address5, displayName, displayName5)  || this.isOnlyAddressAndDisplayName(address5, emailCount, phoneCount, mobileCount, displayName5)) {
+								if (isSameAddressSameName(address, address5, displayName, displayName5)  || this.isOnlyAddressAndDisplayName(address5, emailCount, phoneCount, mobileCount, displayName5)) {
 									++ addressCount;
 									
-									if (isSameAddessSameName(address, address6, displayName, displayName6)  || this.isOnlyAddressAndDisplayName(address6, emailCount, phoneCount, mobileCount, displayName6)) {
+									if (isSameAddressSameName(address, address6, displayName, displayName6)  || this.isOnlyAddressAndDisplayName(address6, emailCount, phoneCount, mobileCount, displayName6)) {
 										++ addressCount;
 										
-										if (isSameAddessSameName(address, address7, displayName, displayName7)  || this.isOnlyAddressAndDisplayName(address7, emailCount, phoneCount, mobileCount, displayName7)) {
+										if (isSameAddressSameName(address, address7, displayName, displayName7)  || this.isOnlyAddressAndDisplayName(address7, emailCount, phoneCount, mobileCount, displayName7)) {
 											++ addressCount;
 											
-											if (isSameAddessSameName(address, address8, displayName, displayName8)  || this.isOnlyAddressAndDisplayName(address8, emailCount, phoneCount, mobileCount, displayName8)) {
+											if (isSameAddressSameName(address, address8, displayName, displayName8)  || this.isOnlyAddressAndDisplayName(address8, emailCount, phoneCount, mobileCount, displayName8)) {
 												++ addressCount;
 												
-												if (isSameAddessSameName(address, address9, displayName, displayName9)  || this.isOnlyAddressAndDisplayName(address9, emailCount, phoneCount, mobileCount, displayName9)) {
+												if (isSameAddressSameName(address, address9, displayName, displayName9)  || this.isOnlyAddressAndDisplayName(address9, emailCount, phoneCount, mobileCount, displayName9)) {
 													++ addressCount;
 													
-													if (isSameAddessSameName(address, address10, displayName, displayName10)  || this.isOnlyAddressAndDisplayName(address10, emailCount, phoneCount, mobileCount, displayName10)) {
+													if (isSameAddressSameName(address, address10, displayName, displayName10)  || this.isOnlyAddressAndDisplayName(address10, emailCount, phoneCount, mobileCount, displayName10)) {
 														++ addressCount;
 														
-														if (isSameAddessSameName(address, address11, displayName, displayName11)  || this.isOnlyAddressAndDisplayName(address11, emailCount, phoneCount, mobileCount, displayName11)) {
+														if (isSameAddressSameName(address, address11, displayName, displayName11)  || this.isOnlyAddressAndDisplayName(address11, emailCount, phoneCount, mobileCount, displayName11)) {
 															++ addressCount;
 															
-															if (isSameAddessSameName(address, address12, displayName, displayName12)  || this.isOnlyAddressAndDisplayName(address12, emailCount, phoneCount, mobileCount, displayName12)) {
+															if (isSameAddressSameName(address, address12, displayName, displayName12)  || this.isOnlyAddressAndDisplayName(address12, emailCount, phoneCount, mobileCount, displayName12)) {
 																++ addressCount;
 															}
 														}
@@ -753,13 +763,13 @@
 			return addressCount;
 		}
 		
-		private boolean isSameAddessSameName(String address, String address1, String displayName, String displayName1) {
+		private boolean isSameAddressSameName(String address, String address1, String displayName, String displayName1) {
 			return FuzzySearch.tokenSetRatio(address, address1) >= 95 && (displayName1.isEmpty() || displayName1.equals(displayName));
 		}
 		
-		private boolean isOnlyAddressAndDisplayName(String address1, int emailCount, int phoneCount, int mobileCount,
-		                                            String displayName1) {
-			return emailCount == 1 &&  phoneCount == 1 && mobileCount == 1 && !address1.isEmpty() && displayName1.isEmpty();
+		private boolean isOnlyAddressAndDisplayName(String address, int emailCount, int phoneCount, int mobileCount,
+		                                            String displayName) {
+			return emailCount == 1 &&  phoneCount == 1 && mobileCount == 1 && !address.isEmpty() && displayName.isEmpty();
 		}
 		
 		private Object importHorseFromMiStable(MultipartFile horseFile, String dirName) {
@@ -2149,6 +2159,7 @@
 		}
 		
 		//https://stackoverflow.com/questions/27880505/lambda-expression-in-iterable-implementation
+		//https://stackoverflow.com/questions/6020384/create-array-of-regex-matches/46859130
 		private static Iterable<MatchResult> allMatches(final Pattern p, final CharSequence input) {
 			return () -> new Iterator<MatchResult>() {
 				// Use a matcher internally.

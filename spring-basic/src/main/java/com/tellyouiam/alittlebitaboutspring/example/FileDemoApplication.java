@@ -1,4 +1,4 @@
-//package com.tellyouiam.alittlebitaboutspring.example;
+package com.tellyouiam.alittlebitaboutspring.example;//package com.tellyouiam.alittlebitaboutspring.example;
 //
 //import com.tellyouiam.alittlebitaboutspring.dto.filestorage.FileStorageProperties;
 //import org.springframework.boot.SpringApplication;

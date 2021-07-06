@@ -105,7 +105,7 @@ public class ImageService {
 		Connection.Response resultImageResponse = Jsoup.connect("https://www.prism.horse/assets/images/white-logo@2x.png")
 				.ignoreContentType(true).execute();
 
-		FileOutputStream out = (new FileOutputStream(new java.io.File("image url to save")));
+		FileOutputStream out = (new FileOutputStream(new File("image url to save")));
 		out.write(resultImageResponse.bodyAsBytes());  // resultImageResponse.body() is where the image's contents are.
 		out.close();
 	}
