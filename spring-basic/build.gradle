@@ -31,7 +31,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     // https://mvnrepository.com/artifact/com.h2database/h2
-    testCompile group: 'com.h2database', name: 'h2', version: '1.3.148'
+    implementation group: 'com.h2database', name: 'h2', version: '1.3.148'
 
 
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
@@ -45,33 +45,33 @@ dependencies {
     //developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
-    compile group: 'org.apache.tomcat', name: 'tomcat-jdbc', version: '9.0.12'
+    implementation group: 'org.apache.tomcat', name: 'tomcat-jdbc', version: '9.0.12'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 
     //implementation 'org.springframework.boot:spring-boot-configuration-processor'
 
-    compile group: 'mysql', name: 'mysql-connector-java', version: '8.0.17'
+    implementation group: 'mysql', name: 'mysql-connector-java', version: '8.0.17'
 
     implementation 'org.jsoup:jsoup:1.12.1'
 
     implementation 'com.opencsv:opencsv:4.6'
 
-    compile group: 'org.springframework', name: 'spring-test', version: '3.1.1.RELEASE'
+    implementation group: 'org.springframework', name: 'spring-test', version: '3.1.1.RELEASE'
 
-    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
+    implementation group: 'org.slf4j', name: 'slf4j-api', version: '1.7.25'
 
     // https://mvnrepository.com/artifact/org.apache.poi/poi
-    compile group: 'org.apache.poi', name: 'poi', version: '3.9'
+    implementation group: 'org.apache.poi', name: 'poi', version: '3.9'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'javax.cache:cache-api:1.1.0'
-    compile group: 'com.google.apis', name: 'google-api-services-drive', version: 'v3-rev191-1.25.0'
+    implementation group: 'com.google.apis', name: 'google-api-services-drive', version: 'v3-rev191-1.25.0'
 
     // https://mvnrepository.com/artifact/org.webjars/bootstrap
-    compile group: 'org.webjars', name: 'bootstrap', version: '4.4.1'
+    implementation group: 'org.webjars', name: 'bootstrap', version: '4.4.1'
 
     // https://mvnrepository.com/artifact/com.opencsv/opencsv
-    compile group: 'com.opencsv', name: 'opencsv', version: '4.5'
+    implementation group: 'com.opencsv', name: 'opencsv', version: '4.5'
 
     //https://projectlombok.org/setup/gradle
     compileOnly 'org.projectlombok:lombok:1.18.12'
@@ -81,45 +81,45 @@ dependencies {
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.12'
 
     // https://mvnrepository.com/artifact/org.apache.poi/poi
-    compile group: 'org.apache.poi', name: 'poi', version: '4.1.0'
+    implementation group: 'org.apache.poi', name: 'poi', version: '4.1.0'
 
     // https://mvnrepository.com/artifact/org.apache.poi/poi-ooxml
-    compile group: 'org.apache.poi', name: 'poi-ooxml', version: '4.1.0'
+    implementation group: 'org.apache.poi', name: 'poi-ooxml', version: '4.1.0'
 
     //annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
 
     // https://mvnrepository.com/artifact/org.apache.commons/commons-text
-    compile group: 'org.apache.commons', name: 'commons-text', version: '1.8'
+    implementation group: 'org.apache.commons', name: 'commons-text', version: '1.8'
 
     // OCR
     // https://mvnrepository.com/artifact/net.sourceforge.tess4j/tess4j
-    compile group: 'net.sourceforge.tess4j', name: 'tess4j', version: '4.5.1'
+    implementation group: 'net.sourceforge.tess4j', name: 'tess4j', version: '4.5.1'
 
     // pdf
     // https://mvnrepository.com/artifact/org.apache.pdfbox/pdfbox
-    compile group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.19'
+    implementation group: 'org.apache.pdfbox', name: 'pdfbox', version: '2.0.19'
     // https://mvnrepository.com/artifact/com.itextpdf/itextpdf
-    compile group: 'com.itextpdf', name: 'itextpdf', version: '5.5.13'
+    implementation group: 'com.itextpdf', name: 'itextpdf', version: '5.5.13'
     // https://mvnrepository.com/artifact/com.itextpdf.tool/xmlworker
-    compile group: 'com.itextpdf.tool', name: 'xmlworker', version: '5.5.13'
+    implementation group: 'com.itextpdf.tool', name: 'xmlworker', version: '5.5.13'
 
     // https://mvnrepository.com/artifact/io.github.jonathanlink/PDFLayoutTextStripper
-    compile group: 'io.github.jonathanlink', name: 'PDFLayoutTextStripper', version: '2.2.3'
+    implementation group: 'io.github.jonathanlink', name: 'PDFLayoutTextStripper', version: '2.2.3'
 
     // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine
-    testCompile group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.6.2'
+    implementation group: 'org.junit.jupiter', name: 'junit-jupiter-engine', version: '5.6.2'
 
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-actuator
-    compile group: 'org.springframework.boot', name: 'spring-boot-starter-actuator', version: '2.3.1.RELEASE'
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-actuator', version: '2.3.1.RELEASE'
 
     // https://mvnrepository.com/artifact/me.xdrop/fuzzywuzzy
-    compile group: 'me.xdrop', name: 'fuzzywuzzy', version: '1.3.1'
+    implementation group: 'me.xdrop', name: 'fuzzywuzzy', version: '1.3.1'
 
     // https://mvnrepository.com/artifact/org.freemarker/freemarker
-    compile group: 'org.freemarker', name: 'freemarker', version: '2.3.30'
+    implementation group: 'org.freemarker', name: 'freemarker', version: '2.3.30'
 
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-mail
-    compile group: 'org.springframework.boot', name: 'spring-boot-starter-mail', version: '2.2.6.RELEASE'
+    implementation group: 'org.springframework.boot', name: 'spring-boot-starter-mail', version: '2.2.6.RELEASE'
 
     // https://mvnrepository.com/artifact/com.fasterxml.jackson.datatype/jackson-datatype-jsr310
 //    compile group: 'com.fasterxml.jackson.datatype', name: 'jackson-datatype-jsr310', version: '2.11.2'
@@ -134,32 +134,32 @@ dependencies {
 //    compile group: 'com.fasterxml.jackson.core', name: 'jackson-annotations', version: '2.8.11'
 
     // https://mvnrepository.com/artifact/fr.delthas/javaskype
-    compile group: 'fr.delthas', name: 'javaskype', version: '1.0.23'
+    implementation group: 'fr.delthas', name: 'javaskype', version: '1.0.23'
 
     // https://mvnrepository.com/artifact/com.samczsun/skype4j
-    compile group: 'com.samczsun', name: 'skype4j', version: '0.1.5'
+    implementation group: 'com.samczsun', name: 'skype4j', version: '0.1.5'
 
     // https://mvnrepository.com/artifact/com.clickntap/vimeo
-    compile group: 'com.clickntap', name: 'vimeo', version: '1.13'
+    implementation group: 'com.clickntap', name: 'vimeo', version: '1.13'
 
     // https://mvnrepository.com/artifact/io.springfox/springfox-swagger2
-    compile group: 'io.springfox', name: 'springfox-swagger2', version: '2.9.2'
+    implementation group: 'io.springfox', name: 'springfox-swagger2', version: '2.9.2'
 
     // https://mvnrepository.com/artifact/io.springfox/springfox-swagger-ui
-    compile group: 'io.springfox', name: 'springfox-swagger-ui', version: '2.9.2'
+    implementation group: 'io.springfox', name: 'springfox-swagger-ui', version: '2.9.2'
 
     // https://mvnrepository.com/artifact/io.springfox/springfox-bean-validators
-    compile group: 'io.springfox', name: 'springfox-bean-validators', version: '2.9.2'
+    implementation group: 'io.springfox', name: 'springfox-bean-validators', version: '2.9.2'
 
-    compile group: 'com.stackify', name: 'stackify-java-apm-annot', version: '1.0.6'
-    compile group: 'com.stackify', name: 'stackify-log-logback', version: '4.0.0'
+    implementation group: 'com.stackify', name: 'stackify-java-apm-annot', version: '1.0.6'
+    implementation group: 'com.stackify', name: 'stackify-log-logback', version: '4.0.0'
 
     // https://mvnrepository.com/artifact/org.apache.velocity/velocity
-    compile group: 'org.apache.velocity', name: 'velocity', version: '1.7'
+    implementation group: 'org.apache.velocity', name: 'velocity', version: '1.7'
 
     //https://stackoverflow.com/questions/8820240/how-to-format-numbers-in-velocity-templates
     // https://mvnrepository.com/artifact/org.apache.velocity/velocity-tools
-    compile group: 'org.apache.velocity', name: 'velocity-tools', version: '2.0'
+    implementation group: 'org.apache.velocity', name: 'velocity-tools', version: '2.0'
 
 //    compile group: 'org.springframework.data', name: 'spring-data-rest-hal-browser', version: '3.0.8.RELEASE'
 
@@ -173,35 +173,35 @@ dependencies {
 //    compile group: 'io.springfox', name: 'springfox-spring-web', version: '2.0.1'
 
     // https://mvnrepository.com/artifact/commons-validator/commons-validator
-    compile group: 'commons-validator', name: 'commons-validator', version: '1.7'
+    implementation group: 'commons-validator', name: 'commons-validator', version: '1.7'
 
     // To work with @Properties source
     // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-configuration-processor
     annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
 
     // https://mvnrepository.com/artifact/com.amazonaws/aws-java-sdk-s3
-    compile group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.930'
+    implementation group: 'com.amazonaws', name: 'aws-java-sdk-s3', version: '1.11.930'
 
     //https://search.maven.org/classic/#artifactdetails%7Cjavax.json.bind%7Cjavax.json.bind-api%7C1.0%7Cjar
-    compile 'javax.json.bind:javax.json.bind-api:1.0'
+    implementation 'javax.json.bind:javax.json.bind-api:1.0'
 
     //https://search.maven.org/classic/#artifactdetails%7Corg.eclipse%7Cyasson%7C2.0.1%7Cjar
-    compile 'org.eclipse:yasson:1.0.1'
-    compile 'org.glassfish:javax.json:1.1.2'
-    compile 'org.apache.johnzon:johnzon-jsonb:1.1.4'
+    implementation 'org.eclipse:yasson:1.0.1'
+    implementation 'org.glassfish:javax.json:1.1.2'
+    implementation 'org.apache.johnzon:johnzon-jsonb:1.1.4'
     // https://mvnrepository.com/artifact/org.apache.geronimo.specs/geronimo-json_1.1_spec
-    compile group: 'org.apache.geronimo.specs', name: 'geronimo-json_1.1_spec', version: '1.0'
+    implementation group: 'org.apache.geronimo.specs', name: 'geronimo-json_1.1_spec', version: '1.0'
     // https://mvnrepository.com/artifact/jakarta.json.bind/jakarta.json.bind-api
-    compile group: 'jakarta.json.bind', name: 'jakarta.json.bind-api', version: '2.0.0'
+    implementation group: 'jakarta.json.bind', name: 'jakarta.json.bind-api', version: '2.0.0'
 
     // https://mvnrepository.com/artifact/org.hibernate/hibernate-core
-    compile group: 'org.hibernate', name: 'hibernate-core', version: '5.4.10.Final'
+    implementation group: 'org.hibernate', name: 'hibernate-core', version: '5.4.10.Final'
 
     // https://mvnrepository.com/artifact/javax.persistence/javax.persistence-api
-    compile group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
+    implementation group: 'javax.persistence', name: 'javax.persistence-api', version: '2.2'
 
     // https://mvnrepository.com/artifact/org.elasticsearch/elasticsearch
-    compile group: 'org.elasticsearch', name: 'elasticsearch', version: '7.10.2'
+    implementation group: 'org.elasticsearch', name: 'elasticsearch', version: '7.10.2'
     implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
 }
 
