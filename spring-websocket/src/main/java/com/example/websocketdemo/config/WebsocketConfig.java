@@ -14,6 +14,7 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 	public void registerStompEndpoints(StompEndpointRegistry registry) {
 		//https://stackoverflow.com/questions/52731686/websocket-vs-sockjs-object
 		//https://www.slideshare.net/AhmedurRahmanShovon/websockets-and-sockjs-real-time-chatting
+		//Enable STOMP support by register STOMP endpoint /ws
 		registry.addEndpoint("/ws").withSockJS();
 	}
 	
