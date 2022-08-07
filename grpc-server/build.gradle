@@ -1,0 +1,28 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.7.2'
+}
+
+version '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(':grpc-interface')
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+
+    // https://github.com/yidongnan/grpc-spring-boot-starter
+    // https://mvnrepository.com/artifact/net.devh/grpc-spring-boot-starter
+    implementation 'net.devh:grpc-spring-boot-starter:2.13.1.RELEASE'
+
+    implementation 'org.springframework.boot:spring-boot-starter-web:2.7.2'
+    implementation 'org.springframework.boot:spring-boot-starter:2.7.2'
+    implementation 'org.springframework.boot:spring-boot-starter-test:2.7.2'
+}
+
+test {
+    useJUnitPlatform()
+}
