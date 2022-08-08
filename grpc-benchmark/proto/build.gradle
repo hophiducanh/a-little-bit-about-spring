@@ -1,0 +1,65 @@
+//https://github.com/google/protobuf-gradle-plugin
+buildscript {
+    ext {
+        protobufVersion = '3.19.1'
+        protobufPluginVersion = '0.8.18'
+        grpcVersion = '1.48.1'
+    }
+}
+
+plugins {
+    id 'java'
+    id 'com.google.protobuf' version "${protobufPluginVersion}"
+}
+
+version '0.0.1-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+// Protobuf Plugin for Gradle
+// https://github.com/google/protobuf-gradle-plugin
+// 1. It assembles the Protobuf Compiler (protoc) command line and uses it to generate Java source files out of your proto files.
+// 2. It adds the generated Java source files to the input of the corresponding Java compilation unit (sourceSet in a Java project; variant in an Android project),
+// so that they can be compiled along with your Java sources.
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+    }
+
+    generateProtoTasks {
+        all()*.plugins {
+            grpc {}
+        }
+    }
+}
+
+dependencies {
+
+    // https://mvnrepository.com/artifact/com.google.protobuf/protobuf-java
+    implementation 'com.google.protobuf:protobuf-java:3.21.4'
+
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+
+    // https://github.com/grpc/grpc-java
+    // The Netty-based transport is the main transport implementation based on Netty. It is for both the client and the server.
+    // https://mvnrepository.com/artifact/io.grpc/grpc-netty-shaded
+    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs 'build/generated/source/proto/main/grpc'
+            srcDirs 'build/generated/source/proto/main/java'
+        }
+    }
+}

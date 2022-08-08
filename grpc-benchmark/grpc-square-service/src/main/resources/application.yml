@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: grpc-square-service
+
+server:
+  port: 8585
+
+grpc:
+  server:
+    port: 6565
+

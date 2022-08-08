@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option java_package = "com.logbasex.proto";
+option java_multiple_files = true;
+
+message Input {
+  int32 number = 1;
+}
+
+message Output {
+  int32 number = 1;
+  int32 result = 2;
+}
+
+service SquareRpc {
+  rpc findSquareUnary(Input) returns (Output) {};
+  rpc findSquareBiStream(stream Input) returns (stream Output) {};
+}

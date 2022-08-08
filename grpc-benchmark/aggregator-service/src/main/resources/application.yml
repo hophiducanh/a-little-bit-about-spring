@@ -1,0 +1,12 @@
+server:
+  port: 8181
+grpc:
+  client:
+    grpc-square-service:
+      address: 'static://localhost:6565'
+      negotiationType: plaintext
+
+rest:
+  square:
+    service:
+      endpoint: 'http://localhost:7575'

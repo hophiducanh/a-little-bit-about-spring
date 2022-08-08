@@ -10,3 +10,8 @@ include 'spring-websocket'
 include 'grpc-client'
 include 'grpc-server'
 include 'grpc-interface'
+
+include 'grpc-benchmark:aggregator-service'
+include 'grpc-benchmark:grpc-square-service'
+include 'grpc-benchmark:rest-square-service'
+include 'grpc-benchmark:proto'
