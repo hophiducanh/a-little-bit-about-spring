@@ -2,6 +2,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:tns="http://www.baeldung.com/springsoap/gen"
            targetNamespace="http://www.baeldung.com/springsoap/gen" elementFormDefault="qualified">
 
+    <!--https://www.tutorialspoint.com/xml/xml_schemas.htm-->
     <xs:element name="getCountryRequest">
         <xs:complexType>
             <xs:sequence>

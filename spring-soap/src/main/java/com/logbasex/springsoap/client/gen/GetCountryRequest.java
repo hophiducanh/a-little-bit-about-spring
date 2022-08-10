@@ -1,6 +1,8 @@
 
 package com.logbasex.springsoap.client.gen;
 
+import com.logbasex.springsoap.CountryEndpoint;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -31,10 +33,11 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "", propOrder = {
     "name"
 })
-@XmlRootElement(name = "getCountryRequest")
+//https://stackoverflow.com/questions/48758241/soap-envfault-in-wsdl
+@XmlRootElement(namespace = CountryEndpoint.NAMESPACE_URI, name = "getCountryRequest")
 public class GetCountryRequest {
 
-    @XmlElement(required = true)
+    @XmlElement(namespace = CountryEndpoint.NAMESPACE_URI, required = true)
     protected String name;
 
     /**
