@@ -13,12 +13,26 @@
 ## Tools
 - https://github.com/grpc-ecosystem/awesome-grpc  
 
+- ### Wireshark analyzing GRPC message
+  - https://www.imlc.me/how-to-inspect-grpc-with-wireshark/
+  - https://www.ridingthecrest.com/blog/2018/10/29/wireshark-getting-started.html
+
+    ```shell
+    sudo apt update -y && sudo apt install wireshark -y
+    
+    sudo wireshark
+    
+    # config http, http2 (or then decode tcp connection as http2)
+    # config gRPC
+    # config protobuf
+    # Edit -> Preferences -> Protocols
+    ```
 ----
 
 [High-level Components](https://github.com/grpc/grpc-java/blob/master/README.md)
 ---------------------
 
-![](grpc-architecture.png)
+![](grpc-client/grpc-architecture.png)
 
 At a high level there are three distinct layers to the library: *Stub*,
 *Channel*, and *Transport*.
@@ -56,3 +70,20 @@ gRPC comes with three Transport implementations:
    client. It is useful for testing, while also being safe for production use.
 
 ----
+
+## Interface Project (Interface Definition Language- IDL)
+
+![](https://yidongnan.github.io/grpc-spring-boot-starter/assets/images/server-project-setup.svg)
+
+We recommend splitting your project into 2-3 separate modules.
+
+1. **The interface project** Contains the raw protobuf files and generates the java model and service classes. You probably share this part.
+2. **The server project** Contains the actual implementation of your project and uses the interface project as dependency.
+3. **The client projects** (optional and possibly many) Any client projects that use the pre-generated stubs to access the server.
+
+
+## [Tutorials](https://yidongnan.github.io/grpc-spring-boot-starter/en/server/getting-started.html#interface-project)
+
+
+![](protoc.png)
+![](grpc-tcp-http.png)
