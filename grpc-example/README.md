@@ -6,14 +6,22 @@
     - Protobuf is the most commonly used IDL (Interface Definition Language) for gRPC. It's where you basically store your data and function contracts in the form of a proto file.
     - [gRPC uses the Interface Definition Language (IDL) from Protocol Buffers. The Protocol Buffers IDL is a custom, platform-neutral language with an open specification. Developers author .proto files to describe services, along with their inputs and outputs. These .proto files can then be used to generate language- or platform-specific stubs for clients and servers, allowing multiple different platforms to communicate. By sharing `.proto` files, teams can generate code to use each others' services, without needing to take a code dependency. One of the advantages of the Protobuf IDL is that as a custom language, it enables gRPC to be completely language and platform agnostic, not favoring any technology over another.](https://docs.microsoft.com/en-us/dotnet/architecture/grpc-for-wcf-developers/interface-definition-language)
 - ### [Generate Java code from Protocol Buffers](https://dev.to/techschoolguru/config-gradle-to-generate-java-code-from-protobuf-1cla)
-    
+- ### [Dùng lý thuyết củ hành để tìm hiểu gRPC](https://www.linkedin.com/pulse/d%C3%B9ng-l%C3%BD-thuy%E1%BA%BFt-c%E1%BB%A7-h%C3%A0nh-%C4%91%E1%BB%83-t%C3%ACm-hi%E1%BB%83u-grpc-nguyen-nguyen/)
+    - gRPC là một RPC platform được phát triển bởi Google nhằm tối ưu hoá và tăng tốc việc giao tiếp giữa các service với nhau trong kiến trúc microservice. gRPC dùng Protocal Buffer giảm kích thước request và response data, RPC để đơn giản hoá trong việc tạo ra các giao tiếp giữa các service với nhau, HTTP/2 để tăng tốc gửi/nhận HTTP request.
+    - RPC là từ viết tắc của Remote Procedure Call, nó được xây dựng với ý tưởng là đơn giản hoá việc giao tiếp giữa những service với nhau, thay vì những service giao tiếp với nhau theo kiểu RESTful API thì giờ đơn giản là gọi hàm như những object nói chuyện với nhau thôi, còn việc phân tán các service là chuyện của tương lai không dính liếu đến việc code.
+    - Protocal Buffer là một ngôn ngữ trung lập để serializing structured data sử dụng cho việc giao tiếp giữa các service với nhau. Protocal Buffer được tạo ra với ý tưởng là làm nhỏ kích thước data truyền đi trong giao tiếp và chỉ cần định nghĩa một lần và sử dụng cho các service với các ngôn ngữ lập trình khác nhau.
+    - ![](http2-request-multiplexing.png)
+    - ![](http2-header-compression.png)
+    - ![](http2-binary-protocol.png)
+    - ![](http2-server-push.png)
+  
 ## Stories
 - https://medium.com/apis-and-digital-transformation/i-got-a-golden-ticket-what-i-learned-about-apis-in-my-first-year-at-google-556e1f02f9ab
 
 ## Tools
 - https://github.com/grpc-ecosystem/awesome-grpc  
 
-- ### Wireshark analyzing GRPC message
+- ### Wireshark analyzing GRPC message (Kiểm tra kích cỡ message sau khi serialize)
   - https://www.imlc.me/how-to-inspect-grpc-with-wireshark/
   - https://www.ridingthecrest.com/blog/2018/10/29/wireshark-getting-started.html
 
