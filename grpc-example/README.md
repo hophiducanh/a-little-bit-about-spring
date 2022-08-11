@@ -60,6 +60,8 @@ interception/decoration and exposes more behavior to the application than the
 Stub layer. It is intended to be easy for application frameworks to use this
 layer to address cross-cutting concerns such as logging, monitoring, auth, etc.
 
+**Each connection between client and server is a "Channel"**
+
 ### Transport
 
 The Transport layer does the heavy lifting of putting and taking bytes off the
@@ -77,6 +79,12 @@ gRPC comes with three Transport implementations:
 3. The in-process transport is for when a server is in the same process as the
    client. It is useful for testing, while also being safe for production use.
 
+![](grpc-channel.png)
+![](grpc-channel-1.png)
+![](grpc-layered.png)
+![](grpc-layered-architecture.png)
+![](grpc-layered-architecture-1.png)
+![](grpc-layered-architecture-2.png)
 ----
 
 ## Interface Project (Interface Definition Language- IDL)
