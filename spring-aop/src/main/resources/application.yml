@@ -1,0 +1,12 @@
+server:
+  port: 8282
+
+#spring:
+#  aop:
+#    proxy-target-class: false
+
+spring:
+  data:
+    mongodb:
+      database: config
+      uri: mongodb://localhost/local
