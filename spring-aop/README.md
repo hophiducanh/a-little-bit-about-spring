@@ -6,6 +6,7 @@
 ## Tutorials
 - https://www.springcloud.io/post/2022-01/springboot-aop/#gsc.tab=0
 - [In Spring AOP, does spring creates proxy object every time a target bean is created or it happens only first time?](https://stackoverflow.com/questions/47134158/in-spring-aop-does-spring-creates-proxy-object-every-time-a-target-bean-is-crea)
+- [Why choose CGLIB proxying as the default after SpringBoot 2.0](https://stackoverflow.com/questions/54980004/why-choose-cglib-proxying-as-the-default-after-springboot-2-0)
 - 
 ## [When does spring AOP use JDK dynamic proxy? When to use cglib? What is the default?](https://javamana.com/2021/10/20211029042150541c.html)
 
