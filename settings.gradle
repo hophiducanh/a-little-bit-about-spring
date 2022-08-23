@@ -18,4 +18,5 @@ include 'grpc-example:grpc-server'
 include 'grpc-example:grpc-interface'
 include 'spring-vulnerability:CVE-2022-22980'
 include 'spring-aop'
+include 'ioc-di'
 

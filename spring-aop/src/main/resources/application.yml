@@ -1,11 +1,9 @@
 server:
   port: 8282
 
-#spring:
-#  aop:
-#    proxy-target-class: false
-
 spring:
+  aop:
+    proxy-target-class: false
   data:
     mongodb:
       database: config
