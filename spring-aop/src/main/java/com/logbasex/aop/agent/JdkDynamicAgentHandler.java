@@ -3,11 +3,11 @@ package com.logbasex.aop.agent;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
-public class DynamicAgentHandler implements InvocationHandler {
+public class JdkDynamicAgentHandler implements InvocationHandler {
 
     private final Object realObject;
 
-    public DynamicAgentHandler(Object realObject) {
+    public JdkDynamicAgentHandler(Object realObject) {
         this.realObject = realObject;
     }
 

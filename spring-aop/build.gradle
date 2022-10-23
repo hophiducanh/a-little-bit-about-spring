@@ -17,6 +17,8 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-aop'
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+    // https://mvnrepository.com/artifact/cglib/cglib
+    implementation 'cglib:cglib:3.3.0'
 }
 
 test {

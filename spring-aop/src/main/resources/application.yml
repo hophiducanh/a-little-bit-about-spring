@@ -3,7 +3,7 @@ server:
 
 spring:
   aop:
-    proxy-target-class: false
+    proxy-target-class: true
   data:
     mongodb:
       database: config

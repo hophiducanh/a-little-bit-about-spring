@@ -6,14 +6,18 @@ package com.logbasex.aop.agent;
 public class Main {
     public static void main(String[] args) {
         StaticAgentHandler staticAgent = new StaticAgentHandler(new RealObject());
-        staticAgent.doSomething();
+//        staticAgent.doSomething();
 
         RealObject realObject = new RealObject();
         Action dynamicAgent = (Action) java.lang.reflect.Proxy.newProxyInstance(
                 ClassLoader.getSystemClassLoader(),
                 new Class[]{Action.class},
-                new DynamicAgentHandler(realObject)
+                new JdkDynamicAgentHandler(realObject)
         );
-        dynamicAgent.doSomething();
+//        dynamicAgent.doSomething();
+
+        CglibDynamicAgentHandler cglibDynamicAgent = new CglibDynamicAgentHandler();
+        RealObject instance = (RealObject) cglibDynamicAgent.getInstance(realObject);
+        instance.doSomething();
     }
 }
