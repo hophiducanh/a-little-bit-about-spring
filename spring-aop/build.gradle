@@ -19,6 +19,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
     // https://mvnrepository.com/artifact/cglib/cglib
     implementation 'cglib:cglib:3.3.0'
+    implementation 'net.bytebuddy:byte-buddy:1.12.18'
 }
 
 test {

@@ -1,3 +1,5 @@
+## [Spring Boot proxy mechanism](https://viblo.asia/p/spring-boot-proxy-mechanism-MG24BOPRJz3)
+
 ## [AOP Proxies](https://docs.spring.io/spring-framework/docs/current/reference/html/core.html#aop-introduction-proxies)
 > Spring AOP defaults to using standard JDK dynamic proxies for AOP proxies. This enables any interface (or set of interfaces) to be proxied.
 >
