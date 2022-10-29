@@ -1,0 +1,2 @@
+- https://www.baeldung.com/byte-buddy
+- https://github.com/anegrin/bytebuddy-spring

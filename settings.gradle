@@ -20,4 +20,5 @@ include 'spring-vulnerability:CVE-2022-22980'
 include 'spring-aop'
 include 'ioc-di'
 include 'java-agent'
+include 'spring-bytebuddy'
 

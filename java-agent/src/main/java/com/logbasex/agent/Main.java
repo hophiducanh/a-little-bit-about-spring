@@ -2,6 +2,7 @@ package com.logbasex.agent;
 
 import java.util.Scanner;
 
+// https://stackoverflow.com/questions/60838748/intellij-idea-java-instrumentation-premain-gets-called-twice-when-directly-run
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
