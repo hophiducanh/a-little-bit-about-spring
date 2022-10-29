@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.logbasex.agent'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+repositories {
+    mavenCentral()
+}
+
+//https://www.jetbrains.com/help/idea/getting-started-with-gradle.html#deploy_gradle
+jar {
+    manifest {
+        from 'src/main/resources/META-INF/MANIFEST.MF'
+    }
+
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
+    implementation 'net.bytebuddy:byte-buddy:1.12.18'
+}
+
+test {
+    useJUnitPlatform()
+}
