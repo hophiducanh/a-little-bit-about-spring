@@ -21,4 +21,5 @@ include 'spring-aop'
 include 'ioc-di'
 include 'java-agent'
 include 'spring-bytebuddy'
+include 'spring-elk'
 

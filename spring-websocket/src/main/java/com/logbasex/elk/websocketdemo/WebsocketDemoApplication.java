@@ -1,4 +1,4 @@
-package com.example.websocketdemo;
+package com.logbasex.elk.websocketdemo;
 
 
 import org.springframework.boot.SpringApplication;

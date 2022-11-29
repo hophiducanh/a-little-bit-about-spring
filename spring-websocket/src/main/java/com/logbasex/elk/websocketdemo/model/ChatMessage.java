@@ -1,4 +1,4 @@
-package com.example.websocketdemo.model;
+package com.logbasex.elk.websocketdemo.model;
 
 public class ChatMessage {
 	public enum MessageType {

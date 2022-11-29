@@ -1,0 +1,2 @@
+- https://www.linkedin.com/pulse/awesomeness-logback-logstash-appender-ken-delong/
+- https://www.youtube.com/watch?v=hvYUwUmHB6M

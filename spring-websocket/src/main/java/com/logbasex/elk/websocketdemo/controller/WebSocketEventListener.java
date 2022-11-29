@@ -1,6 +1,6 @@
-package com.example.websocketdemo.controller;
+package com.logbasex.elk.websocketdemo.controller;
 
-import com.example.websocketdemo.model.ChatMessage;
+import com.logbasex.elk.websocketdemo.model.ChatMessage;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
