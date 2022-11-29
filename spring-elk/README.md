@@ -1,2 +1,4 @@
 - https://www.linkedin.com/pulse/awesomeness-logback-logstash-appender-ken-delong/
 - https://www.youtube.com/watch?v=hvYUwUmHB6M
+- https://auth0.com/blog/spring-boot-logs-aggregation-and-monitoring-using-elk-stack/
+- https://howtodoinjava.com/spring-cloud/elk-stack-tutorial-example/
