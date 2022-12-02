@@ -12,9 +12,18 @@ repositories {
     mavenCentral()
 }
 
+test {
+    useJUnitPlatform()
+}
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    // https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-test
+    testImplementation 'org.springframework.boot:spring-boot-starter-test:2.7.2'
+    // https://mvnrepository.com/artifact/junit/junit
+    testImplementation 'junit:junit:4.11'
+
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 }
 
