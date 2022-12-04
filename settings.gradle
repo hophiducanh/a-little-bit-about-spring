@@ -23,4 +23,5 @@ include 'java-agent'
 include 'spring-bytebuddy'
 include 'spring-elk'
 include 'spring-validator'
-
+include 'spring-testing'
+include 'spring-testing:spring-unit-test-introduction'
