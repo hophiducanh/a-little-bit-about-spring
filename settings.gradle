@@ -26,4 +26,4 @@ include 'spring-validator'
 include 'spring-testing'
 include 'spring-testing:spring-unit-test-introduction'
 include 'java-multithreading'
-
+include 'spring-async-annotation'
