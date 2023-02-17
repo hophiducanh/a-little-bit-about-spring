@@ -24,6 +24,8 @@ public class HelloWorldController {
 	@GetMapping("/hello/async")
 	public String helloAsync() {
 		long start = System.currentTimeMillis();
+		// nếu 1 method trong service có đi kèm @Async annotation hay @Transactional thì helloService sẽ được inject
+		// qua proxy. Ngược lại thì không.
 		helloService.asyncProcessSomethingForLong();
 		long end = System.currentTimeMillis();
 		return "Hello World Took " + (end - start) + " milliseconds ! and the current Thread is : "+Thread.currentThread().getName();
