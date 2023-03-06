@@ -1,0 +1,2 @@
+- [@Import vs @ComponentScan](https://www.baeldung.com/spring-import-annotation)
+- https://www.logicbig.com/tutorials/spring-framework/spring-core.html

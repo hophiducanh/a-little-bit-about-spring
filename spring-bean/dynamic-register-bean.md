@@ -1,0 +1,2 @@
+## Spring - Dynamically register beans
+
