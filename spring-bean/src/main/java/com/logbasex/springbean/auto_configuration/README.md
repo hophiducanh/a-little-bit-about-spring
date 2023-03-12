@@ -1,0 +1,4 @@
+- https://medium.com/codeshake/spring-boot-auto-configuration-mystery-revealed-d734516dddfb
+- https://stackoverflow.com/questions/32107610/why-use-spring-factories-for-spring-boot-auto-configuration-instead-of-annotatio
+- https://geowarin.com/understanding-spring-boot/
+- https://www.marcobehler.com/guides/spring-boot-autoconfiguration
