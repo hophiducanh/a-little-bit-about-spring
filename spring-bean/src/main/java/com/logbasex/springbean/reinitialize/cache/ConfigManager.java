@@ -29,6 +29,7 @@ public class ConfigManager {
 	// IDE or build system might move your resources to your build directory and put that on the class path.
 	// So the file you are editing in your source directory is not the file that is being served.
 	// .getSourceAsStream() caches internally.
+	// https://www.baeldung.com/spring-reloading-properties
 	private void initConfigs() {
 		Properties properties = new Properties();
 		URL resource = getClass().getClassLoader().getResource(filePath);
