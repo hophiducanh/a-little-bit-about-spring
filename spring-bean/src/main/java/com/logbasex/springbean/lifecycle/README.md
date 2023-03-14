@@ -1,6 +1,8 @@
 ## [What is the difference between BeanPostProcessor and init/destroy method in Spring?](https://stackoverflow.com/questions/9862127/what-is-the-difference-between-beanpostprocessor-and-init-destroy-method-in-spri)
 
+---
 
+![](bean-life-cycle.jpg)
 
 ---
 

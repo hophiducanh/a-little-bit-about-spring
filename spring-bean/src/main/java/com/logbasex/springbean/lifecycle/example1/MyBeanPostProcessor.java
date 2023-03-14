@@ -13,7 +13,7 @@ public class MyBeanPostProcessor implements BeanPostProcessor {
 	
 	@Override
 	public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
-		System.out.println("8. BeanPostProcessor#postProcessAfterInitialization method");
+		System.out.println("9. BeanPostProcessor#postProcessAfterInitialization method");
 		return bean;
 	}
 	
