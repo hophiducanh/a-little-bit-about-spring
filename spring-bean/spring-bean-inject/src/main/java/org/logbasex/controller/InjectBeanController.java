@@ -2,12 +2,13 @@ package org.logbasex.controller;
 
 import org.logbasex.service.autowired_injection.AutowiredInjectBeanService;
 import org.logbasex.service.autowired_injection.NullInjectBeanService;
+import org.logbasex.service.component_annotation.ComponentPerson;
+import org.logbasex.service.configuration_annotation.ConfigurationPerson;
 import org.logbasex.service.constructor_injection.ConstructorInjectBeanService;
+import org.logbasex.service.import_annotation.AnotherImportPerson;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import javax.swing.*;
 
 @RestController
 public class InjectBeanController {
@@ -20,6 +21,18 @@ public class InjectBeanController {
 	
 	@Autowired
 	private AutowiredInjectBeanService autowiredInjectBeanSv;
+	
+	@Autowired
+	private ComponentPerson componentAnnotationInject;
+	
+	@Autowired
+	private ConfigurationPerson configurationAnnotationInject;
+	
+	@Autowired
+	private AnotherImportPerson importAnnotationInject;
+	
+//	@Autowired
+//	private ImportSelectorMainConfiguration importSelectorInject;
 	
 	@GetMapping("/inject/constructor")
 	public Object constructorInject(){
@@ -46,4 +59,24 @@ public class InjectBeanController {
 		// LogBeanPostProcessor khi log thì bean vẫn được tạo nhưng không inject được.
 		return nullInjectBeanService.inject();
 	}
+	
+	@GetMapping("/inject/component-annotation")
+	public Object componentAnnotationInject(){
+		return componentAnnotationInject.getName();
+	}
+	
+	@GetMapping("/inject/configuration-annotation")
+	public Object configurationAnnotationInject(){
+		return configurationAnnotationInject.getName();
+	}
+	
+	@GetMapping("/inject/import-annotation")
+	public Object importAnnotationInject(){
+		return importAnnotationInject.getName();
+	}
+	
+//	@GetMapping("/inject/import-selector")
+//	public Object importSelector(){
+//		return importSelectorInject.importSelectorPersonService().inject();
+//	}
 }
