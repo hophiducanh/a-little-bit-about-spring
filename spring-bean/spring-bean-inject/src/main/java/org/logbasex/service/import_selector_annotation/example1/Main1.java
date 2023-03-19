@@ -1,6 +1,5 @@
 package org.logbasex.service.import_selector_annotation.example1;
 
-import org.logbasex.SpringBeanInjectApplication;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ApplicationContext;
@@ -11,7 +10,7 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  * <a href="https://www.logicbig.com/tutorials/spring-framework/spring-core/import-selector.html">...</a>
  */
 @SpringBootApplication
-public class Main {
+public class Main1 {
 	
 	public static void main(String[] args) {
 		System.setProperty("myProp", "1");
@@ -31,13 +30,13 @@ public class Main {
 		// if (!isAllowBeanDefinitionOverriding()) {
 		//				throw new BeanDefinitionOverrideException(beanName, beanDefinition, existingDefinition);
 		//			}
-//		ConfigurableApplicationContext run = SpringApplication.run(Main.class, args);
-//		ClientBean bean0 = run.getBean(ClientBean.class);
-//		System.out.println(bean0.doSomething());
+		ConfigurableApplicationContext run = SpringApplication.run(Main1.class, args);
+		ClientBean bean0 = run.getBean(ClientBean.class);
+		System.out.println(bean0.doSomething());
 		
 		// ApplicationContext context = new AnnotationConfigApplicationContext(Main.class);
 		// isAllowBeanDefinitionOverriding() = true
-		ApplicationContext context = new AnnotationConfigApplicationContext(Main.class);
+		ApplicationContext context = new AnnotationConfigApplicationContext(Main1.class);
 		ClientBean bean = context.getBean(ClientBean.class);
 		System.out.println(bean.doSomething());
 	}

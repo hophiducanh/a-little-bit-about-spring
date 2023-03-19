@@ -1,6 +1,6 @@
 server:
   port: 8485
-#spring:
-#  main:
-#    allow-bean-definition-overriding:
-#      true
+spring:
+  main:
+    allow-bean-definition-overriding:
+      true

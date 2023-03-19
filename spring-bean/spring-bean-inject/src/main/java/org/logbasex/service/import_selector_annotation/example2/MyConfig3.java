@@ -4,9 +4,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class MyConfig1 {
+public class MyConfig3 {
 	@Bean
-	AppBean appBean () {
-		return new AppBean("from config 1");
+	AppBean2 appBean2() {
+		return new AppBean2("from config 1");
 	}
 }
