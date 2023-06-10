@@ -128,12 +128,9 @@ public class ByteBuddyProxyFactoryBean implements FactoryBean<Object> {
             this.target = target;
         }
 
-        public @RuntimeType
-        Object intercept(@Origin(cache = true) Method method,
-                         @AllArguments Object[] arguments)
-                throws Exception {
+         @RuntimeType
+         public Object intercept(@Origin Method method, @AllArguments Object[] arguments) throws Exception {
             long start = System.currentTimeMillis();
-
             try {
                 return method.invoke(target, arguments);
             } finally {
