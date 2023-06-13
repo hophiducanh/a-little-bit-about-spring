@@ -1,4 +1,4 @@
-package com.logbasex.slf4j_log4j;
+package com.logbasex.slf4j_log4j2;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;

@@ -1,3 +1,6 @@
+- https://stackify.com/compare-java-logging-frameworks/
+
+## Java Logging Evolution 
 The Java logging landscape has evolved significantly over the years. In the early days of Java, there was no standard logging framework. Instead, each Java application had its own custom logging framework. This made it difficult to develop and maintain applications, as developers had to learn the nuances of each different logging framework.
 
 In 1999, Ceki Gülcü developed Log4J, the first standard logging framework for Java. Log4J quickly became the de facto standard for Java logging, and it is still widely used today.
