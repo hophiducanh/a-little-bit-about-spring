@@ -8,7 +8,10 @@ public class SpringApplication {
 	
 	public static void main(String[] args) {
 		ConfigurableApplicationContext context = org.springframework.boot.SpringApplication.run(SpringApplication.class, args);
-		Example bean = context.getBean(Example.class);
-		bean.doSomething();
+		Example example = context.getBean(Example.class);
+		example.doSomething();
+		
+		Example1 example1 = context.getBean(Example1.class);
+		example1.doSomething();
 	}
 }

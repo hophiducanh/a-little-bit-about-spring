@@ -26,3 +26,6 @@ The following are some of the benefits of using SLF4J:
 * **Performance:** SLF4J is designed to be efficient, which can improve the performance of applications.
 
 If you are developing a Java application, I recommend using SLF4J for logging. SLF4J provides a number of benefits, including portability, flexibility, and performance.
+
+## Performance
+- https://logging.apache.org/log4j/2.x/performance.html
