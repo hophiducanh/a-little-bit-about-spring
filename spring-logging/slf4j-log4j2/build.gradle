@@ -25,14 +25,14 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
 
     implementation 'org.springframework.boot:spring-boot-starter'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-log4j2'
 
     // using spring-boot-starter-log4j2 instead of all following dependency
     // https://www.logicbig.com/tutorials/spring-framework/spring-boot/log4j2.html
-    // https://logging.apache.org/log4j/2.x/log4j-slf4j-impl.html
 //    implementation 'org.slf4j:slf4j-api:2.0.7'
-//    implementation 'org.apache.logging.log4j:log4j-slf4j2-impl:2.20.0'
+
+    // https://logging.apache.org/log4j/2.x/log4j-slf4j-impl.html
+//    implementation 'org.apache.logging.log4j:log4j-slf4j-impl:2.13.0'
 //    implementation 'org.apache.logging.log4j:log4j-core:2.20.0'
 }
 
