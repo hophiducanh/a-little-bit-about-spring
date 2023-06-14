@@ -2,6 +2,40 @@
 - [Log4j 2 SLF4J Binding](https://logging.apache.org/log4j/2.x/log4j-slf4j-impl.html)
 - https://www.baeldung.com/slf4j-with-log4j2-logback
 
+----
+![https://www.slf4j.org/manual.html](https://www.slf4j.org/images/concrete-bindings.png)
+
+SLF4J is a logging facade that allows you to decouple your code from the actual logging implementation. This makes it easy to switch logging implementations without having to change your code.
+
+To delegate a call to SLF4J, you simply use the SLF4J API. For example, to log a message at the INFO level, you would use the following code:
+
+```
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class MyClass {
+
+    private static final Logger logger = LoggerFactory.getLogger(MyClass.class);
+
+    public void doSomething() {
+        logger.info("Doing something important...");
+    }
+}
+```
+
+When this code is executed, the SLF4J implementation will delegate the call to the underlying logging implementation. The specific logging implementation that is used will depend on the configuration of your application.
+
+SLF4J provides a number of different logging implementations, including Log4j, Logback, and JUL. You can choose the implementation that best suits your needs.
+
+Here are some of the benefits of using SLF4J:
+
+* **Decoupling:** SLF4J decouples your code from the underlying logging implementation. This makes it easy to switch logging implementations without having to change your code.
+* **Flexibility:** SLF4J provides a number of different logging implementations, so you can choose the one that best suits your needs.
+* **Performance:** SLF4J is designed to be efficient, so it does not add any significant overhead to your application.
+
+If you are looking for a flexible and efficient logging solution for your Java application, then SLF4J is a great option.
+
+------------
 
 Sure, here are the steps on how to use SLF4J with Log4J:
 
