@@ -1,6 +1,4 @@
-- https://stackify.com/compare-java-logging-frameworks/
 
-## Java Logging
 - [Tutorial](https://www.logicbig.com/tutorials/core-java-tutorial/logging.html)
 - [Why not use java.util.logging?](https://stackoverflow.com/questions/11359187/why-not-use-java-util-logging/11360517#11360517)
 
