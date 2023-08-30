@@ -90,3 +90,63 @@ run:659, ThreadPoolExecutor$Worker (org.apache.tomcat.util.threads)
 run:61, TaskThread$WrappingRunnable (org.apache.tomcat.util.threads)
 run:750, Thread (java.lang)
 ```
+
+## Spring @Async vs CompletableFuture.supplyAsync()
+
+- [is using @Async and CompletableFuture in controller can increase performance of our api?](https://stackoverflow.com/questions/65120202/is-using-async-and-completablefuture-in-controller-can-increase-performance-of)
+
+### Does @Async as same as completableFuture.supplyAsync() if i want to execute task async only?
+
+Yes, when you want to execute a task asynchronously without dealing with the complexities of managing threads directly, both `@Async` and `CompletableFuture.supplyAsync()` can achieve similar results. They abstract away the thread management details and allow you to focus on writing asynchronous code.
+
+Here's a comparison between `@Async` and `CompletableFuture.supplyAsync()` for executing a task asynchronously:
+
+1. **@Async:**
+    - Spring's `@Async` annotation is a higher-level approach to asynchronous execution within a Spring application.
+    - It requires configuration of the `@EnableAsync` annotation and an appropriate thread pool setup.
+    - By annotating a method with `@Async`, Spring handles the thread creation and management for you.
+
+   ```java
+   @Async
+   public CompletableFuture<String> asyncMethod() {
+       // Asynchronous logic
+       return CompletableFuture.completedFuture("Async task completed");
+   }
+   ```
+
+2. **CompletableFuture.supplyAsync():**
+    - `CompletableFuture.supplyAsync()` is a lower-level approach available in the Java standard library for creating asynchronous tasks.
+    - You directly specify the logic to be executed asynchronously and can optionally provide an `Executor` to control the thread pool used for execution.
+
+   ```java
+   CompletableFuture<String> future = CompletableFuture.supplyAsync(() -> {
+       // Asynchronous logic
+       return "Async task completed";
+   });
+   ```
+
+In both cases, the main idea is to execute code asynchronously without blocking the main thread. If you are working within a Spring application and have already configured the necessary `@EnableAsync` setup, using `@Async` can be more concise and integrated.
+
+If you are working outside of a Spring context or want more control over the thread pool, using `CompletableFuture.supplyAsync()` gives you greater flexibility.
+
+Ultimately, whether you choose `@Async` or `CompletableFuture.supplyAsync()` depends on your specific use case and the level of integration you want with the Spring framework.
+
+---
+
+### Does combine @Async and  completableFuture.supplyAsync() improve performance if i want to execute task async only?
+
+Combining `@Async` and `CompletableFuture.supplyAsync()` would not provide any additional benefits in terms of performance if your goal is to execute a task asynchronously. These two approaches essentially achieve the same result, but using them together would introduce unnecessary complexity without adding value.
+
+You should choose one of these approaches based on your application's requirements and the level of integration you need:
+
+1. **Using `@Async`**:
+    - If you're already working within a Spring application and have configured `@EnableAsync`, it's more straightforward to use `@Async` for executing tasks asynchronously.
+    - Spring's `@Async` abstracts away the thread management and integrates well within the Spring framework.
+    - It's a higher-level approach that simplifies the process of executing methods asynchronously.
+
+2. **Using `CompletableFuture.supplyAsync()`**:
+    - If you're not using Spring or want to maintain more control over the thread pool, you can use `CompletableFuture.supplyAsync()`.
+    - This approach is available in the Java standard library and can be used in any Java application.
+    - It provides more flexibility in terms of specifying the executor for thread management.
+
+Using both approaches together wouldn't provide any performance improvement and might even complicate your code unnecessarily. Choose the approach that best fits your application's context and requirements. If your primary goal is to execute a task asynchronously, either `@Async` or `CompletableFuture.supplyAsync()` would be sufficient on its own.
