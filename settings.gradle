@@ -37,3 +37,7 @@ include 'spring-logging'
 include 'spring-logging:slf4j-log4j2'
 include 'spring-logging:logback'
 include 'spring-mongodb'
+include 'spring-reactive'
+include 'spring-reactive:spring-reactive-benchmark'
+findProject(':spring-reactive:spring-reactive-benchmark')?.name = 'spring-reactive-benchmark'
+
