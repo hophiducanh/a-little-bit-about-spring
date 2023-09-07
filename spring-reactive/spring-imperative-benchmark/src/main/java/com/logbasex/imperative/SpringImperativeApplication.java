@@ -1,4 +1,4 @@
-package com.logbasex;
+package com.logbasex.imperative;
 
 import lombok.extern.log4j.Log4j2;
 import org.springframework.boot.SpringApplication;
@@ -8,7 +8,7 @@ import javax.annotation.PostConstruct;
 
 @Log4j2
 @SpringBootApplication
-public class SpringReactiveApplication {
+public class SpringImperativeApplication {
 	
 	@PostConstruct
 	public void init() {
@@ -16,6 +16,6 @@ public class SpringReactiveApplication {
 	}
 	
 	public static void main(String[] args) {
-		SpringApplication.run(SpringReactiveApplication.class, args);
+		SpringApplication.run(SpringImperativeApplication.class, args);
 	}
 }

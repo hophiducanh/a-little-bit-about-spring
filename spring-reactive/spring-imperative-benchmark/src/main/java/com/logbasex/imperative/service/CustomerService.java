@@ -1,6 +1,6 @@
-package com.logbasex.reactive.service;
+package com.logbasex.imperative.service;
 
-import com.logbasex.reactive.dto.Data;
+import com.logbasex.imperative.dto.Data;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,5 +14,4 @@ public class CustomerService {
 			throw new RuntimeException("error happened");
 		}
 	}
-	
 }

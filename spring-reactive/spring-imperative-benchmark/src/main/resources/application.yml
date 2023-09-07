@@ -1,5 +1,8 @@
 server:
-  port: 7171
+  port: 7272
+#  tomcat:
+#    threads:
+#      max: 16
 
 spring:
   data:
