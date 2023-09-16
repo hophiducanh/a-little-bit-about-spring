@@ -29,3 +29,7 @@ Unfortunately, Java Thread Pool Executor (TPE) is biased toward queuing rather t
 2. Once there are more tasks than the number of core threads, the queue starts filling up to store the tasks.
 
 3. Once the queue is filled, extended threads are created.
+
+---
+
+## [Thread pool executor](https://yellowcodebooks.com/2021/07/06/java-bai-50-thread-pool-tap-3-threadpoolexecutor)
