@@ -4,6 +4,8 @@ import com.logbasex.async_annotation.service.HelloService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.concurrent.CompletableFuture;
+
 @RestController
 public class HelloWorldController {
 	
@@ -31,4 +33,14 @@ public class HelloWorldController {
 		return "Hello World Took " + (end - start) + " milliseconds ! and the current Thread is : "+Thread.currentThread().getName();
 	}
 	
+	//view more in spring-imperative project
+	@GetMapping("/hello/async/v2")
+	public CompletableFuture<String> helloAsyncV2() {
+		long start = System.currentTimeMillis();
+		// nếu 1 method trong service có đi kèm @Async annotation hay @Transactional thì helloService sẽ được inject
+		// qua proxy. Ngược lại thì không.
+		helloService.asyncProcessSomethingForLong();
+		long end = System.currentTimeMillis();
+		return CompletableFuture.supplyAsync(() -> "Hello World Took " + (end - start) + " milliseconds ! and the current Thread is : "+Thread.currentThread().getName());
+	}
 }

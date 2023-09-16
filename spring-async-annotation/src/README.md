@@ -133,7 +133,7 @@ Ultimately, whether you choose `@Async` or `CompletableFuture.supplyAsync()` dep
 
 ---
 
-### Does combine @Async and  completableFuture.supplyAsync() improve performance if i want to execute task async only?
+### Does combine @Async and  completableFuture.supplyAsync() improve performance if I want to execute task async only?
 
 Combining `@Async` and `CompletableFuture.supplyAsync()` would not provide any additional benefits in terms of performance if your goal is to execute a task asynchronously. These two approaches essentially achieve the same result, but using them together would introduce unnecessary complexity without adding value.
 
@@ -150,3 +150,78 @@ You should choose one of these approaches based on your application's requiremen
     - It provides more flexibility in terms of specifying the executor for thread management.
 
 Using both approaches together wouldn't provide any performance improvement and might even complicate your code unnecessarily. Choose the approach that best fits your application's context and requirements. If your primary goal is to execute a task asynchronously, either `@Async` or `CompletableFuture.supplyAsync()` would be sufficient on its own.
+
+---
+
+### How does Spring get the result from an endpoint that returns CompletableFuture object?
+
+In a Spring application, when you return a `CompletableFuture` from a controller method, Spring's web framework (e.g., Spring MVC or Spring WebFlux) is responsible for managing the asynchronous processing and handling of the result. Here's how Spring gets the result from an endpoint that returns a `CompletableFuture`:
+
+1. **Controller Invocation**: When a client makes a request to an endpoint that returns a `CompletableFuture`, Spring's dispatcher servlet receives the request and identifies the appropriate controller method to handle it based on the URL mapping.
+
+2. **Controller Method Execution**: The controller method is invoked, and it returns the `CompletableFuture` immediately. At this point, the controller method is free to continue executing other tasks, and it doesn't block the main thread.
+
+3. **CompletableFuture Processing**: Spring's web framework registers a callback to be executed when the `CompletableFuture` is completed. This callback typically involves using Java's `CompletionStage` API to register a `thenAccept` or `thenApply` function.
+
+4. **Asynchronous Processing**: The asynchronous processing within the `CompletableFuture` continues in a separate thread or executor pool. This can involve performing time-consuming operations, waiting for external services, or other asynchronous tasks.
+
+5. **Completion of CompletableFuture**: When the `CompletableFuture` computation is finished (either successfully or exceptionally), the registered callback is executed.
+
+6. **Handling the Result**: Depending on the type of callback registered, Spring will handle the result in one of two ways:
+
+   - If the `CompletableFuture` is returning a value, Spring will use the result to construct the HTTP response. For example, if the `CompletableFuture` contains a `String`, Spring will convert it to a JSON or plain text response and send it to the client.
+
+   - If the `CompletableFuture` completes exceptionally with an error, Spring will handle the error by returning an appropriate HTTP error response (e.g., a 500 Internal Server Error) and possibly logging the error.
+
+7. **Response to the Client**: The result of the `CompletableFuture` is sent as an HTTP response to the client, and the client receives the response.
+
+By using `CompletableFuture`, Spring can efficiently handle a large number of concurrent requests without blocking the server's main thread. It leverages the non-blocking, asynchronous nature of `CompletableFuture` to keep the application responsive.
+
+Here's an example of a Spring controller method that returns a `CompletableFuture`:
+
+```java
+@RestController
+public class MyController {
+
+    @Autowired
+    private MyService myService;
+
+    @GetMapping("/async")
+    public CompletableFuture<String> asyncMethod() {
+        return myService.performAsyncTask();
+    }
+}
+```
+
+In this example, `myService.performAsyncTask()` returns a `CompletableFuture<String>`, and Spring takes care of the asynchronous processing and returning the result to the client when the `CompletableFuture` completes.
+
+----
+
+## [Is using @Async and CompletableFuture in controller can increase performance of our API?](https://stackoverflow.com/questions/65120202/is-using-async-and-completablefuture-in-controller-can-increase-performance-of/65185737#65185737)
+
+---
+
+## [8+ things you need to know when you want to use Spring @Async really well](https://levelup.gitconnected.com/8-things-you-need-to-know-when-you-want-to-use-spring-async-really-well-e5af4af259c5)
+
+
+To use asynchronous programming effectively, it's crucial to understand when and why to use it, and to be aware of potential pitfalls. Here are some guidelines for using asynchronous programming effectively:
+
+- **EnableAsync Annotation:** In a Spring Boot application, add `@EnableAsync` to the startup class to enable asynchronous processing.
+
+- **Accessibility:** Annotated methods should not be static or private; they must be public.
+
+- **Component Annotation:** Ensure the class containing the asynchronous method is annotated with `@Component` or other appropriate annotations to allow Spring to scan for asynchronous classes.
+
+- **Avoid Self-Invocation:** Avoid invoking an asynchronous method from within the same class, as it bypasses the proxy and loses the asynchronous effect.
+
+- **Transactional Operations:** Avoid annotating `@Transactional` on asynchronous methods directly. Instead, place `@Transactional` on methods called internally.
+
+- **Avoid Circular Dependencies:** Be cautious when using asynchronous methods in classes with circular dependencies, as it can lead to circular dependency exceptions.
+
+- **Handling Return Values:** When dealing with asynchronous methods returning `Future`, use appropriate techniques to wait for and handle the results.
+
+- **Custom Thread Pools:** Customize thread pool configurations for different asynchronous tasks to optimize resource utilization.
+
+- **Exception Handling:** Implement a custom `AsyncUncaughtExceptionHandler` to handle exceptions that occur within asynchronous methods.
+
+- **Transaction Handling:** Ensure proper transaction handling in asynchronous methods by carefully structuring your code.

@@ -7,6 +7,7 @@
 ## Netty
 - https://kkgulati.medium.com/avoid-reactor-freeze-reactive-programming-fdc0b4b5991
 - https://stackoverflow.com/questions/48607114/how-to-set-event-loop-pool-size-in-spring-webflux-webclient
+- https://kamilszymanski.github.io/resources-utilization-in-reactive-services/
 
 ```
 No, for performance testing between Reactive Spring (using Project Reactor) and Imperative Spring, you do not need to have the same thread pool sizes or settings.

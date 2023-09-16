@@ -21,12 +21,24 @@ public class HelloService {
 	 * (việc chờ rồi mới thực thi tiếp này gọi là đồng bộ - synchronize), mà cứ tiếp tục công việc của caller.
 	 * Lúc đó, callee được chạy bất đồng bộ.
 	 */
-	@Async
+//	@Async
+	@Async("asyncExecutor")
 	public void asyncProcessSomethingForLong() {
 		try {
 			Thread.sleep(5000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+		}
+	}
+	
+	@Async("taskExecutor")
+	public void printNumber(long num) {
+		System.out.println(num);
+		try {
+			Thread.sleep(60000);
+		}
+		catch (InterruptedException e) {
+			System.out.println("Error while executing sleep in Thread for task: " + num);
 		}
 	}
 }
