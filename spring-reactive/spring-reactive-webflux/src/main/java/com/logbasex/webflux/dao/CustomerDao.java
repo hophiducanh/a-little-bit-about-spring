@@ -38,4 +38,11 @@ public class CustomerDao {
 				.doOnNext(i -> System.out.println("reactive processing count: " + i))
 				.map(i -> new Customer(i, "customer" + i));
 	}
+	
+	public Flux<Customer> getCustomerList() {
+		return Flux
+				.range(1, 10)
+				.doOnNext(i -> System.out.println("reactive processing count: " + i))
+				.map(i -> new Customer(i, "customer" + i));
+	}
 }
