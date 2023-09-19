@@ -41,4 +41,4 @@ include 'spring-reactive'
 include 'spring-reactive:spring-reactive-benchmark'
 include 'spring-reactive:spring-imperative-benchmark'
 include 'spring-reactive:spring-reactive-webflux'
-
+include 'spring-reactive:spring-reactive-mongodb-crud'
