@@ -1,3 +1,6 @@
+## Showcase
+- [Chat application](https://umes4ever.medium.com/server-sent-event-sse-chat-application-using-spring-boot-and-react-js-945b7fdf88f)
+
 ## Why we need Server-Sent Events in Spring Webflux?
 
 In Spring WebFlux, Server-Sent Events (SSE) can be a valuable feature for building reactive, real-time web applications. SSE provides a way for the server to push updates or events to the client over a single HTTP connection, making it suitable for scenarios where you want to deliver real-time updates to web clients. Here are some reasons why you might want to use SSE in Spring WebFlux:

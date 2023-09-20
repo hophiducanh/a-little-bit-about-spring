@@ -1,0 +1,49 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.1.0'
+    id 'io.spring.dependency-management' version '1.1.0'
+}
+
+group = 'com.logbasex'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = '17'
+}
+
+// ----------
+
+// https://stackoverflow.com/questions/56861256/gradle-build-failed-main-class-name-has-not-been-configured-and-it-could-not-be
+// In short, bootJar is for Spring Boot applications that need an executable JAR,
+// while jar is for regular Java applications or libraries that don't need the special Spring Boot features.
+bootJar {
+    enabled = false
+}
+
+jar {
+    enabled = true
+}
+
+// ---------------
+
+repositories {
+    mavenCentral()
+}
+
+// https://docs.spring.io/spring-boot/docs/current/gradle-plugin/reference/htmlsingle/
+tasks.named("bootBuildImage") {
+    imageName = "spring/spring"
+
+    // https://stackoverflow.com/questions/62865594/spring-boot-2-3-0-buildpack-builds-image-with-creation-date-40-years-ago
+    // createdDate = "now"
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
