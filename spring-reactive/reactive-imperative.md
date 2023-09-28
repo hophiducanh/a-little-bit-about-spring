@@ -26,3 +26,31 @@ The core principles of reactive programming are centered around dealing with asy
 The main difference between reactive programming and imperative programming is the approach to handling asynchronous and event-driven scenarios. Imperative programming typically involves explicitly specifying step-by-step instructions to achieve a specific task. In contrast, reactive programming abstracts away the details of how data flows and events are handled, allowing developers to focus on what needs to happen when certain conditions are met.
 
 Reactive programming can make it easier to develop applications that are responsive, scalable, and resilient to changing conditions, especially in modern, distributed, and real-time systems. However, it also comes with a learning curve and may require a shift in mindset for developers accustomed to imperative programming paradigms.
+
+----
+
+## Advantage of reactive programming over imperative programming at low-level/cpu level?
+
+Reactive programming offers several advantages over imperative programming at the low-level CPU level, especially in scenarios where concurrency and parallelism are crucial:
+
+1. **Reduced Context Switching Overhead:** Reactive programming often minimizes the need for thread context switches, which can be expensive in terms of CPU overhead. By using asynchronous and non-blocking operations, reactive systems can efficiently manage and process multiple tasks on a single thread or a small number of threads. This reduces the context switching overhead associated with managing a large number of threads in imperative programming.
+
+2. **Efficient Resource Utilization:** Reactive systems are designed to efficiently utilize system resources, including CPU cores. They can adapt to varying workloads and allocate resources dynamically based on demand. This leads to better resource utilization and can result in improved performance compared to statically allocated threads in imperative programming.
+
+3. **Scalability:** Reactive programming models, such as the Actor model, are well-suited for building highly scalable systems. They can easily distribute workloads across multiple cores or even across multiple machines while maintaining responsiveness and minimizing contention issues.
+
+4. **Fine-Grained Control:** Reactive programming allows for fine-grained control over concurrency. Developers can define how different parts of the system should react to events and messages, enabling precise management of concurrency without relying on lower-level thread management.
+
+5. **Error Handling:** Reactive programming often provides robust error-handling mechanisms, making it easier to manage and recover from errors in asynchronous operations. This can lead to more resilient applications in situations where errors are likely to occur.
+
+6. **Avoiding Deadlocks and Race Conditions:** Reactive programming models often reduce the likelihood of common concurrency issues such as deadlocks and race conditions by design. This can simplify the development process and lead to more reliable software.
+
+7. **Streamlined Parallelism:** Reactive programming libraries often provide abstractions for parallelism, allowing developers to express concurrency and parallelism more concisely and clearly. This can lead to more maintainable code and easier debugging.
+
+8. **Responsive User Interfaces:** In UI development, reactive programming can lead to more responsive and smooth user interfaces. By handling asynchronous tasks efficiently, UIs remain responsive even when performing resource-intensive operations in the background.
+
+9. **Energy Efficiency:** Efficiently managing CPU resources through reactive programming can lead to energy savings in mobile and battery-powered devices, making the software more environmentally friendly.
+
+It's important to note that while reactive programming can offer these advantages, it may also introduce complexity, and not all applications benefit equally from a reactive approach. The choice between reactive and imperative programming should consider the specific requirements of the application, the expertise of the development team, and other relevant factors.
+
+![https://www.youtube.com/watch?v=M3jNn3HMeWg](https://user-images.githubusercontent.com/22516811/271293960-952866b4-c7ae-44b9-9bc8-def637d6d77f.png)
