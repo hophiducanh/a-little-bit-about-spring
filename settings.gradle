@@ -1,8 +1,3 @@
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-    }
-}
 rootProject.name = 'a-little-bit-about-spring'
 include 'spring-basic'
 include 'spring-sqs-delay-queue'
@@ -44,4 +39,4 @@ include 'spring-reactive:spring-reactive-webflux'
 include 'spring-reactive:spring-reactive-mongodb-crud'
 include 'spring-boot-3'
 include 'spring-boot-3:spring-native-image'
-
+include 'spring-java-native-thread'

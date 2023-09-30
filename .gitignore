@@ -37,3 +37,7 @@ out/
 
 application.properties
 !.idea
+
+gradle
+gradlew
+gradlew.bat
