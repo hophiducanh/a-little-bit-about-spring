@@ -1,5 +1,6 @@
 ## [Virtual threads in Spring Boot with Java 19](https://medium.com/@egorponomarev/virtual-threads-in-spring-boot-with-java-19-ea98e1725058)
 
+## [Spring 6 Virutal Threads](https://www.baeldung.com/spring-6-virtual-threads)
 
 ## Spring 2.7 + Tomcat 9 + Java 17
 > ab -n 1000 -c 1000 http://localhost:8118/test
