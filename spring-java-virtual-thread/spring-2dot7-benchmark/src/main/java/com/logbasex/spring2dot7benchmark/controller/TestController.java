@@ -10,7 +10,7 @@ public class TestController {
 	
 	private static final Logger log = LoggerFactory.getLogger(TestController.class);
 	
-	@GetMapping
+	@GetMapping("/test")
 	public void test() {
 		log.info("Start to sleep {}", Thread.currentThread());
 		try {
