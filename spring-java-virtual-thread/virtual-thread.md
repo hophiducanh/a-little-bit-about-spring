@@ -6,6 +6,10 @@
 - Virtual threads are fully compatible with the existing `Thread` API, so existing applications and libraries can support them with minimal change.
 - Virtual threads support the existing debugging and profiling interfaces, enabling easy troubleshooting, debugging, and profiling of virtual threads with existing tools and techniques.
 
+### [Discussion](https://www.reddit.com/r/java/comments/xlwrjw/virtual_threads_new_foundations_for_highscale/)
+
+![image](https://user-images.githubusercontent.com/22516811/272006521-ef5bc6a9-e3b4-45bb-af5b-f0710cc5f8d7.png)
+
 ----
 
 ## [Virtual Threads in Java](https://www.happycoders.eu/java/virtual-threads/)
