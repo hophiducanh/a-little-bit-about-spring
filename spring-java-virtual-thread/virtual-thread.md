@@ -1,3 +1,13 @@
+ ## [Virtual Threads: New Foundations for High-Scale Java Applications](https://www.infoq.com/articles/java-virtual-threads/)
+
+- Virtual threads are a lightweight implementation of Java threads, delivered as a preview feature in Java 19.
+- Virtual threads dramatically reduce the effort of writing, maintaining, and observing high-throughput concurrent applications.
+- Virtual threads breathe new life into the familiar thread-per-request style of programming, allowing it to scale with near-optimal hardware utilization.
+- Virtual threads are fully compatible with the existing `Thread` API, so existing applications and libraries can support them with minimal change.
+- Virtual threads support the existing debugging and profiling interfaces, enabling easy troubleshooting, debugging, and profiling of virtual threads with existing tools and techniques.
+
+----
+
 ## [Virtual Threads in Java](https://www.happycoders.eu/java/virtual-threads/)
 
 ### Why Do We Need Virtual Threads?
