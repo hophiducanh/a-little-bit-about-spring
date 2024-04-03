@@ -17,7 +17,8 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 		//Enable STOMP support by register STOMP endpoint /ws
 		registry.addEndpoint("/ws")
 				//when client is set up outside this project.
-				.setAllowedOrigins("*")
+				.setAllowedOriginPatterns("*")
+//				.setAllowedOrigins("http://127.0.0.1:46809")
 				.withSockJS();
 	}
 	
