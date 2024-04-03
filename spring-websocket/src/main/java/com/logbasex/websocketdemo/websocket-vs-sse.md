@@ -1,5 +1,7 @@
 ## References
 - https://soubiran.dev/posts/real-time-without-websocket
+- [Using SSE Instead Of WebSockets For Unidirectional Data Flow Over HTTP/2](https://www.smashingmagazine.com/2018/02/sse-websockets-data-flow-http2/)
+- [What are some best practices for optimizing the performance and scalability of server sent events?](https://www.linkedin.com/advice/0/what-some-best-practices-optimizing-performance-scalability)
 
 ---
 ---
@@ -117,4 +119,83 @@ WebSocket heartbeats are a mechanism used to ensure that the connection between 
 
 Heartbeats in WebSockets, therefore, serve as a crucial mechanism for maintaining the health and responsiveness of the real-time, persistent connection that WebSockets provide, enabling reliable and efficient two-way communication between the client and the server.
 
+----
 
+## What is frame here?
+
+In the context of WebSockets, a "frame" refers to the basic unit of communication in the WebSocket protocol. Each piece of data sent over a WebSocket connection is broken down into one or more frames. These frames encapsulate the data being transmitted, allowing for efficient and structured communication between the client and the server.
+
+### Characteristics of WebSocket Frames
+
+1. **Structure**: A WebSocket frame consists of a header and a payload. The header contains control information, such as the type of frame (e.g., text, binary, ping, pong, close), length of the payload, and whether the data is fragmented or final. The payload is the actual data being transmitted.
+
+2. **Types of Frames**: WebSocket frames can be of various types, including:
+   - **Data Frames**: Carry the payload data that is being transmitted between the client and server. Data frames can be text (UTF-8 encoded data) or binary.
+   - **Control Frames**: Used for managing the connection itself, including ping, pong, and close frames. These are used to perform tasks like checking the connection’s health (ping/pong) or signaling the closing of the connection.
+
+3. **Fragmentation**: Large messages can be broken down into multiple frames, a process known as fragmentation. This allows the sending of a large message in smaller, manageable units without needing to buffer the entire message in memory.
+
+4. **Order and Reliability**: Frames are sent and received in the order they are generated, ensuring that the data integrity and sequence are maintained, which is crucial for consistent communication.
+
+5. **Efficiency**: By using frames, the WebSocket protocol minimizes the overhead of communication, making it more efficient than other, more verbose protocols (like HTTP polling), especially for real-time interactions.
+
+### Purpose of Framing in WebSockets
+
+- **Real-time Communication**: Enables efficient and timely transmission of data, allowing for real-time interactions between the client and server.
+- **Protocol Control**: Through control frames, the protocol can manage the state of the connection, perform health checks, and gracefully handle closing the connection.
+- **Flexibility**: Supports different data types and allows for message fragmentation, providing flexibility in handling various communication patterns and data sizes.
+
+In summary, a frame in the WebSocket protocol is the fundamental unit of data transmission, designed to efficiently and reliably carry information between communicating parties in a real-time, persistent connection.
+
+====
+====
+
+## [Why is EventSource connection closed every 30-60 sec when no data transported, while WebSocket's one is kept open?](https://stackoverflow.com/questions/8761025/why-is-eventsource-connection-closed-every-30-60-sec-when-no-data-transported-w)
+
+> ### The Server-Sent Events (Eventsource) API is layered on HTTP. WebSocket is layered on TCP (but has an HTTP compatible handshake).? 
+
+Both HTTP and TCP often have idle timeouts however, the TCP timeouts tend to be much longer (e.g. 2 hours rather than 2 minutes). So you still might need keep-alive messages in WebSockets, but they could probably be much less frequent. Also, the [WebSocket standard](https://www.rfc-editor.org/rfc/rfc6455) defines ping/pong frames that the browser/server may implement to do this for you.
+> There is nothing as TCP idle timeout. Some firewalls might cut idle connections unless TCP is configured to send keepalive packets (which it often is), but TCP itself never closes an idle conneciton. HTTP servers generally close the HTTP connection in order to save resources. – 
+
+====
+====
+
+## [WebSockets ping/pong, why not TCP keepalive?](https://stackoverflow.com/questions/23238319/websockets-ping-pong-why-not-tcp-keepalive)
+
+> TCP keepalive doesn't get passed through a web proxy. The websocket ping/pong will be forwarded by through web proxies. TCP keepalive is designed to supervise a connection between TCP endpoints. Web socket endpoints are not equal to TCP endpoints. A websocket connection can use several TCP connections between two websocket endpoints.
+
+
+TCP keepalive does exist and can be a good transport layer mechanism to detect inactive connections. However, WebSockets introduce some limitations with relying solely on TCP keepalive:
+
+* **Default Disabled:** TCP Keepalive is often disabled by default on many systems.
+* **Coarse-grained Checks:**  The default intervals for TCP keepalive checks can be quite long (around 2 hours) which isn't ideal for real-time applications that WebSockets are often used for.
+* **Limited Scope:** TCP Keepalive only checks between TCP stacks, not necessarily verifying if the application on the other end is alive.
+
+WebSockets ping/pong offers several advantages:
+
+* **End-to-End Checks:**  These messages ensure both the connection and the application at the other end are responsive.
+* **Customizable Frequency:**  Ping messages can be sent at intervals appropriate for the application's needs, providing a more fine-grained approach to monitoring the connection.
+* **Always Available:** Since WebSockets rely on TCP, using ping/pong is inherently available.
+
+In essence, WebSockets ping/pong provide a more application-specific and configurable way to monitor connection health compared to the general purpose TCP keepalive mechanism.
+
+====
+====
+
+##  Why SSE has a limit on concurrent connections to a single domain?
+
+> [Why does your browser limit the number of concurrent network calls?](https://www.linkedin.com/pulse/why-does-your-browser-limit-number-concurrent-ishwar-rimal/)
+
+There are two main reasons why SSE has a limit on concurrent connections to a single domain:
+
+1. **Browser Limitation on HTTP Connections:**
+   - Traditionally, browsers enforce a limit on the number of open HTTP connections (typically 6) to a single domain. This is done to prevent overwhelming the browser and the server with too many requests at once.
+   - Each SSE connection requires its own dedicated HTTP connection to keep the data stream open. With too many connections, the browser can become overloaded and unresponsive.
+
+2. **SSE and HTTP (vs. HTTP/2):**
+   - SSE relies on HTTP protocol, specifically HTTP 1.1 in most cases.
+   - HTTP 1.1 has limitations on how many connections can be open at once.
+   - Newer protocols like HTTP/2 allow for many more concurrent connections, but  SSE itself doesn't inherently benefit from this improvement.
+   - While some servers might be using HTTP/2, it doesn't guarantee that SSE connections will leverage it for increased connections.
+
+In short, the limit is a combination of browser restrictions on HTTP connections in general and the way SSE utilizes those connections under HTTP 1.1.
