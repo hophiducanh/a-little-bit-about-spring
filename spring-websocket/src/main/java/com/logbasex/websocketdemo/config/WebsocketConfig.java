@@ -15,7 +15,10 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 		//https://stackoverflow.com/questions/52731686/websocket-vs-sockjs-object
 		//https://www.slideshare.net/AhmedurRahmanShovon/websockets-and-sockjs-real-time-chatting
 		//Enable STOMP support by register STOMP endpoint /ws
-		registry.addEndpoint("/ws").withSockJS();
+		registry.addEndpoint("/ws")
+				//when client is set up outside this project.
+				.setAllowedOrigins("*")
+				.withSockJS();
 	}
 	
 	@Override
