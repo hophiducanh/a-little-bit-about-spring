@@ -27,6 +27,7 @@ function connect(event) {
         stompClient = Stomp.over(socket);
 
         stompClient.connect({}, onConnected, onError);
+        console.log("Socket is successfully connected.")
     }
     event.preventDefault();
 }

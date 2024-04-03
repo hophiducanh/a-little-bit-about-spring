@@ -1,6 +1,6 @@
-package com.logbasex.elk.websocketdemo.controller;
+package com.logbasex.websocketdemo.controller;
 
-import com.logbasex.elk.websocketdemo.model.ChatMessage;
+import com.logbasex.websocketdemo.model.ChatMessage;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;

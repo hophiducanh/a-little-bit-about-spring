@@ -1,6 +1,6 @@
-package com.logbasex.elk.websocketdemo.controller;
+package com.logbasex.websocketdemo.controller;
 
-import com.logbasex.elk.websocketdemo.model.ChatMessage;
+import com.logbasex.websocketdemo.model.ChatMessage;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-@Component
 @Log4j2
+@Component
 public class WebSocketEventListener {
 
 	@Autowired
