@@ -2,6 +2,7 @@
 - https://soubiran.dev/posts/real-time-without-websocket
 - [Using SSE Instead Of WebSockets For Unidirectional Data Flow Over HTTP/2](https://www.smashingmagazine.com/2018/02/sse-websockets-data-flow-http2/)
 - [What are some best practices for optimizing the performance and scalability of server sent events?](https://www.linkedin.com/advice/0/what-some-best-practices-optimizing-performance-scalability)
+- [WebSockets vs Long Polling](https://www.reddit.com/r/programming/comments/c08mss/websockets_vs_long_polling/)
 
 ---
 ---
