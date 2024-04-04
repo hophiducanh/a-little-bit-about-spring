@@ -7,3 +7,5 @@ Open index.html file then inspect.
 ```shell
 curl --location --request GET 'http://localhost:8182/sse'
 ```
+
+![](sse.gif)
