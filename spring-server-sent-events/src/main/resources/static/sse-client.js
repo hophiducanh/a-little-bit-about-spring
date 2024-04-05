@@ -1,4 +1,4 @@
-const eventSource = new EventSource('http://localhost:8080/sse');
+const eventSource = new EventSource('http://localhost:8182/sse');
 
 console.log(eventSource);
 
