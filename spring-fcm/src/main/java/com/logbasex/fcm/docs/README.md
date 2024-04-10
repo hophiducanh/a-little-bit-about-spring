@@ -16,6 +16,7 @@
 ![](fcm-create-project-2.png)
 
 ## Step 2. Create web app
+> Project settings > General > Your apps
 
 ![](fcm-web-integration.png)
 
@@ -25,7 +26,13 @@
 
 ## Step 3. Setting web app
 
+### Generate web push certificate key (VAPID key)
+
+VAPID stands for Voluntary Application Server Identity, a new way to send and receive website Push Notifications. With your VAPID key, your server can send web Push Notifications directly to browsers.
+
 ![](fcm-web-setting-cloud-messaging.png)
+
+### Service Account
 
 ![](fcm-web-setting-service-account.png)
 
@@ -44,3 +51,14 @@ Here's how they typically work in a system:
     - The public configuration details used on the client side are specifically designed for integrating Firebase services, like FCM, into your application without exposing sensitive information.
 
 In summary, the separation of these configurations aligns with the principle of least privilege and ensures secure interaction with Firebase services: the client-side configuration allows receiving messages, while the server-side configuration with a Service Account enables broader administrative capabilities.
+
+## Test Push Notification
+
+![](fcm-test-push-notification.png)
+
+![](fcm-test-push-notification-1.png)
+
+![](fcm-test-push-notification-2.png)
+
+### [Get Registration Token Of Device](https://firebase.google.com/docs/cloud-messaging/js/client?authuser=0#access_the_registration_token)
+![](fcm-test-push-notification-3.png)
