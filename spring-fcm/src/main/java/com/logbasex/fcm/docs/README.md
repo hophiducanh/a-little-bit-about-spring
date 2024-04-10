@@ -1,9 +1,31 @@
 ## References
-- 
+- ![Web push notifications using Firebase Cloud Messaging](https://blogs.halodoc.io/web-push-notification-using-firebase-cloud-messaging/)
 
 
 ----
 ----
+
+## Architecture
+
+![](fcm-architecture.png)
+
+![](fcm-architecture-1.png)
+
+====
+====
+
+## Prerequisites
+
+### 1) Register service worker
+
+![](fcm-service-workers.png)
+
+### 2) Get user permission to send push notification
+
+![](fcm-notification-api.png)
+
+====
+====
 
 ## Step 1. Create Project
 
@@ -53,6 +75,8 @@ Here's how they typically work in a system:
 In summary, the separation of these configurations aligns with the principle of least privilege and ensures secure interaction with Firebase services: the client-side configuration allows receiving messages, while the server-side configuration with a Service Account enables broader administrative capabilities.
 
 ## Test Push Notification
+
+> Maybe you need to wait a min.
 
 ![](fcm-test-push-notification.png)
 

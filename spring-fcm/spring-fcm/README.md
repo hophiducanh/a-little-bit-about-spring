@@ -1,3 +1,11 @@
+## References
+- [Firebase Cloud Messaging in React: A Comprehensive Guide](https://medium.com/simform-engineering/firebase-cloud-messaging-in-react-a-comprehensive-guide-b5e325452f97)
+- [[ReactJS] Push notification sử dụng Firebase Cloud Messaging](https://viblo.asia/p/reactjs-push-notification-su-dung-firebase-cloud-messaging-yZjJYE9XJOE#_a-foreground-4)
+- [Push notifications with React and Firebase](https://blog.logrocket.com/push-notifications-react-firebase/)
+
+----
+----
+
 ## Create App
 
 ### `npx create-react-app spring-fcm`
