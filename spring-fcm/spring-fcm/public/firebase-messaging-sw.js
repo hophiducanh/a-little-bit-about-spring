@@ -1,6 +1,10 @@
 // Firebase FCM on TypeScript: "The script has an unsupported MIME type ('text/html')
 // Handle messages when your web app is in the foreground: https://firebase.google.com/docs/cloud-messaging/js/receive#handle_messages_when_your_web_app_is_in_the_foreground
 
+// Service Worker
+importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js');
+importScripts('https://www.gstatic.com/firebasejs/8.10.1/firebase-messaging.js');
+
 const firebaseConfig = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
     authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
@@ -28,5 +32,5 @@ messaging.onBackgroundMessage(() => {
     self.registration.showNotification(
         notificationTitle,
         notificationOptions
-    );
+    ).then(r => r);
 });
