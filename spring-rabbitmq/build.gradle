@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.5.2'
+    // use starter without specify version
+    id 'io.spring.dependency-management' version '1.0.10.RELEASE'
+    id 'war'
+}
+
+group = 'com.logbasex.rabbitmq'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '1.8'
+
+configurations {
+    developmentOnly
+    runtimeClasspath {
+        extendsFrom developmentOnly
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    //spring initializr: spring-boot-starter vs spring-boot-starter-web
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-amqp'
+    //make sure retrofit vs okhttp3 compatible
+    implementation 'com.squareup.retrofit2:retrofit:2.9.0'
+    implementation 'com.squareup.retrofit2:converter-jackson:2.9.0'
+    implementation 'com.squareup.okhttp3:logging-interceptor:3.14.9'
+
+    compileOnly 'org.projectlombok:lombok:1.18.28'
+    annotationProcessor 'org.projectlombok:lombok:1.18.28'
+}
+
+test {
+    useJUnitPlatform()
+}

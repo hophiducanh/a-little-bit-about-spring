@@ -46,4 +46,5 @@ include 'spring-java-virtual-thread:virtual-thread-vs-webflux'
 include 'spring-design-pattern'
 include 'spring-server-sent-events'
 include 'spring-fcm'
+include 'spring-rabbitmq'
 

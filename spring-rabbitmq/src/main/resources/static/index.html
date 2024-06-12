@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>STOMP over WebSocket Example</title>
+    <script src="stomp.js"></script>
+</head>
+<body>
+    <script type="text/javascript">
+        // Establish a WebSocket connection
+        var socket = new WebSocket('ws://localhost:15674/ws');
+        
+        // Create a STOMP client
+        var client = Stomp.over(socket);
+
+        var headers = {
+                login: 'admin',
+                passcode: 'admin',
+                host: 'logbasex'  // Specify the virtual host
+            };
+
+        // STOMP client connection callback
+        client.connect(headers, function(frame) {
+            console.log('Connected: ' + frame);
+            //https://www.rabbitmq.com/docs/stomp#d.ed
+            client.subscribe('/exchange/logbasex/logbasex_router_key', function(message) {
+                console.log('Received: ' + message);
+            });
+        }, function(error) {
+            console.log('Error: ' + error);
+        });
+    </script>
+</body>
+</html>

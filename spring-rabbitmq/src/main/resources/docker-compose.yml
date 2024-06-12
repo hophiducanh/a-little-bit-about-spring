@@ -1,0 +1,24 @@
+version: '3'
+services:
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"   # RabbitMQ main port
+      - "15672:15672" # RabbitMQ Management plugin port
+      - "15674:15674" # RabbitMQ STOMP over Websocket
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    command: >
+      sh -c "
+        rabbitmq-plugins enable --offline rabbitmq_management;
+        rabbitmq-plugins enable --offline rabbitmq_web_stomp;
+        rabbitmq-server
+      "
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+volumes:
+  rabbitmq_data:
