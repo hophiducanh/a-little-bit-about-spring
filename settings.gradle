@@ -48,4 +48,5 @@ include 'spring-server-sent-events'
 include 'spring-fcm'
 include 'spring-rabbitmq'
 include 'spring-kafka'
+include 'spring-lexoranks'
 

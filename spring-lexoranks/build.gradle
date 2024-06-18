@@ -6,7 +6,7 @@ plugins {
     id 'war'
 }
 
-group = 'com.logbasex.kafka'
+group = 'com.logbasex.lexoranks'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '1.8'
 
@@ -25,6 +25,8 @@ dependencies {
     //spring initializr: spring-boot-starter vs spring-boot-starter-web
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    //https://github.com/pravin-raha/lexorank4j?tab=readme-ov-file
+    implementation 'com.github.pravin-raha:lexorank4j:0.1.0'
 
     compileOnly 'org.projectlombok:lombok:1.18.28'
     annotationProcessor 'org.projectlombok:lombok:1.18.28'
