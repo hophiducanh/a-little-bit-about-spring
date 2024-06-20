@@ -49,4 +49,6 @@ include 'spring-fcm'
 include 'spring-rabbitmq'
 include 'spring-kafka'
 include 'spring-lexoranks'
+include 'spring-keycloak'
+include 'spring-hikari-cp'
 

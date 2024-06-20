@@ -16,6 +16,7 @@ public class LexoRankApplication {
         System.out.println(minLexoRank.format());
         System.out.println(middleLexoRank.format());
         System.out.println(maxLexoRank.format());
+		System.out.println(parsedLexoRank.between(maxLexoRank));
 		SpringApplication.run(LexoRankApplication.class, args);
 	}
 }
